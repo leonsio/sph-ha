@@ -1,4 +1,4 @@
-// Compatibility and shared week-selection logic for KFG timetable cards.
+// Compatibility and shared selection logic for KFG timetable cards.
 //
 // KFG A/B week rules:
 // - A/B badges describe the week in which that lesson is active.
@@ -6,13 +6,11 @@
 //   it shares a time slot with an explicitly badged lesson.
 // - A lesson with a non-matching badge is never shown.
 //
-// Examples:
-//   A + unbadged -> week A: A only, week B: unbadged only
-//   B + unbadged -> week B: B only, week A: unbadged only
-//   A + B        -> week A: A only, week B: B only
-//   A only       -> week A: A, week B: nothing
-//   B only       -> week B: B, week A: nothing
-//   unbadged only -> shown in both weeks
+// Vertretungsplan sensor selection:
+// - `vertretungsplan_sensor` in the card config explicitly selects the sensor.
+// - Without an explicit setting, `sensor.vertretungsplan_<klasse>` is used
+//   when that entity exists, e.g. `sensor.vertretungsplan_7n`.
+// - For backwards compatibility `sensor.vertretungsplan` remains the fallback.
 (() => {
   const CARD_TAGS = [
     "kfg-stundenplan-card",
@@ -62,16 +60,10 @@
       const hasExplicitBadges = group.some((lesson) => badgeValues(lesson?.badge).length > 0);
 
       if (matching.length) {
-        // Current week has an explicit lesson. It replaces an unbadged
-        // counterpart at this time slot.
         result.push(...matching);
       } else if (hasExplicitBadges) {
-        // There are explicit A/B alternatives, but none for the current
-        // week. In this case an unbadged lesson is the counterpart for the
-        // other week. If there is no unbadged counterpart, the slot is empty.
         result.push(...unbadged);
       } else {
-        // Purely generic lesson: active in every week.
         result.push(...unbadged);
       }
     }
@@ -101,28 +93,80 @@
     );
   };
 
-  const hassWithFilteredTimetable = (card, hass) => {
-    const entity = findTimetableEntity(card, hass);
-    if (!entity) return hass;
+  const entitySuffix = (value) =>
+    String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/ä/g, "a")
+      .replace(/ö/g, "o")
+      .replace(/ü/g, "u")
+      .replace(/ß/g, "ss")
+      .replace(/[^a-z0-9_]+/g, "_")
+      .replace(/^_+|_+$/g, "");
 
-    const attrs = entity.attributes || {};
+  const configuredSubstitutionSensor = (card) => {
+    const value =
+      card?.config?.vertretungsplan_sensor ??
+      card?.config?.vertretungsplan ??
+      card?.config?.substitution_sensor;
+    return String(value || "").trim();
+  };
+
+  const findSubstitutionSensor = (card, hass, timetableEntity) => {
+    const configured = configuredSubstitutionSensor(card);
+    if (configured) {
+      // Explicit configuration always wins, even if the configured entity is
+      // currently unavailable. This prevents silently switching to another
+      // class' Vertretungsplan.
+      return hass?.states?.[configured] || null;
+    }
+
+    const childClass = String(timetableEntity?.attributes?.klasse || "").trim();
+    const classSuffix = entitySuffix(childClass);
+    if (classSuffix) {
+      const classEntity = hass?.states?.[`sensor.vertretungsplan_${classSuffix}`];
+      if (classEntity) return classEntity;
+    }
+
+    return hass?.states?.["sensor.vertretungsplan"] || null;
+  };
+
+  const hassForCard = (card, hass) => {
+    const timetableEntity = findTimetableEntity(card, hass);
+    if (!timetableEntity) return hass;
+
+    const attrs = timetableEntity.attributes || {};
     const days = attrs.eigener_plan;
     const week = attrs.wochenkennung;
-    if (!Array.isArray(days) || !week) return hass;
+    const states = { ...(hass.states || {}) };
+    let changed = false;
 
-    const filteredDays = filterDaysForWeek(days, week);
-    const filteredEntity = {
-      ...entity,
-      attributes: {
-        ...attrs,
-        eigener_plan: filteredDays,
-      },
-    };
+    if (Array.isArray(days) && week) {
+      states[timetableEntity.entity_id] = {
+        ...timetableEntity,
+        attributes: {
+          ...attrs,
+          eigener_plan: filterDaysForWeek(days, week),
+        },
+      };
+      changed = true;
+    }
 
-    const states = {
-      ...(hass.states || {}),
-      [entity.entity_id]: filteredEntity,
-    };
+    const substitution = findSubstitutionSensor(card, hass, timetableEntity);
+    if (substitution) {
+      // The existing KFG cards internally read sensor.vertretungsplan. Alias
+      // the selected per-class/configured entity to that legacy name so all
+      // substitution and "Nachricht des Tages" logic uses the same source.
+      states["sensor.vertretungsplan"] = substitution;
+      changed = true;
+    } else if (configuredSubstitutionSensor(card)) {
+      // An explicit but unavailable entity must not fall back to a different
+      // Vertretungsplan that may happen to exist in hass.states.
+      delete states["sensor.vertretungsplan"];
+      changed = true;
+    }
+
+    if (!changed) return hass;
 
     const patchedHass = Object.create(Object.getPrototypeOf(hass));
     Object.assign(patchedHass, hass);
@@ -153,7 +197,7 @@
         enumerable: descriptor.enumerable === true,
         get: descriptor.get,
         set(hass) {
-          originalSetter.call(this, hassWithFilteredTimetable(this, hass));
+          originalSetter.call(this, hassForCard(this, hass));
         },
       });
 
