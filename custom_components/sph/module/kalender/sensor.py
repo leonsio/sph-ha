@@ -12,9 +12,9 @@ from .coordinator import relevant_calendar_events
 CALENDAR_ATTRIBUTE_LIMIT = 50
 
 
-def calendar_preview(events):
-    """Return only relevant calendar entries for card consumption."""
-    relevant = relevant_calendar_events(events)
+def calendar_preview(events, event_types=None):
+    """Return only configured calendar entries for card consumption."""
+    relevant = relevant_calendar_events(events, event_types)
     return [
         {
             "start": event.get("start", ""),
@@ -44,15 +44,22 @@ class SphCalendarSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self):
-        return len(relevant_calendar_events(self.coordinator.data))
+        return len(
+            relevant_calendar_events(
+                self.coordinator.data,
+                self.coordinator.event_types,
+            )
+        )
 
     @property
     def extra_state_attributes(self):
-        # Filter again at entity level deliberately. The coordinator already
-        # limits its data to Arbeiten/Klausuren, but this guarantees that the
-        # legacy sensor and all cards consuming its `termine` attribute can
-        # never expose or use other SPH calendar categories.
-        events = relevant_calendar_events(self.coordinator.data)
+        # Filter again at entity level deliberately. This guarantees that the
+        # legacy sensor and all cards consuming its `termine` attribute expose
+        # only calendar categories selected in the integration settings.
+        events = relevant_calendar_events(
+            self.coordinator.data,
+            self.coordinator.event_types,
+        )
         timetable_data = self.timetable_coordinator.data or {}
         art_counts = Counter(
             str(event.get("art", "")).strip()
@@ -68,7 +75,8 @@ class SphCalendarSensor(CoordinatorEntity, SensorEntity):
             "kind": self.entry.data.get(CONF_CHILD_NAME, ""),
             "kind_kürzel": self.entry.data.get(CONF_CHILD_SHORTCUT, ""),
             "klasse": timetable_data.get("klasse", ""),
-            "termine": calendar_preview(events),
+            "kalenderarten": list(self.coordinator.event_types),
+            "termine": calendar_preview(events, self.coordinator.event_types),
             "termine_gesamt": len(events),
             "termine_weitere": max(0, len(events) - CALENDAR_ATTRIBUTE_LIMIT),
             "arten": dict(art_counts),
