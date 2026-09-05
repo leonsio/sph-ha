@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import voluptuous as vol
@@ -8,13 +9,47 @@ from homeassistant.config_entries import ConfigEntry, OptionsFlow
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 
 from .const import (
+    CONF_CALENDAR_EVENT_TYPES,
     CONF_CHILD_NAME,
     CONF_CHILD_SHORTCUT,
     CONF_SCHOOL_ID,
     CONF_UPDATE_INTERVAL,
+    DEFAULT_CALENDAR_EVENT_TYPES,
     DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
 )
+
+
+def _calendar_types_to_text(value: Any) -> str:
+    """Render stored calendar types as an editable comma-separated string."""
+    if isinstance(value, (list, tuple, set)):
+        items = [str(item).strip() for item in value if str(item).strip()]
+    else:
+        items = [
+            item.strip()
+            for item in re.split(r"[,;\n]+", str(value or ""))
+            if item.strip()
+        ]
+    return ", ".join(items or DEFAULT_CALENDAR_EVENT_TYPES)
+
+
+def _parse_calendar_types(value: Any) -> list[str]:
+    """Parse a user-editable list and remove duplicates case-insensitively."""
+    if isinstance(value, (list, tuple, set)):
+        raw_items = [str(item) for item in value]
+    else:
+        raw_items = re.split(r"[,;\n]+", str(value or ""))
+
+    result: list[str] = []
+    seen: set[str] = set()
+    for raw in raw_items:
+        item = raw.strip()
+        key = item.casefold()
+        if not item or key in seen:
+            continue
+        seen.add(key)
+        result.append(item)
+    return result or list(DEFAULT_CALENDAR_EVENT_TYPES)
 
 
 class SphConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -94,6 +129,9 @@ class SphOptionsFlow(OptionsFlow):
                     CONF_USERNAME: user_input[CONF_USERNAME].strip(),
                     CONF_PASSWORD: user_input[CONF_PASSWORD],
                     CONF_UPDATE_INTERVAL: int(user_input[CONF_UPDATE_INTERVAL]),
+                    CONF_CALENDAR_EVENT_TYPES: _parse_calendar_types(
+                        user_input.get(CONF_CALENDAR_EVENT_TYPES)
+                    ),
                 }
             )
 
@@ -103,8 +141,8 @@ class SphOptionsFlow(OptionsFlow):
                 title=f"Schulportal Hessen – {child_name} ({child_shortcut})",
             )
 
-            # Recreate the integration so the new credentials, school ID and
-            # update interval are applied immediately without requiring a HA restart.
+            # Recreate the integration so credentials, school ID, update interval
+            # and calendar filters are applied immediately without a HA restart.
             await self.hass.config_entries.async_reload(self.config_entry.entry_id)
             return self.async_create_entry(title="", data={})
 
@@ -138,5 +176,11 @@ class SphOptionsFlow(OptionsFlow):
                     CONF_UPDATE_INTERVAL,
                     default=values.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL),
                 ): vol.All(vol.Coerce(int), vol.Range(min=5, max=1440)),
+                vol.Required(
+                    CONF_CALENDAR_EVENT_TYPES,
+                    default=_calendar_types_to_text(
+                        values.get(CONF_CALENDAR_EVENT_TYPES, DEFAULT_CALENDAR_EVENT_TYPES)
+                    ),
+                ): str,
             }
         )
