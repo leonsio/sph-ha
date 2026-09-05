@@ -9,5 +9,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/leonsio/sph-ha/issues",
   "requirements": ["pycryptodome==3.23.0"],
-  "version": "0.3.17"
+  "version": "0.4.0"
 }
