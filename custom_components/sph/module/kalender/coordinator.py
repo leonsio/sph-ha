@@ -7,13 +7,15 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from ...api import current_school_year_start
 from ...api.client import SphAuthClient
-from ...const import CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
+from ...const import (
+    CONF_CALENDAR_EVENT_TYPES,
+    CONF_UPDATE_INTERVAL,
+    DEFAULT_CALENDAR_EVENT_TYPES,
+    DEFAULT_UPDATE_INTERVAL,
+)
 from .client import SphCalendarClient
 
 _LOGGER = logging.getLogger(__name__)
-
-# Only these SPH calendar categories are relevant for the integration.
-CALENDAR_EVENT_TYPES = {"arbeiten", "klausuren"}
 
 
 # Official Hessian summer holidays. Calendar-specific bounds remain in the
@@ -48,12 +50,31 @@ def school_year_bounds(school_year_start: int) -> tuple[datetime, datetime]:
     )
 
 
-def relevant_calendar_events(events):
-    """Return only Arbeiten and Klausuren from the SPH calendar."""
+def normalize_calendar_event_types(event_types=None) -> list[str]:
+    """Normalize configured calendar categories while preserving display names."""
+    values = event_types if isinstance(event_types, (list, tuple, set)) else DEFAULT_CALENDAR_EVENT_TYPES
+    result: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        item = str(value).strip()
+        key = item.casefold()
+        if not item or key in seen:
+            continue
+        seen.add(key)
+        result.append(item)
+    return result or list(DEFAULT_CALENDAR_EVENT_TYPES)
+
+
+def relevant_calendar_events(events, event_types=None):
+    """Return only SPH calendar entries selected in the integration settings."""
+    wanted = {
+        item.casefold()
+        for item in normalize_calendar_event_types(event_types)
+    }
     return [
         event
         for event in (events or [])
-        if str(event.get("art", "")).strip().casefold() in CALENDAR_EVENT_TYPES
+        if str(event.get("art", "")).strip().casefold() in wanted
     ]
 
 
@@ -63,6 +84,9 @@ class SphCalendarCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, entry, auth: SphAuthClient):
         self.entry = entry
         self.client = SphCalendarClient(auth)
+        self.event_types = normalize_calendar_event_types(
+            entry.data.get(CONF_CALENDAR_EVENT_TYPES, DEFAULT_CALENDAR_EVENT_TYPES)
+        )
         super().__init__(
             hass,
             logger=_LOGGER,
@@ -87,12 +111,13 @@ class SphCalendarCoordinator(DataUpdateCoordinator):
             events = await self.hass.async_add_executor_job(
                 self.client.get_calendar, start, end, school_year_start
             )
-            filtered = relevant_calendar_events(events)
+            filtered = relevant_calendar_events(events, self.event_types)
             _LOGGER.debug(
-                "SPH: Kalender liefert für Schuljahr %s/%s %d relevante Termine (Arbeiten/Klausuren) von %d insgesamt",
+                "SPH: Kalender liefert für Schuljahr %s/%s %d relevante Termine der Arten %s von %d insgesamt",
                 school_year_start,
                 school_year_start + 1,
                 len(filtered),
+                ", ".join(self.event_types),
                 len(events or []),
             )
             return filtered
