@@ -24,14 +24,15 @@
     "step": {
       "init": {
         "title": "Schulportal Hessen konfigurieren",
-        "description": "Ändere die Zugangsdaten, Schulnummer, Kinderdaten oder das Aktualisierungsintervall. Die Integration wird anschließend automatisch neu geladen.",
+        "description": "Ändere Zugangsdaten, Schulnummer, Kinderdaten, Aktualisierungsintervall oder die gespeicherten Kalenderarten. Kalenderarten können als kommagetrennte Liste frei erweitert werden; standardmäßig werden Arbeiten und Klausuren verwendet. Die Integration wird anschließend automatisch neu geladen.",
         "data": {
           "child_name": "Name des Kindes",
           "child_shortcut": "Kürzel des Kindes",
           "school_id": "Schulnummer",
           "username": "Benutzername",
           "password": "Passwort",
-          "update_interval": "Aktualisierungsintervall (Minuten)"
+          "update_interval": "Aktualisierungsintervall (Minuten)",
+          "calendar_event_types": "Kalenderarten (kommagetrennt)"
         }
       }
     },
