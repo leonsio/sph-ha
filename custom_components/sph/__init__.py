@@ -18,7 +18,7 @@ from .const import CONF_CHILD_NAME, CONF_CHILD_SHORTCUT, CONF_PASSWORD, CONF_SCH
 _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
-CARD_VERSION = "0.3.16"
+CARD_VERSION = "0.3.17"
 CARD_URLS = (
     f"/api/{DOMAIN}/static/sph-stundenplan-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/sph-stundenplan-tag-card.js?v={CARD_VERSION}",
@@ -65,10 +65,6 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         [StaticPathConfig(f"/api/{DOMAIN}/static", str(static_dir), False)]
     )
 
-    # Lovelace resources are registered exactly once here. Do not also use
-    # add_extra_js_url(): doing both causes the same ES module to be evaluated
-    # twice, which can trigger CustomElementRegistry duplicate-definition
-    # errors in Safari/iOS.
     if hass.is_running:
         hass.async_create_task(_register_lovelace_resources(hass))
     else:
@@ -91,6 +87,8 @@ async def _migrate_sensor_entity_ids(hass: HomeAssistant, entry: ConfigEntry) ->
         (f"{entry.entry_id}_calendar_json", f"schulkalender_{suffix}_json"),
         (f"{entry.entry_id}_meinunterricht", f"mein_unterricht_{suffix}"),
         (f"{entry.entry_id}_meinunterricht_json", f"mein_unterricht_{suffix}_json"),
+        (f"{entry.entry_id}_lerngruppen", f"lerngruppen_{suffix}"),
+        (f"{entry.entry_id}_lerngruppen_json", f"lerngruppen_{suffix}_json"),
     ):
         entity_id = registry.async_get_entity_id("sensor", DOMAIN, unique_id)
         if not entity_id:
@@ -103,15 +101,19 @@ async def _migrate_sensor_entity_ids(hass: HomeAssistant, entry: ConfigEntry) ->
             continue
         registry.async_update_entity(entity_id, new_entity_id=desired)
 
-    calendar_unique_id = f"{entry.entry_id}_native_calendar"
-    calendar_entity_id = registry.async_get_entity_id("calendar", DOMAIN, calendar_unique_id)
-    desired_calendar = f"calendar.schulkalender_{suffix}"
-    if calendar_entity_id and calendar_entity_id != desired_calendar and not registry.async_get(desired_calendar):
-        registry.async_update_entity(calendar_entity_id, new_entity_id=desired_calendar)
+    for unique_id, object_id in (
+        (f"{entry.entry_id}_native_calendar", f"schulkalender_{suffix}"),
+        (f"{entry.entry_id}_lerngruppen_calendar", f"lerngruppen_{suffix}"),
+    ):
+        entity_id = registry.async_get_entity_id("calendar", DOMAIN, unique_id)
+        desired = f"calendar.{object_id}"
+        if entity_id and entity_id != desired and not registry.async_get(desired):
+            registry.async_update_entity(entity_id, new_entity_id=desired)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     from .module.kalender.coordinator import SphCalendarCoordinator
+    from .module.lerngruppen.coordinator import SphLearningGroupsCoordinator
     from .module.meinunterricht.coordinator import SphMeinUnterrichtCoordinator
     from .module.stundenplan.coordinator import SphTimetableCoordinator
 
@@ -138,11 +140,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception as err:
         _LOGGER.warning("Schulportal Hessen Mein Unterricht für %s aktuell nicht verfügbar: %s", entry.title, err)
 
+    lerngruppen = SphLearningGroupsCoordinator(hass, entry, auth, timetable)
+    try:
+        await lerngruppen.async_config_entry_first_refresh()
+    except Exception as err:
+        _LOGGER.warning("Schulportal Hessen Lerngruppen für %s aktuell nicht verfügbar: %s", entry.title, err)
+
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "auth": auth,
         "timetable": timetable,
         "calendar": calendar,
         "meinunterricht": meinunterricht,
+        "lerngruppen": lerngruppen,
     }
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "calendar"])
     await _migrate_sensor_entity_ids(hass, entry)
