@@ -18,7 +18,7 @@ from .const import CONF_CHILD_NAME, CONF_CHILD_SHORTCUT, CONF_PASSWORD, CONF_SCH
 _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
-CARD_VERSION = "0.3.13"
+CARD_VERSION = "0.3.16"
 CARD_URLS = (
     f"/api/{DOMAIN}/static/sph-stundenplan-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/sph-stundenplan-tag-card.js?v={CARD_VERSION}",
@@ -84,15 +84,18 @@ async def _migrate_sensor_entity_ids(hass: HomeAssistant, entry: ConfigEntry) ->
     shortcut = str(entry.data.get(CONF_CHILD_SHORTCUT, "")).strip()
     child = "_".join(part for part in (name, shortcut) if part)
     suffix = slugify(child) if child else "schulportal_hessen"
-    for unique_id, prefix in (
-        (f"{entry.entry_id}_timetable", "stundenplan"),
-        (f"{entry.entry_id}_calendar", "schulkalender"),
-        (f"{entry.entry_id}_meinunterricht", "mein_unterricht"),
+    for unique_id, object_id in (
+        (f"{entry.entry_id}_timetable", f"stundenplan_{suffix}"),
+        (f"{entry.entry_id}_timetable_json", f"stundenplan_{suffix}_json"),
+        (f"{entry.entry_id}_calendar", f"schulkalender_{suffix}"),
+        (f"{entry.entry_id}_calendar_json", f"schulkalender_{suffix}_json"),
+        (f"{entry.entry_id}_meinunterricht", f"mein_unterricht_{suffix}"),
+        (f"{entry.entry_id}_meinunterricht_json", f"mein_unterricht_{suffix}_json"),
     ):
         entity_id = registry.async_get_entity_id("sensor", DOMAIN, unique_id)
         if not entity_id:
             continue
-        desired = f"sensor.{prefix}_{suffix}"
+        desired = f"sensor.{object_id}"
         if entity_id == desired:
             continue
         if registry.async_get(desired):
