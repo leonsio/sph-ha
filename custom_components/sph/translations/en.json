@@ -24,14 +24,15 @@
     "step": {
       "init": {
         "title": "Configure Schulportal Hessen",
-        "description": "Change the login credentials, school ID, child information, or update interval. The integration will be reloaded automatically afterwards.",
+        "description": "Change the login credentials, school ID, child information, update interval, or stored calendar event types. Calendar event types can be freely extended as a comma-separated list; Arbeiten and Klausuren are used by default. The integration will be reloaded automatically afterwards.",
         "data": {
           "child_name": "Child name",
           "child_shortcut": "Child shortcut",
           "school_id": "School ID",
           "username": "Username",
           "password": "Password",
-          "update_interval": "Update interval (minutes)"
+          "update_interval": "Update interval (minutes)",
+          "calendar_event_types": "Calendar event types (comma-separated)"
         }
       }
     },
