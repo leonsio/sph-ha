@@ -8,7 +8,8 @@ from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import CONF_CHILD_NAME, CONF_CHILD_SHORTCUT, DOMAIN
+from .const import DOMAIN
+from .module.lerngruppen.calendar import SphLearningGroupsCalendar
 from .module.stundenplan.sensor import child_label
 
 
@@ -35,11 +36,8 @@ def _calendar_event(item: dict, hass) -> CalendarEvent | None:
     if start is None:
         return None
 
-    # Home Assistant requires an exclusive end strictly after start.
     if all_day:
         if end is None or end <= start:
-            end = start + timedelta(days=1)
-        elif end == start:
             end = start + timedelta(days=1)
     else:
         if end is None or end <= start:
@@ -61,7 +59,7 @@ def _calendar_event(item: dict, hass) -> CalendarEvent | None:
 
 
 class SphSchoolCalendar(CoordinatorEntity, CalendarEntity):
-    """Read-only calendar containing SPH Arbeiten and Klausuren."""
+    """Read-only calendar containing selected SPH calendar categories."""
 
     _attr_has_entity_name = False
     _attr_icon = "mdi:calendar-school"
@@ -105,7 +103,6 @@ class SphSchoolCalendar(CoordinatorEntity, CalendarEntity):
         start_date: datetime,
         end_date: datetime,
     ) -> list[CalendarEvent]:
-        """Return cached SPH events overlapping the requested range."""
         result = []
         for event in self._events():
             event_start = self._sort_key(event.start)
@@ -117,4 +114,9 @@ class SphSchoolCalendar(CoordinatorEntity, CalendarEntity):
 
 async def async_setup_entry(hass, entry, async_add_entities):
     data = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([SphSchoolCalendar(data["calendar"], entry)])
+    async_add_entities(
+        [
+            SphSchoolCalendar(data["calendar"], entry),
+            SphLearningGroupsCalendar(data["lerngruppen"], entry),
+        ]
+    )
