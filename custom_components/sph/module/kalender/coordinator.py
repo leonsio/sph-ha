@@ -12,6 +12,9 @@ from .client import SphCalendarClient
 
 _LOGGER = logging.getLogger(__name__)
 
+# Only these SPH calendar categories are relevant for the integration.
+CALENDAR_EVENT_TYPES = {"arbeiten", "klausuren"}
+
 
 # Official Hessian summer holidays. Calendar-specific bounds remain in the
 # calendar module; the school-year selection itself is shared via api/.
@@ -45,6 +48,15 @@ def school_year_bounds(school_year_start: int) -> tuple[datetime, datetime]:
     )
 
 
+def relevant_calendar_events(events):
+    """Return only Arbeiten and Klausuren from the SPH calendar."""
+    return [
+        event
+        for event in (events or [])
+        if str(event.get("art", "")).strip().casefold() in CALENDAR_EVENT_TYPES
+    ]
+
+
 class SphCalendarCoordinator(DataUpdateCoordinator):
     """Coordinator for the SPH calendar module."""
 
@@ -75,12 +87,14 @@ class SphCalendarCoordinator(DataUpdateCoordinator):
             events = await self.hass.async_add_executor_job(
                 self.client.get_calendar, start, end, school_year_start
             )
+            filtered = relevant_calendar_events(events)
             _LOGGER.debug(
-                "SPH: Kalender liefert für Schuljahr %s/%s insgesamt %d Termine",
+                "SPH: Kalender liefert für Schuljahr %s/%s %d relevante Termine (Arbeiten/Klausuren) von %d insgesamt",
                 school_year_start,
                 school_year_start + 1,
+                len(filtered),
                 len(events or []),
             )
-            return events or []
+            return filtered
         except Exception as err:
             raise UpdateFailed(str(err)) from err
