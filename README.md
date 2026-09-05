@@ -2,7 +2,7 @@
 
 Home-Assistant-Custom-Integration für Daten aus dem **Schulportal Hessen (SPH)**.
 
-Die Installation erfolgt einmalig als Integration **Schulportal Hessen**. Sie umfasst aktuell die Module **Stundenplan** und **Schulkalender**.
+Die Installation erfolgt einmalig als Integration **Schulportal Hessen**. Sie umfasst aktuell die Module **Stundenplan**, **Schulkalender**, **Mein Unterricht** und **Lerngruppen**.
 
 ## Installation über HACS
 
@@ -37,7 +37,15 @@ Für ein Kind mit Name `Maxim` und Kürzel `Mk` entstehen beispielsweise:
 
 ```text
 sensor.stundenplan_maxim_mk
+sensor.stundenplan_maxim_mk_json
 sensor.schulkalender_maxim_mk
+sensor.schulkalender_maxim_mk_json
+sensor.mein_unterricht_maxim_mk
+sensor.mein_unterricht_maxim_mk_json
+sensor.lerngruppen_maxim_mk
+sensor.lerngruppen_maxim_mk_json
+calendar.schulkalender_maxim_mk
+calendar.lerngruppen_maxim_mk
 ```
 
 ### Stundenplan
@@ -46,21 +54,38 @@ Der Stundenplan enthält unter anderem persönliche Stunden, Fach, Lehrkraft, Ra
 
 ### Schulkalender
 
-Der Kalender verwendet automatisch das aktuelle **hessische Schuljahr** und bevorzugt den CSV-Export des Schulportals. iCal wird als Fallback verwendet.
+Der Kalender verwendet automatisch das aktuelle **hessische Schuljahr** und bevorzugt den CSV-Export des Schulportals. iCal wird als Fallback verwendet. Die anzuzeigenden Kalenderarten können in den Integrationseinstellungen festgelegt werden.
 
-Termine enthalten unter anderem:
+### Mein Unterricht
 
+Das Modul stellt aktuelle Aufgaben aus „Mein Unterricht“ mit Kurs, Thema, Aufgabe und Erledigt-Status bereit.
+
+### Lerngruppen
+
+Das Modul liest die **Leistungskontrollen** aus `lerngruppen.php`. Der Kursname wird ohne die technische Kennung in Klammern gespeichert. Die Lehrkraft wird über die zugehörige Lerngruppe ermittelt.
+
+Für Kalendertermine werden die angegebenen Schulstunden mit dem persönlichen Stundenplan abgeglichen. Beginn und Ende richten sich nach der ersten bzw. letzten angegebenen Schulstunde. Art und angegebene Prüfungsdauer bleiben als eigene Felder erhalten.
+
+Beispiel:
+
+```text
+Arbeit: Englisch 7n
+```
+
+Gespeichert werden unter anderem:
+
+- `datum`
+- `kurs`
+- `art`
+- `stunden`
+- `stunden_text`
+- `dauer_minuten`
+- `lehrkraft`
+- `lehrkraft_kürzel`
 - `start`
 - `end`
-- `all_day`
 - `summary`
-- `description`
-- `location`
-- `art`
-- `verantwortlich`
 - `uid`
-
-`art` und `verantwortlich` bleiben erhalten und können später zur Filterung verwendet werden.
 
 ## Lovelace-Karten
 
@@ -84,7 +109,7 @@ Die Karten werden von der Integration automatisch als Lovelace-Ressourcen regist
 
 ## Verhalten bei Verbindungsproblemen
 
-Bei einem fehlgeschlagenen Abruf bleiben die zuletzt erfolgreich geladenen Daten erhalten. Sobald das Schulportal wieder erreichbar ist, werden die Daten beim nächsten erfolgreichen Aktualisierungsversuch aktualisiert.
+Bei einem fehlgeschlagenen Abruf bleiben die zuletzt erfolgreich geladenen Daten erhalten, soweit das jeweilige Modul bereits Daten geladen hat. Sobald das Schulportal wieder erreichbar ist, werden die Daten beim nächsten erfolgreichen Aktualisierungsversuch aktualisiert.
 
 ## Hinweis
 
