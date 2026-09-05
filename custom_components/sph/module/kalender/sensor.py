@@ -7,11 +7,14 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ...const import CONF_CHILD_NAME, CONF_CHILD_SHORTCUT
 from ..stundenplan.sensor import child_label
+from .coordinator import relevant_calendar_events
 
 CALENDAR_ATTRIBUTE_LIMIT = 50
 
 
 def calendar_preview(events):
+    """Return only relevant calendar entries for card consumption."""
+    relevant = relevant_calendar_events(events)
     return [
         {
             "start": event.get("start", ""),
@@ -23,7 +26,7 @@ def calendar_preview(events):
             "location": event.get("location", ""),
             "uid": event.get("uid", ""),
         }
-        for event in sorted(events or [], key=lambda item: str(item.get("start", "")))[:CALENDAR_ATTRIBUTE_LIMIT]
+        for event in sorted(relevant, key=lambda item: str(item.get("start", "")))[:CALENDAR_ATTRIBUTE_LIMIT]
     ]
 
 
@@ -41,11 +44,15 @@ class SphCalendarSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self):
-        return len(self.coordinator.data or [])
+        return len(relevant_calendar_events(self.coordinator.data))
 
     @property
     def extra_state_attributes(self):
-        events = self.coordinator.data or []
+        # Filter again at entity level deliberately. The coordinator already
+        # limits its data to Arbeiten/Klausuren, but this guarantees that the
+        # legacy sensor and all cards consuming its `termine` attribute can
+        # never expose or use other SPH calendar categories.
+        events = relevant_calendar_events(self.coordinator.data)
         timetable_data = self.timetable_coordinator.data or {}
         art_counts = Counter(
             str(event.get("art", "")).strip()
