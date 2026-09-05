@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 
 from homeassistant.components.sensor import SensorEntity
@@ -45,6 +46,24 @@ def child_label(entry) -> str:
     return name or shortcut or "Schulportal Hessen"
 
 
+def timetable_payload(coordinator, entry) -> dict:
+    """Build the complete timetable payload shared by normal and JSON sensors."""
+    data = coordinator.data or coordinator.last_successful_data or {}
+    return {
+        "kind": entry.data.get(CONF_CHILD_NAME, ""),
+        "kind_kürzel": entry.data.get(CONF_CHILD_SHORTCUT, ""),
+        "klasse": data.get("klasse", ""),
+        "wochenkennung": data.get("week_badge"),
+        "tage": enrich_days(data.get("all", [])),
+        "eigener_plan": enrich_days(data.get("own", [])),
+    }
+
+
+def compact_json(payload: dict) -> str:
+    """Serialize data as compact UTF-8 JSON for external consumers."""
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+
+
 class SphTimetableSensor(CoordinatorEntity, SensorEntity):
     _attr_has_entity_name = False
     _attr_icon = "mdi:calendar-clock"
@@ -70,12 +89,36 @@ class SphTimetableSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self):
-        data = self._current_data()
+        return timetable_payload(self.coordinator, self.entry)
+
+
+class SphTimetableJsonSensor(CoordinatorEntity, SensorEntity):
+    """Timetable as one JSON string for ESPHome and other simple clients."""
+
+    _attr_has_entity_name = False
+    _attr_icon = "mdi:code-json"
+
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator)
+        self.entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_timetable_json"
+        self._attr_name = f"Stundenplan {child_label(entry)} JSON"
+
+    @property
+    def available(self):
+        return bool(self.coordinator.data or self.coordinator.last_successful_data)
+
+    @property
+    def native_value(self):
+        # Home Assistant limits entity states to 255 characters. The complete
+        # JSON therefore lives in a single string attribute instead of state.
+        return "verfügbar" if self.available else "unbekannt"
+
+    @property
+    def extra_state_attributes(self):
+        value = compact_json(timetable_payload(self.coordinator, self.entry))
         return {
-            "kind": self.entry.data.get(CONF_CHILD_NAME, ""),
-            "kind_kürzel": self.entry.data.get(CONF_CHILD_SHORTCUT, ""),
-            "klasse": data.get("klasse", ""),
-            "wochenkennung": data.get("week_badge"),
-            "tage": enrich_days(data.get("all", [])),
-            "eigener_plan": enrich_days(data.get("own", [])),
+            "json": value,
+            "format": "application/json",
+            "bytes": len(value.encode("utf-8")),
         }
