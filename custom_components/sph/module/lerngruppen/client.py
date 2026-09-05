@@ -36,12 +36,13 @@ class SphLearningGroupsClient:
                 html = self.auth._decrypt_tags(response.text)
                 soup = BeautifulSoup(html, "html.parser")
                 groups_table = soup.select_one("#LGs tbody")
-                assessments = soup.select("#klausuren tr[data-type='klausur']")
-                if groups_table is None or not assessments:
+                assessments_panel = soup.select_one("#klausuren")
+                if groups_table is None or assessments_panel is None:
                     raise RuntimeError(
-                        "Die SPH-Seite Lerngruppen enthält keine erwarteten Lerngruppen/Leistungskontrollen."
+                        "Die SPH-Seite Lerngruppen enthält nicht die erwarteten Bereiche."
                     )
                 groups = self._parse_groups(groups_table)
+                assessments = assessments_panel.select("tr[data-type='klausur']")
                 return self._parse_assessments(assessments, groups)
             except Exception:
                 if attempt == 0:
