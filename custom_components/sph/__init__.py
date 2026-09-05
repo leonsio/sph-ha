@@ -18,7 +18,7 @@ from .const import CONF_CHILD_NAME, CONF_CHILD_SHORTCUT, CONF_PASSWORD, CONF_SCH
 _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
-CARD_VERSION = "0.3.11"
+CARD_VERSION = "0.3.13"
 CARD_URLS = (
     f"/api/{DOMAIN}/static/sph-stundenplan-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/sph-stundenplan-tag-card.js?v={CARD_VERSION}",
@@ -100,6 +100,12 @@ async def _migrate_sensor_entity_ids(hass: HomeAssistant, entry: ConfigEntry) ->
             continue
         registry.async_update_entity(entity_id, new_entity_id=desired)
 
+    calendar_unique_id = f"{entry.entry_id}_native_calendar"
+    calendar_entity_id = registry.async_get_entity_id("calendar", DOMAIN, calendar_unique_id)
+    desired_calendar = f"calendar.schulkalender_{suffix}"
+    if calendar_entity_id and calendar_entity_id != desired_calendar and not registry.async_get(desired_calendar):
+        registry.async_update_entity(calendar_entity_id, new_entity_id=desired_calendar)
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     from .module.kalender.coordinator import SphCalendarCoordinator
@@ -135,13 +141,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "calendar": calendar,
         "meinunterricht": meinunterricht,
     }
-    await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
+    await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "calendar"])
     await _migrate_sensor_entity_ids(hass, entry)
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    unloaded = await hass.config_entries.async_unload_platforms(entry, ["sensor"])
+    unloaded = await hass.config_entries.async_unload_platforms(entry, ["sensor", "calendar"])
     if unloaded:
         hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
     return unloaded
