@@ -8,7 +8,7 @@ from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .const import CONF_MODULE_KALENDER, DEFAULT_MODULE_ENABLED, DOMAIN
 from .module.lerngruppen.calendar import SphLearningGroupsCalendar
 from .module.stundenplan.sensor import child_label
 
@@ -114,9 +114,9 @@ class SphSchoolCalendar(CoordinatorEntity, CalendarEntity):
 
 async def async_setup_entry(hass, entry, async_add_entities):
     data = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities(
-        [
-            SphSchoolCalendar(data["calendar"], entry),
-            SphLearningGroupsCalendar(data["lerngruppen"], entry),
-        ]
-    )
+    entities = [SphLearningGroupsCalendar(data["lerngruppen"], entry)]
+
+    if bool(entry.data.get(CONF_MODULE_KALENDER, DEFAULT_MODULE_ENABLED)):
+        entities.insert(0, SphSchoolCalendar(data["calendar"], entry))
+
+    async_add_entities(entities)
