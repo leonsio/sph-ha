@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Schulportal Hessen",
-        "description": "Set up a child and its Schulportal Hessen account. Individual modules can be disabled; disabled modules do not fetch data.",
+        "description": "Set up a child and its Schulportal Hessen account. Select the modules that should fetch data.",
         "data": {
           "child_name": "Child name",
           "child_shortcut": "Child shortcut",
@@ -11,10 +11,7 @@
           "username": "Username",
           "password": "Password",
           "update_interval": "Update interval (minutes)",
-          "module_stundenplan": "Enable timetable module",
-          "module_kalender": "Enable school calendar module",
-          "module_meinunterricht": "Enable Mein Unterricht module",
-          "module_lerngruppen": "Enable learning groups module"
+          "active_modules": "Active modules"
         }
       }
     },
@@ -28,7 +25,7 @@
     "step": {
       "init": {
         "title": "Configure Schulportal Hessen",
-        "description": "Change the login credentials, school ID, child information, update interval, calendar event types, or active modules. For calendar event types: if the field is empty, all calendar event types are loaded. If types are entered, only those are kept. Multiple types may be separated by commas, semicolons, or line breaks. The integration will be reloaded automatically afterwards.",
+        "description": "Change the login credentials, school ID, child information, update interval, calendar event types, or active modules. If the calendar event types field is empty, all calendar event types are loaded. If types are entered, only those are kept. Multiple types may be separated by commas, semicolons, or line breaks. The integration will be reloaded automatically afterwards.",
         "data": {
           "child_name": "Child name",
           "child_shortcut": "Child shortcut",
@@ -37,16 +34,23 @@
           "password": "Password",
           "update_interval": "Update interval (minutes)",
           "calendar_event_types": "Calendar event types (empty = all)",
-          "module_stundenplan": "Enable timetable module",
-          "module_kalender": "Enable school calendar module",
-          "module_meinunterricht": "Enable Mein Unterricht module",
-          "module_lerngruppen": "Enable learning groups module"
+          "active_modules": "Active modules"
         }
       }
     },
     "error": {
       "invalid_school_id": "The school ID must be numeric.",
       "invalid_child": "The child name and shortcut must not be empty."
+    }
+  },
+  "selector": {
+    "active_modules": {
+      "options": {
+        "stundenplan": "Timetable",
+        "kalender": "School calendar",
+        "meinunterricht": "Mein Unterricht",
+        "lerngruppen": "Learning groups"
+      }
     }
   }
 }
