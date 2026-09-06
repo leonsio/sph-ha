@@ -1,0 +1,65 @@
+lerngruppen_termin_hinzufuegen:
+  name: Lerngruppen-Termin hinzufügen
+  description: Fügt einen lokalen Leistungskontrolltermin hinzu, der unabhängig von SPH-Aktualisierungen gespeichert bleibt.
+  fields:
+    entity_id:
+      name: Lerngruppen-Sensor
+      description: Sensor des Kindes, z. B. sensor.lerngruppen_maxim_mk.
+      required: true
+      selector:
+        entity:
+          domain: sensor
+    datum:
+      name: Datum
+      required: true
+      selector:
+        date:
+    art:
+      name: Art
+      required: true
+      example: Arbeit
+      selector:
+        text:
+    kurs:
+      name: Fach/Kurs
+      required: true
+      example: Englisch
+      selector:
+        text:
+    dauer_minuten:
+      name: Dauer
+      description: Dauer der Leistungskontrolle in Minuten.
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 1440
+          mode: box
+    stunden:
+      name: Stunden
+      description: Schulstunden, z. B. 3,4 oder 3-4.
+      required: false
+      selector:
+        text:
+    lehrkraft:
+      name: Lehrkraft
+      required: false
+      selector:
+        text:
+
+lerngruppen_termin_loeschen:
+  name: Lerngruppen-Termin löschen
+  description: Löscht einen lokal hinzugefügten Leistungskontrolltermin. SPH-Termine können nicht gelöscht werden.
+  fields:
+    entity_id:
+      name: Lerngruppen-Sensor
+      required: true
+      selector:
+        entity:
+          domain: sensor
+    id:
+      name: Termin-ID
+      description: ID des manuell hinzugefügten Termins.
+      required: true
+      selector:
+        text:
