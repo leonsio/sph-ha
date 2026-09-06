@@ -129,6 +129,7 @@ async def _migrate_sensor_entity_ids(hass: HomeAssistant, entry: ConfigEntry) ->
 
     for unique_id, object_id in (
         (f"{entry.entry_id}_native_calendar", f"schulkalender_{suffix}"),
+        (f"{entry.entry_id}_timetable_calendar", f"stundenplan_{suffix}"),
         (f"{entry.entry_id}_lerngruppen_calendar", f"lerngruppen_{suffix}"),
     ):
         entity_id = registry.async_get_entity_id("calendar", DOMAIN, unique_id)
