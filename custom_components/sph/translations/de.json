@@ -11,6 +11,7 @@
           "username": "Benutzername",
           "password": "Passwort",
           "update_interval": "Aktualisierungsintervall (Minuten)",
+          "timetable_output": "Stundenplan-Ausgabe",
           "active_modules": "Aktive Module"
         }
       }
@@ -25,7 +26,7 @@
     "step": {
       "init": {
         "title": "Schulportal Hessen konfigurieren",
-        "description": "Ändere Zugangsdaten, Schulnummer, Kinderdaten, Aktualisierungsintervall, Kalenderarten oder die aktiven Module. Ist das Feld Kalenderarten leer, werden alle Kalenderarten geladen. Werden Arten eingetragen, werden nur diese übernommen. Mehrere Arten können komma-, semikolon- oder zeilengetrennt angegeben werden. Die Integration wird anschließend automatisch neu geladen.",
+        "description": "Ändere Zugangsdaten, Schulnummer, Kinderdaten, Aktualisierungsintervall, Kalenderarten, Stundenplan-Ausgabe oder die aktiven Module. Ist das Feld Kalenderarten leer, werden alle Kalenderarten geladen. Werden Arten eingetragen, werden nur diese übernommen. Mehrere Arten können komma-, semikolon- oder zeilengetrennt angegeben werden. Der persönliche Stundenplan bleibt immer enthalten; optional kann zusätzlich der vollständige SPH-Stundenplan im Block 'tage' ausgegeben werden. Die Integration wird anschließend automatisch neu geladen.",
         "data": {
           "child_name": "Name des Kindes",
           "child_shortcut": "Kürzel des Kindes",
@@ -33,6 +34,7 @@
           "username": "Benutzername",
           "password": "Passwort",
           "update_interval": "Aktualisierungsintervall (Minuten)",
+          "timetable_output": "Stundenplan-Ausgabe",
           "calendar_event_types": "Kalenderarten (leer = alle)",
           "active_modules": "Aktive Module"
         }
@@ -50,6 +52,12 @@
         "kalender": "Schulkalender",
         "meinunterricht": "Mein Unterricht",
         "lerngruppen": "Lerngruppen"
+      }
+    },
+    "timetable_output": {
+      "options": {
+        "own": "Nur eigener Plan",
+        "all": "Eigener Plan + vollständiger SPH-Stundenplan"
       }
     }
   }
