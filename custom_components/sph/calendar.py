@@ -8,9 +8,14 @@ from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import CONF_MODULE_KALENDER, DEFAULT_MODULE_ENABLED, DOMAIN
+from .const import (
+    CONF_MODULE_KALENDER,
+    DEFAULT_MODULE_ENABLED,
+    DOMAIN,
+)
 from .module.lerngruppen.calendar import SphLearningGroupsCalendar
 from .module.stundenplan.calendar import SphTimetableCalendar
+from .module.stundenplan.movable_holidays import SphMovableHolidaysCalendar
 from .module.stundenplan.sensor import child_label
 
 
@@ -119,6 +124,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
         SphTimetableCalendar(data["timetable"], entry),
         SphLearningGroupsCalendar(data["lerngruppen"], entry),
     ]
+
+    if data["movable_holidays"].enabled:
+        entities.append(SphMovableHolidaysCalendar(data["movable_holidays"], entry))
 
     if bool(entry.data.get(CONF_MODULE_KALENDER, DEFAULT_MODULE_ENABLED)):
         entities.insert(0, SphSchoolCalendar(data["calendar"], entry))
