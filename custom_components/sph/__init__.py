@@ -29,12 +29,13 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
-CARD_VERSION = "0.4.12"
+CARD_VERSION = "0.4.19"
 CARD_URLS = (
     f"/api/{DOMAIN}/static/sph-stundenplan-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/sph-stundenplan-tag-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/sph-stundenplan-grid-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/sph-lerngruppen-card.js?v={CARD_VERSION}",
+    f"/api/{DOMAIN}/static/sph-meinunterricht-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/kfg-stundenplan-compat.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/kfg-stundenplan-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/kfg-stundenplan-tag-card.js?v={CARD_VERSION}",
@@ -72,13 +73,15 @@ async def _register_lovelace_resources(hass: HomeAssistant) -> None:
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    from .module.lerngruppen.services import async_register_services
+    from .module.lerngruppen.services import async_register_services as async_register_lerngruppen_services
+    from .module.meinunterricht.services import async_register_services as async_register_meinunterricht_services
 
     static_dir = Path(__file__).parent / "static"
     await hass.http.async_register_static_paths(
         [StaticPathConfig(f"/api/{DOMAIN}/static", str(static_dir), False)]
     )
-    await async_register_services(hass)
+    await async_register_lerngruppen_services(hass)
+    await async_register_meinunterricht_services(hass)
 
     if hass.is_running:
         hass.async_create_task(_register_lovelace_resources(hass))
@@ -192,6 +195,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.warning("Schulportal Hessen Kalender für %s aktuell nicht verfügbar: %s", entry.title, err)
 
     meinunterricht = SphMeinUnterrichtCoordinator(hass, entry, auth)
+    await meinunterricht.async_load_manual_items()
     try:
         await meinunterricht.async_config_entry_first_refresh()
     except Exception as err:
@@ -222,6 +226,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # first refresh. Track them after all SPH entities have been set up and
     # refresh the overlay independently from the SPH polling cycle.
     timetable.async_start_free_day_tracking()
+    meinunterricht.async_start_manual_cleanup()
     return True
 
 
@@ -230,6 +235,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     timetable = data.get("timetable")
     if timetable is not None:
         timetable.async_stop_free_day_tracking()
+
+    meinunterricht = data.get("meinunterricht")
+    if meinunterricht is not None:
+        meinunterricht.async_stop_manual_cleanup()
 
     unloaded = await hass.config_entries.async_unload_platforms(entry, ["sensor", "calendar"])
     if unloaded:
