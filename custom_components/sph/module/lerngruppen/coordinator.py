@@ -79,17 +79,34 @@ class SphLearningGroupsCoordinator(DataUpdateCoordinator):
             raise UpdateFailed(str(err)) from err
 
     def _merged_items(self) -> list[dict]:
-        """Combine remote SPH data with local appointments without overwriting either source."""
-        combined = [*self._sph_items, *self._manual_items]
-        prepared = [self._with_timetable_times(item) for item in combined]
+        """Combine SPH and local appointments, preferring SPH on duplicates."""
+        sph_items = [self._with_timetable_times(item) for item in self._sph_items]
+        manual_items = [self._with_timetable_times(item) for item in self._manual_items]
+        sph_keys = {self._duplicate_key(item) for item in sph_items}
+        combined = [
+            *sph_items,
+            *(item for item in manual_items if self._duplicate_key(item) not in sph_keys),
+        ]
         return sorted(
-            prepared,
+            combined,
             key=lambda item: (
                 str(item.get("datum", "")),
                 item.get("stunden", []),
                 str(item.get("summary", "")),
             ),
         )
+
+    @staticmethod
+    def _duplicate_key(item: dict) -> tuple:
+        """Build a conservative key for the same assessment from both sources."""
+        course = re.sub(r"\s+", " ", str(item.get("kurs", "")).strip()).casefold()
+        art = re.sub(r"\s+", " ", str(item.get("art", "")).strip()).casefold()
+        periods = tuple(
+            int(value)
+            for value in item.get("stunden", [])
+            if str(value).isdigit()
+        )
+        return (str(item.get("datum", "")), art, course, periods)
 
     def _timetable_data(self):
         return (
