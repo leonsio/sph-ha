@@ -61,26 +61,6 @@
         "own": "Nur eigener Plan",
         "all": "Eigener Plan + vollständiger SPH-Stundenplan"
       }
-    },
-    "school_district": {
-      "options": {
-        "none": "Nicht ausgewählt",
-        "Bad Vilbel": "Bad Vilbel",
-        "Bebra": "Bebra",
-        "Darmstadt": "Darmstadt",
-        "Frankfurt am Main": "Frankfurt am Main",
-        "Fritzlar": "Fritzlar",
-        "Fulda": "Fulda",
-        "Gießen": "Gießen",
-        "Hanau": "Hanau",
-        "Heppenheim": "Heppenheim",
-        "Kassel": "Kassel",
-        "Marburg": "Marburg",
-        "Offenbach am Main": "Offenbach am Main",
-        "Rüsselsheim am Main": "Rüsselsheim am Main",
-        "Weilburg": "Weilburg",
-        "Wiesbaden": "Wiesbaden"
-      }
     }
   }
 }
