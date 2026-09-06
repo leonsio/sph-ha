@@ -132,11 +132,19 @@ def _timetable_output_selector():
 
 
 def _school_district_selector():
+    """Return a selector whose stored values are the real district names.
+
+    District names contain spaces and umlauts and therefore cannot be used as
+    Home Assistant translation option keys. Supplying explicit value/label
+    pairs keeps the persisted values stable without requiring invalid
+    translation keys.
+    """
+    options = [{"value": SCHOOL_DISTRICT_NONE, "label": "—"}]
+    options.extend({"value": district, "label": district} for district in SCHOOL_DISTRICTS)
     return SelectSelector(
         SelectSelectorConfig(
-            options=[SCHOOL_DISTRICT_NONE, *SCHOOL_DISTRICTS],
+            options=options,
             multiple=False,
-            translation_key="school_district",
         )
     )
 
