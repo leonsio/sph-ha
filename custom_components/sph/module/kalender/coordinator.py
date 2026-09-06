@@ -53,7 +53,10 @@ def school_year_bounds(school_year_start: int) -> tuple[datetime, datetime]:
 
 
 def normalize_calendar_event_types(event_types=None) -> list[str]:
-    """Normalize configured calendar categories while preserving display names."""
+    """Normalize configured calendar categories while preserving display names.
+
+    An empty list means that all calendar event types are allowed.
+    """
     values = event_types if isinstance(event_types, (list, tuple, set)) else DEFAULT_CALENDAR_EVENT_TYPES
     result: list[str] = []
     seen: set[str] = set()
@@ -64,18 +67,23 @@ def normalize_calendar_event_types(event_types=None) -> list[str]:
             continue
         seen.add(key)
         result.append(item)
-    return result or list(DEFAULT_CALENDAR_EVENT_TYPES)
+    return result
 
 
 def relevant_calendar_events(events, event_types=None):
-    """Return only SPH calendar entries selected in the integration settings."""
-    wanted = {
-        item.casefold()
-        for item in normalize_calendar_event_types(event_types)
-    }
+    """Return SPH calendar entries matching the configured selection.
+
+    If no event types are configured, no filtering is applied.
+    """
+    source = list(events or [])
+    selected = normalize_calendar_event_types(event_types)
+    if not selected:
+        return source
+
+    wanted = {item.casefold() for item in selected}
     return [
         event
-        for event in (events or [])
+        for event in source
         if str(event.get("art", "")).strip().casefold() in wanted
     ]
 
@@ -120,14 +128,22 @@ class SphCalendarCoordinator(DataUpdateCoordinator):
                 self.client.get_calendar, start, end, school_year_start
             )
             filtered = relevant_calendar_events(events, self.event_types)
-            _LOGGER.debug(
-                "SPH: Kalender liefert für Schuljahr %s/%s %d relevante Termine der Arten %s von %d insgesamt",
-                school_year_start,
-                school_year_start + 1,
-                len(filtered),
-                ", ".join(self.event_types),
-                len(events or []),
-            )
+            if self.event_types:
+                _LOGGER.debug(
+                    "SPH: Kalender liefert für Schuljahr %s/%s %d Termine der ausgewählten Arten %s von %d insgesamt",
+                    school_year_start,
+                    school_year_start + 1,
+                    len(filtered),
+                    ", ".join(self.event_types),
+                    len(events or []),
+                )
+            else:
+                _LOGGER.debug(
+                    "SPH: Kalender liefert für Schuljahr %s/%s alle %d Termine (kein Artenfilter)",
+                    school_year_start,
+                    school_year_start + 1,
+                    len(filtered),
+                )
             return filtered
         except Exception as err:
             raise UpdateFailed(str(err)) from err
