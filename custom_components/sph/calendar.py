@@ -1,4 +1,4 @@
-"""Native Home Assistant calendar platform for SPH tests and exams."""
+"""Native Home Assistant calendar platform for SPH data."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import CONF_MODULE_KALENDER, DEFAULT_MODULE_ENABLED, DOMAIN
 from .module.lerngruppen.calendar import SphLearningGroupsCalendar
+from .module.stundenplan.calendar import SphTimetableCalendar
 from .module.stundenplan.sensor import child_label
 
 
@@ -114,7 +115,10 @@ class SphSchoolCalendar(CoordinatorEntity, CalendarEntity):
 
 async def async_setup_entry(hass, entry, async_add_entities):
     data = hass.data[DOMAIN][entry.entry_id]
-    entities = [SphLearningGroupsCalendar(data["lerngruppen"], entry)]
+    entities = [
+        SphTimetableCalendar(data["timetable"], entry),
+        SphLearningGroupsCalendar(data["lerngruppen"], entry),
+    ]
 
     if bool(entry.data.get(CONF_MODULE_KALENDER, DEFAULT_MODULE_ENABLED)):
         entities.insert(0, SphSchoolCalendar(data["calendar"], entry))
