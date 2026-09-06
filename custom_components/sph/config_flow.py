@@ -22,6 +22,7 @@ from .const import (
     CONF_MODULE_LERNGRUPPEN,
     CONF_MODULE_MEINUNTERRICHT,
     CONF_MODULE_STUNDENPLAN,
+    CONF_SCHOOL_DISTRICT,
     CONF_SCHOOL_ID,
     CONF_TIMETABLE_OUTPUT,
     CONF_UPDATE_INTERVAL,
@@ -30,9 +31,11 @@ from .const import (
     DEFAULT_TIMETABLE_OUTPUT,
     DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
+    SCHOOL_DISTRICT_NONE,
     TIMETABLE_OUTPUT_ALL,
     TIMETABLE_OUTPUT_OWN,
 )
+from .module.stundenplan.movable_holidays import SCHOOL_DISTRICTS
 
 MODULE_STUNDENPLAN = "stundenplan"
 MODULE_KALENDER = "kalender"
@@ -128,6 +131,16 @@ def _timetable_output_selector():
     )
 
 
+def _school_district_selector():
+    return SelectSelector(
+        SelectSelectorConfig(
+            options=[SCHOOL_DISTRICT_NONE, *SCHOOL_DISTRICTS],
+            multiple=False,
+            translation_key="school_district",
+        )
+    )
+
+
 class SphConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
@@ -176,6 +189,10 @@ class SphConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_TIMETABLE_OUTPUT,
                     default=values.get(CONF_TIMETABLE_OUTPUT, DEFAULT_TIMETABLE_OUTPUT),
                 ): _timetable_output_selector(),
+                vol.Required(
+                    CONF_SCHOOL_DISTRICT,
+                    default=values.get(CONF_SCHOOL_DISTRICT, SCHOOL_DISTRICT_NONE),
+                ): _school_district_selector(),
                 vol.Required(CONF_ACTIVE_MODULES, default=active_modules): _module_selector(active_modules),
             }
         )
@@ -218,6 +235,9 @@ class SphOptionsFlow(OptionsFlow):
                     CONF_UPDATE_INTERVAL: int(user_input[CONF_UPDATE_INTERVAL]),
                     CONF_TIMETABLE_OUTPUT: str(
                         user_input.get(CONF_TIMETABLE_OUTPUT, DEFAULT_TIMETABLE_OUTPUT)
+                    ),
+                    CONF_SCHOOL_DISTRICT: str(
+                        user_input.get(CONF_SCHOOL_DISTRICT, SCHOOL_DISTRICT_NONE)
                     ),
                     CONF_CALENDAR_EVENT_TYPES: _parse_calendar_types(
                         user_input.get(CONF_CALENDAR_EVENT_TYPES)
@@ -279,6 +299,10 @@ class SphOptionsFlow(OptionsFlow):
                     CONF_TIMETABLE_OUTPUT,
                     default=values.get(CONF_TIMETABLE_OUTPUT, DEFAULT_TIMETABLE_OUTPUT),
                 ): _timetable_output_selector(),
+                vol.Required(
+                    CONF_SCHOOL_DISTRICT,
+                    default=values.get(CONF_SCHOOL_DISTRICT, SCHOOL_DISTRICT_NONE),
+                ): _school_district_selector(),
                 vol.Optional(
                     CONF_CALENDAR_EVENT_TYPES,
                     description={"suggested_value": calendar_types},
