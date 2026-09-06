@@ -53,12 +53,24 @@ def _parse_date(value: str) -> str:
 
 
 def _parse_periods(value: str) -> list[int]:
-    periods = []
-    for raw in re.findall(r"\d+", str(value or "")):
+    text = str(value or "")
+    periods: list[int] = []
+
+    for start_raw, end_raw in re.findall(r"(\d+)\s*[-–—]\s*(\d+)", text):
+        start, end = int(start_raw), int(end_raw)
+        if start > end:
+            start, end = end, start
+        for number in range(max(1, start), min(20, end) + 1):
+            if number not in periods:
+                periods.append(number)
+
+    text_without_ranges = re.sub(r"\d+\s*[-–—]\s*\d+", " ", text)
+    for raw in re.findall(r"\d+", text_without_ranges):
         number = int(raw)
         if 1 <= number <= 20 and number not in periods:
             periods.append(number)
-    return periods
+
+    return sorted(periods)
 
 
 async def async_register_services(hass) -> None:
