@@ -35,11 +35,15 @@ def _calendar_types_to_text(value: Any) -> str:
             for item in re.split(r"[,;\n]+", str(value or ""))
             if item.strip()
         ]
-    return ", ".join(items or DEFAULT_CALENDAR_EVENT_TYPES)
+    return ", ".join(items)
 
 
 def _parse_calendar_types(value: Any) -> list[str]:
-    """Parse a user-editable list and remove duplicates case-insensitively."""
+    """Parse a user-editable list and remove duplicates case-insensitively.
+
+    An empty list intentionally means that no type filter is applied and all
+    SPH calendar entries are kept.
+    """
     if isinstance(value, (list, tuple, set)):
         raw_items = [str(item) for item in value]
     else:
@@ -54,7 +58,7 @@ def _parse_calendar_types(value: Any) -> list[str]:
             continue
         seen.add(key)
         result.append(item)
-    return result or list(DEFAULT_CALENDAR_EVENT_TYPES)
+    return result
 
 
 class SphConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
