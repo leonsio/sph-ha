@@ -3,14 +3,18 @@
     "step": {
       "user": {
         "title": "Schulportal Hessen",
-        "description": "Set up a child and its Schulportal Hessen account.",
+        "description": "Set up a child and its Schulportal Hessen account. Individual modules can be disabled; disabled modules do not fetch data.",
         "data": {
           "child_name": "Child name",
           "child_shortcut": "Child shortcut",
           "school_id": "School ID",
           "username": "Username",
           "password": "Password",
-          "update_interval": "Update interval (minutes)"
+          "update_interval": "Update interval (minutes)",
+          "module_stundenplan": "Enable timetable module",
+          "module_kalender": "Enable school calendar module",
+          "module_meinunterricht": "Enable Mein Unterricht module",
+          "module_lerngruppen": "Enable learning groups module"
         }
       }
     },
@@ -24,7 +28,7 @@
     "step": {
       "init": {
         "title": "Configure Schulportal Hessen",
-        "description": "Change the login credentials, school ID, child information, update interval, or stored calendar event types. Calendar event types can be freely extended as a comma-separated list; Arbeiten and Klausuren are used by default. The integration will be reloaded automatically afterwards.",
+        "description": "Change the login credentials, school ID, child information, update interval, calendar event types, or active modules. Disabled modules do not fetch data from Schulportal; their sensors/calendars remain empty. Calendar event types can be freely extended as a comma-separated list; Arbeiten and Klausuren are used by default. The integration will be reloaded automatically afterwards.",
         "data": {
           "child_name": "Child name",
           "child_shortcut": "Child shortcut",
@@ -32,7 +36,11 @@
           "username": "Username",
           "password": "Password",
           "update_interval": "Update interval (minutes)",
-          "calendar_event_types": "Calendar event types (comma-separated)"
+          "calendar_event_types": "Calendar event types (comma-separated)",
+          "module_stundenplan": "Enable timetable module",
+          "module_kalender": "Enable school calendar module",
+          "module_meinunterricht": "Enable Mein Unterricht module",
+          "module_lerngruppen": "Enable learning groups module"
         }
       }
     },
