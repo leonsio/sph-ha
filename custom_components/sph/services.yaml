@@ -63,3 +63,70 @@ lerngruppen_termin_loeschen:
       required: true
       selector:
         text:
+
+meinunterricht_hausaufgabe_hinzufuegen:
+  name: Hausaufgabe hinzufügen
+  description: Fügt eine lokale Hausaufgabe zu Mein Unterricht hinzu. Sie bleibt von SPH-Aktualisierungen unabhängig und wird sieben Tage nach dem eingetragenen Datum automatisch gelöscht.
+  fields:
+    entity_id:
+      name: Mein-Unterricht-Sensor
+      description: Sensor des Kindes, z. B. sensor.mein_unterricht_maxim_mk.
+      required: true
+      selector:
+        entity:
+          domain: sensor
+    datum:
+      name: Datum
+      required: true
+      selector:
+        date:
+    fach:
+      name: Fach
+      required: true
+      example: Englisch
+      selector:
+        text:
+    kurs:
+      name: Kurs
+      required: false
+      selector:
+        text:
+    thema:
+      name: Thema
+      required: false
+      selector:
+        text:
+    aufgabe:
+      name: Hausaufgabe
+      required: true
+      selector:
+        text:
+          multiline: true
+    lehrer:
+      name: Lehrer
+      required: false
+      selector:
+        text:
+    erledigt:
+      name: Erledigt
+      required: false
+      default: false
+      selector:
+        boolean:
+
+meinunterricht_hausaufgabe_loeschen:
+  name: Hausaufgabe löschen
+  description: Löscht eine lokal hinzugefügte Hausaufgabe. SPH-Hausaufgaben können nicht gelöscht werden.
+  fields:
+    entity_id:
+      name: Mein-Unterricht-Sensor
+      required: true
+      selector:
+        entity:
+          domain: sensor
+    id:
+      name: Hausaufgaben-ID
+      description: ID der manuell hinzugefügten Hausaufgabe.
+      required: true
+      selector:
+        text:
