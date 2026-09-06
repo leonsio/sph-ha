@@ -189,10 +189,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await _remove_disabled_calendar_entities(hass, entry)
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "calendar"])
     await _migrate_sensor_entity_ids(hass, entry)
+
+    # The Germany calendar may still be restoring/loading when SPH performs its
+    # first refresh. Track it after all SPH entities have been set up and refresh
+    # the free-day overlay independently from the SPH polling cycle.
+    timetable.async_start_free_day_tracking()
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    data = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
+    timetable = data.get("timetable")
+    if timetable is not None:
+        timetable.async_stop_free_day_tracking()
+
     unloaded = await hass.config_entries.async_unload_platforms(entry, ["sensor", "calendar"])
     if unloaded:
         hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
