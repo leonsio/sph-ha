@@ -8,7 +8,13 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from ...const import CONF_CHILD_NAME, CONF_CHILD_SHORTCUT
+from ...const import (
+    CONF_CHILD_NAME,
+    CONF_CHILD_SHORTCUT,
+    CONF_TIMETABLE_OUTPUT,
+    DEFAULT_TIMETABLE_OUTPUT,
+    TIMETABLE_OUTPUT_ALL,
+)
 
 SUBJECT_NAMES = {
     "M": "Mathematik", "D": "Deutsch", "E": "Englisch", "F": "Französisch", "L": "Latein",
@@ -65,18 +71,35 @@ def _mask_current_week_free_days(coordinator, days, free_days):
     ]
 
 
+def _empty_days_like(days):
+    """Keep the weekday layout while intentionally omitting lesson contents."""
+    return [[] for _ in (days or [])]
+
+
 def timetable_payload(coordinator, entry) -> dict:
-    """Build the complete timetable payload shared by normal and JSON sensors."""
+    """Build the timetable payload shared by normal and JSON sensors.
+
+    The personal timetable (``eigener_plan``) is always populated. The legacy
+    complete timetable block (``tage``) remains present for compatibility but
+    is empty by default. It is populated only when explicitly enabled in the
+    integration options.
+    """
     data = coordinator.data or coordinator.last_successful_data or {}
     free_days = list(data.get("free_days", []) or [])
     all_days = _mask_current_week_free_days(coordinator, data.get("all", []), free_days)
     own_days = _mask_current_week_free_days(coordinator, data.get("own", []), free_days)
+
+    timetable_output = str(
+        entry.data.get(CONF_TIMETABLE_OUTPUT, DEFAULT_TIMETABLE_OUTPUT)
+    ).strip().lower()
+    exposed_all_days = all_days if timetable_output == TIMETABLE_OUTPUT_ALL else _empty_days_like(all_days)
+
     return {
         "kind": entry.data.get(CONF_CHILD_NAME, ""),
         "kind_kürzel": entry.data.get(CONF_CHILD_SHORTCUT, ""),
         "klasse": data.get("klasse", ""),
         "wochenkennung": data.get("week_badge"),
-        "tage": enrich_days(all_days),
+        "tage": enrich_days(exposed_all_days),
         "eigener_plan": enrich_days(own_days),
         "freie_tage": free_days,
         "freie_tage_kalender": data.get("free_day_calendar", ""),
@@ -134,8 +157,6 @@ class SphTimetableJsonSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self):
-        # Home Assistant limits entity states to 255 characters. The complete
-        # JSON therefore lives in a single string attribute instead of state.
         return "verfügbar" if self.available else "unbekannt"
 
     @property
