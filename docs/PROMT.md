@@ -1,106 +1,110 @@
 # Aufgabe: Home-Assistant-Integration „Schulportal Hessen (SPH)“
 
-Entwickle eine vollständige Home-Assistant-Custom-Integration für das Schulportal Hessen unter:
+Arbeite direkt im bestehenden Repository:
+
+https://github.com/leonsio/sph-ha
+
+Die Integration ist eine HACS-kompatible Home-Assistant-Custom-Integration für das Schulportal Hessen:
 
 https://start.schulportal.hessen.de/
 
-Repository-Ziel:
-https://github.com/leonsio/sph-ha
+Bestehender funktionierender Code hat Vorrang vor diesem Dokument. Vor Änderungen immer den aktuellen Repository-Stand analysieren und vorhandene Funktionen erhalten.
 
-Die Integration soll HACS-kompatibel sein und modular aufgebaut werden.
+## 1. Module
 
-## 1. Ziel der Integration
-
-Die Integration ruft Daten aus dem Schulportal Hessen ab und stellt sie als Home-Assistant-Sensoren und Lovelace-Karten bereit.
-
-Aktuell sollen folgende Module existieren:
+Aktuell existieren folgende fachliche Module:
 
 - Stundenplan
 - Schulkalender
 - Mein Unterricht
+- Lerngruppen
 
-Zusätzlich existieren spezielle KFG-Lovelace-Karten für das Kaiserin-Friedrich-Gymnasium in Bad Homburg.
+Zusätzlich existieren normale SPH-Lovelace-Karten sowie KFG-spezifische Varianten für das Kaiserin-Friedrich-Gymnasium.
 
-Wichtig: Die normale SPH-Funktionalität darf durch KFG-Sonderfunktionen nicht verändert werden.
+KFG-Sonderfunktionen dürfen normale SPH-Funktionen nicht verändern.
 
-## 2. Repository-Architektur
+## 2. Architektur
 
-Die Integration soll modular strukturiert sein:
+Fachliche Logik gehört in das jeweilige Modul:
 
 ```text
 custom_components/sph/
 ├── api/
-│   ├── Auth-/Session-Funktionen
-│   └── übergreifende API-Funktionen
+│   └── gemeinsame Auth-/Session-/HTTP-Logik
 ├── module/
 │   ├── stundenplan/
-│   │   ├── __init__.py
 │   │   ├── client.py
 │   │   ├── coordinator.py
+│   │   ├── calendar.py
+│   │   ├── movable_holidays.py
 │   │   └── sensor.py
 │   ├── kalender/
-│   │   ├── __init__.py
 │   │   ├── client.py
 │   │   ├── coordinator.py
 │   │   └── sensor.py
-│   └── meinunterricht/
-│       ├── __init__.py
+│   ├── meinunterricht/
+│   │   ├── client.py
+│   │   ├── coordinator.py
+│   │   └── sensor.py
+│   └── lerngruppen/
 │       ├── client.py
 │       ├── coordinator.py
-│       └── sensor.py
+│       ├── calendar.py
+│       ├── sensor.py
+│       ├── services.py
+│       └── storage.py
 ├── static/
-│   ├── sph-stundenplan-card.js
-│   ├── sph-stundenplan-tag-card.js
-│   ├── sph-stundenplan-grid-card.js
-│   ├── kfg-stundenplan-card.js
-│   ├── kfg-stundenplan-tag-card.js
-│   └── kfg-stundenplan-grid-card.js
-├── brand/
 ├── translations/
 ├── __init__.py
+├── calendar.py
 ├── config_flow.py
 ├── const.py
 └── sensor.py
 ```
 
-Grundregel: Fachliche Funktionen gehören in das jeweilige Modul. Stundenplan nach `module/stundenplan/`, Kalender nach `module/kalender/`, Mein Unterricht nach `module/meinunterricht/`. Nur Funktionen, die mehrere Module benötigen, gehören unter `api/`.
+Nur Funktionen, die von mehreren Modulen benötigt werden, gehören nach `api/`.
 
-## 3. Authentifizierung / Session
+## 3. Authentifizierung und Robustheit
 
-Die Anmeldung erfolgt über das Schulportal Hessen. Schulnummer, Benutzername und Passwort müssen konfigurierbar sein.
+Alle SPH-Module verwenden dieselbe authentifizierte Session.
 
-Die HTTP-Session soll zwischen Stundenplan, Kalender und Mein Unterricht wiederverwendet werden. Nicht bei jedem Modul separat anmelden.
+Bei abgelaufener Session:
 
-Die Session muss erkennen können, wenn sie abgelaufen ist. Bei einer abgelaufenen Session:
+1. Login erneuern.
+2. Ursprünglichen Abruf erneut versuchen.
 
-1. Session/Login erneuern
-2. ursprünglichen Abruf erneut versuchen
+Temporäre Fehler dürfen vorhandene erfolgreiche Daten nicht unnötig löschen. Dazu zählen insbesondere:
 
-Die Integration darf nicht davon ausgehen, dass ein Login dauerhaft gültig ist.
+- fehlende Internetverbindung,
+- SPH nicht erreichbar,
+- HTTP-Fehler,
+- abgelaufene Session,
+- leere oder fehlerhafte CSV/iCal-Daten,
+- geänderte HTML-Struktur,
+- einzelne nicht verfügbare Module.
 
-## 4. Robustheit
+Ein Fehler in einem Modul darf andere Module nicht unbrauchbar machen.
 
-Die Integration muss gegen temporäre Fehler robust sein.
-
-Wenn keine Internetverbindung besteht, Schulportal Hessen nicht erreichbar ist, ein einzelner Bereich des Schulportals nicht funktioniert, ein CSV-/iCal-Export temporär nicht verfügbar ist oder eine Session abgelaufen ist, dürfen bereits vorhandene Daten nicht durch leere Daten ersetzt werden.
-
-Stattdessen:
-
-- letzten erfolgreichen Datenstand behalten
-- Fehler loggen
-- beim nächsten Update erneut versuchen
-
-Ein Ausfall des Kalenders darf beispielsweise nicht verhindern, dass der Stundenplan weiterhin funktioniert. Ein Ausfall von „Mein Unterricht“ darf ebenfalls nicht die anderen Module deaktivieren.
-
-## 5. Aktualisierung
+## 4. Aktualisierung und Module
 
 Standard-Aktualisierungsintervall: **60 Minuten**.
 
-Das Intervall muss nach der Ersteinrichtung konfigurierbar sein.
+In der Konfiguration gibt es eine Mehrfachauswahl **Aktive Module** für:
 
-## 6. Config Flow
+- Stundenplan
+- Schulkalender
+- Mein Unterricht
+- Lerngruppen
 
-Folgende Parameter müssen konfigurierbar bzw. nachträglich änderbar sein:
+Intern werden aus Kompatibilitätsgründen weiterhin die bisherigen booleschen Modulwerte gespeichert.
+
+Ein deaktiviertes Modul soll keine unnötigen HTTP-Abrufe durchführen.
+
+Wird der Schulkalender deaktiviert, werden dessen Sensor- und Kalender-Entities vollständig aus der Entity Registry entfernt.
+
+## 5. Config Flow
+
+Folgende Werte müssen einstellbar bzw. nachträglich änderbar sein:
 
 - Schulnummer / SchulID
 - Benutzername
@@ -108,73 +112,190 @@ Folgende Parameter müssen konfigurierbar bzw. nachträglich änderbar sein:
 - Name des Kindes
 - Kürzel des Kindes
 - Aktualisierungsintervall
+- aktive Module
+- Stundenplan-Ausgabe
+- Schulamtsbezirk für bewegliche Ferientage
+- Kalenderarten-Filter
 
-Die nachträgliche Änderung darf nicht nur bei einer Neuinstallation möglich sein.
+Die Integration wird nach Änderungen automatisch neu geladen.
 
-Der Name und das Kürzel werden für die Entity-ID verwendet.
+### Home-Assistant-Selector-Regeln
+
+Bei `translation_key` dürfen Selector-Optionen nur gültige HA-Translationsschlüssel verwenden: `[a-z0-9-_]+`, ohne Leerzeichen/Umlaute und ohne führenden/abschließenden Bindestrich oder Unterstrich.
+
+Bei Anzeigenamen wie `Bad Vilbel`, `Frankfurt am Main` oder `Gießen` stattdessen explizite `value`/`label`-Optionen ohne `translation_key` verwenden oder intern slug-fähige Werte sauber auf Anzeigenamen abbilden.
+
+## 6. Entity-Namen
+
+Name und Kürzel des Kindes fließen in die Entity-ID ein.
 
 Beispiele:
 
 - `sensor.stundenplan_maxim_mk`
+- `sensor.stundenplan_maxim_mk_json`
+- `calendar.stundenplan_maxim_mk`
 - `sensor.schulkalender_maxim_mk`
+- `sensor.schulkalender_maxim_mk_json`
+- `calendar.schulkalender_maxim_mk`
 - `sensor.mein_unterricht_maxim_mk`
+- `sensor.mein_unterricht_maxim_mk_json`
+- `sensor.lerngruppen_maxim_mk`
+- `sensor.lerngruppen_maxim_mk_json`
+- `calendar.lerngruppen_maxim_mk`
+- `calendar.bewegliche_ferientage_maxim_mk`
 
 ## 7. Stundenplan
 
-Der Stundenplan wird aus `stundenplan.php` ausgelesen. Die Daten enthalten unter anderem:
+Quelle: `stundenplan.php`.
 
-- Fach
-- Fachkürzel
+Zu den Unterrichtsdaten gehören:
+
+- Fach/Fachkürzel
 - Lehrer
 - Raum
-- Beginn
-- Ende
-- Stunde
+- Beginn/Ende
+- Stundenindex
 - Dauer
-- badge
-- Tag
+- `badge`
+- Wochentag
+- Schülerklasse
+- aktuelle A/B-Wochenkennung
 
-Zusätzlich soll die Klasse des Schülers erkannt werden.
+Client-Datenmodell:
 
-Beispiel:
+```python
+{
+    "week_badge": ...,
+    "all": [...],
+    "own": [...],
+    "klasse": ...,
+}
+```
 
-`stundenplan.php?a=detail_klasse&e=1&k=7n`
+## 8. Stundenplan-Sensoren
 
-Dabei bedeutet `k=7n` → Klasse 7n.
+Es existieren:
 
-Die erkannte Klasse soll als Datenfeld gespeichert werden und später für weitere Funktionen verfügbar sein.
+- `sensor.stundenplan_<kind>`
+- `sensor.stundenplan_<kind>_json`
 
-## 8. Wochenkennung / A-B-Wochen
+Der Block `eigener_plan` bleibt immer erhalten und ist der primäre persönliche Stundenplan.
 
-Der Stundenplan kann eine `wochenkennung` enthalten, z. B. `A` oder `B`.
+Der Legacy-Block `tage` bleibt aus Kompatibilitätsgründen strukturell erhalten.
 
-Bei einer Unterrichtsstunde kann zusätzlich `badge` vorhanden sein.
+Konfiguration **Stundenplan-Ausgabe**:
 
-Regeln:
+- `own`: nur `eigener_plan` befüllen; `tage` als leere Tagesblöcke erhalten.
+- `all`: zusätzlich vollständigen SPH-Stundenplan in `tage` ausgeben.
 
-- `badge = null` → Unterricht findet unabhängig von der Wochenkennung statt.
-- `badge = A` → Stunde nur anzeigen, wenn `wochenkennung = A`.
-- `badge = B` → Stunde nur anzeigen, wenn `wochenkennung = B`.
+Der JSON-Sensor stellt denselben Payload als kompakten JSON-String im Attribut `json` bereit.
 
-Es können zur gleichen Uhrzeit zwei unterschiedliche Fächer existieren. Beispiel: Physik → Woche B, Chemie → Woche A. Dann darf nur das für die aktuelle Wochenkennung passende Fach angezeigt werden.
+## 9. A/B-Wochen
 
-## 9. Schulkalender
+A/B-Stunden müssen anhand der aktuellen Wochenkennung korrekt gefiltert werden.
 
-Der Schulkalender wird aus `kalender.php` abgerufen. Bevorzugt soll der CSV-Export verwendet werden:
+Bei gleichen Zeitslots gelten Gegenstück-Regeln:
 
-`https://start.schulportal.hessen.de/kalender.php?a=export&export=csv&year=2026`
+| Slot | Woche A | Woche B |
+|---|---|---|
+| A + unmarkiert | A | unmarkiert |
+| B + unmarkiert | unmarkiert | B |
+| A + B | A | B |
+| nur A | A | nichts |
+| nur B | nichts | B |
+| nur unmarkiert | unmarkiert | unmarkiert |
 
-Für 2026/2027 ist `year=2026`, für 2027/2028 `year=2027`.
+Diese Logik gilt sowohl für den nativen Stundenplan-Kalender als auch für die KFG-Kompatibilitätslogik.
 
-Das Schuljahr darf nicht einfach anhand des Kalenderjahres bestimmt werden. Es muss das aktuelle hessische Schuljahr erkannt werden. Dazu sollen die offiziellen Ferientermine des Hessischen Kultusministeriums berücksichtigt werden:
+## 10. Nativer Stundenplan-Kalender
 
-https://kultus.hessen.de/schulsystem/ferien/ferientermine
+Entity:
 
-Das aktuell laufende Schuljahr ist entscheidend. Das nächste Schuljahr ist für die normale Anzeige irrelevant.
+- `calendar.stundenplan_<kind>`
 
-## 10. Kalenderdaten
+Zeitfenster:
 
-Jeder Termin soll möglichst folgende Felder besitzen:
+- 2 Wochen Vergangenheit
+- 8 Wochen Zukunft
+
+Events werden dynamisch erzeugt, nicht dauerhaft materialisiert. Dadurch verschwinden ältere Einträge automatisch aus dem Zeitfenster.
+
+Pro tatsächlichem Schultag wird zusätzlich ein ganztägiger Marker erzeugt:
+
+- `Schulwoche A`
+- `Schulwoche B`
+
+Ganztägige `date`-Events und zeitgebundene `datetime`-Events müssen vor Sortierung und Vergleichen auf kompatible timezone-aware Werte normalisiert werden.
+
+## 11. Freie Tage über `calendar.deutschland_he`
+
+Wenn `calendar.deutschland_he` existiert, wird er über `calendar.get_events` abgefragt.
+
+Jeder Tag mit mindestens einem Termin gilt als schulfrei.
+
+An freien Tagen werden unterdrückt:
+
+- Unterricht im nativen Stundenplan-Kalender,
+- `Schulwoche A/B`,
+- Unterrichtsdaten in der aktuell dargestellten Woche der Stundenplan-Sensoren.
+
+Die Prüfung ist vom normalen SPH-Abruf entkoppelt:
+
+- Retry kurz nach Integration-Start,
+- Reaktion auf State-Änderungen,
+- zusätzliche Prüfung alle 15 Minuten.
+
+Ändert sich nur die Freie-Tage-Liste, werden vorhandene Stundenplandaten neu veröffentlicht, ohne SPH erneut abzurufen.
+
+## 12. Bewegliche Ferientage
+
+Quelle:
+
+https://schulaemter.hessen.de/schulbesuch/bewegliche-ferientage
+
+Die Liste der Schulamtsbezirke ist statisch im Code hinterlegt.
+
+Die Webseite enthält Termine getrennt nach:
+
+- Schulamtsbezirk
+- Schuljahr
+
+Es dürfen nur die Termine des konfigurierten Bezirks und des aktuell relevanten Schuljahres übernommen werden.
+
+Andere Bezirke und andere Schuljahre sind zu verwerfen.
+
+Die Online-Quelle wird nur **einmal pro Tag** aktualisiert.
+
+Bei Fehlern oder leerem Ergebnis:
+
+- zuletzt erfolgreiche gespeicherte Daten behalten,
+- nicht durch leere Daten ersetzen.
+
+Persistent gespeichert werden nur relevante Daten, z. B.:
+
+```yaml
+district: Bad Vilbel
+school_year: 2026/2027
+events:
+  - date: "2027-02-08"
+    summary: Rosenmontag
+```
+
+Die beweglichen Ferientage werden als eigener nativer Kalender bereitgestellt:
+
+- `calendar.bewegliche_ferientage_<kind>`
+
+Dieser Kalender wird vom Stundenplan genauso als Freie-Tage-Quelle ausgewertet wie `calendar.deutschland_he`.
+
+## 13. Schulkalender
+
+Quelle: `kalender.php`.
+
+Bevorzugt CSV, iCal als Fallback.
+
+Das relevante hessische Schuljahr muss korrekt bestimmt werden.
+
+Normalisierte Felder:
 
 - `start`
 - `end`
@@ -186,62 +307,110 @@ Jeder Termin soll möglichst folgende Felder besitzen:
 - `verantwortlich`
 - `uid`
 
-Besonders wichtig sind `art` und `verantwortlich`, da sie später als Filterkriterien verwendet werden.
+### Kalenderarten-Filter
 
-Textwerte müssen korrekt escaped/serialisiert werden. Keine manuelle YAML-Erzeugung, bei der beispielsweise `art: Ferien` statt eines korrekt serialisierten Strings entsteht.
+`calendar_event_types` ist optional:
 
-## 11. Kalender-Sensor
+- leer / `[]` = alle Kategorien übernehmen,
+- Werte vorhanden = nur diese Kategorien übernehmen.
 
-Der Kalender-Sensor enthält die Termine als Liste.
+Mehrere Werte dürfen komma-, semikolon- oder zeilengetrennt angegeben werden.
 
-Home Assistant begrenzt die Größe von State Attributes auf 16384 Bytes. Es darf deshalb nicht versucht werden, eine unbegrenzt große Terminliste als State Attribute zu speichern.
+Entities:
 
-Die Implementierung muss mit dieser Grenze sinnvoll umgehen, z. B. durch Begrenzung oder Priorisierung relevanter Termine bzw. alternative Datenhaltung.
+- `sensor.schulkalender_<kind>`
+- `sensor.schulkalender_<kind>_json`
+- `calendar.schulkalender_<kind>`
 
-## 12. Mein Unterricht
+Home Assistant begrenzt State Attributes. Große JSON-Attribute können vom Recorder nicht gespeichert werden; das ist bei der Datenmenge zu berücksichtigen.
 
-Neues Modul: `module/meinunterricht/`
+## 14. Mein Unterricht
 
-Die Seite `https://start.schulportal.hessen.de/meinunterricht.php#aktuell` soll ausgelesen werden.
+Quelle: `meinunterricht.php`.
 
-Ziel: Alle aktuellen Hausaufgaben erfassen.
+Entities:
 
-Pro Aufgabe möglichst:
+- `sensor.mein_unterricht_<kind>`
+- `sensor.mein_unterricht_<kind>_json`
+
+Typische Felder:
 
 - Datum
 - Wochentag
-- Fach
-- Kurs
+- Fach/Kurs
+- Thema/Aufgabe
 - Lehrer
-- Thema
-- Aufgabe
-- erledigt
+- erledigt/nicht erledigt
+- interne IDs, soweit verfügbar
 
-Zusätzlich:
+Die gemeinsame SPH-Session muss verwendet werden.
 
-- Anzahl Aufgaben
-- Anzahl erledigt
-- Anzahl nicht erledigt
+## 15. Lerngruppen
 
-Die Darstellung des Status soll später visuell möglich sein.
+Quelle: `lerngruppen.php`.
 
-Die bestehende Auth-/Session-Logik muss verwendet werden.
+Leistungskontrollen enthalten typischerweise:
 
-## 13. Bestehende Implementierungen analysieren
+- Datum
+- Kurs
+- Art
+- Schulstunden
+- Dauer in Minuten
+- Lehrkraft
+- Lehrkraft-Kürzel
+- Summary
+- UID
 
-Vor der Implementierung von Mein Unterricht soll geprüft werden, ob bestehende Open-Source-Implementierungen existieren, insbesondere Lanis-Mobile:
+Die Schülerklasse wird aus dem persönlichen Stundenplan gelesen und als eigenständiges Token aus dem Kursnamen entfernt.
 
-https://github.com/lanis-mobile/lanis
+Summary-Beispiel:
 
-Erkenntnisse dürfen zur Verbesserung des Parsings verwendet werden, aber die Integration soll direkt das Schulportal Hessen auslesen.
+```text
+Arbeit: Englisch (45 Min)
+```
 
-## 14. Lovelace-Karten
+Das Datum gehört bewusst nicht in das Summary.
+
+Stundenangaben sollen mit dem persönlichen Stundenplan zu Start-/Endzeiten aufgelöst werden. Falls das nicht möglich ist, ist ein ganztägiger Termin zulässig.
+
+Entities:
+
+- `sensor.lerngruppen_<kind>`
+- `sensor.lerngruppen_<kind>_json`
+- `calendar.lerngruppen_<kind>`
+
+## 16. Manuelle Lerngruppen-Termine
+
+Fehlende Leistungskontrollen können lokal ergänzt werden.
+
+Nicht in SPH zurückschreiben.
+
+Persistenz über Home Assistants `Store`, getrennt von SPH-Daten.
+
+Services:
+
+- `sph.lerngruppen_termin_hinzufuegen`
+- `sph.lerngruppen_termin_loeschen`
+
+Manuelle Termine müssen SPH-Updates überleben.
+
+Wenn später ein passender SPH-Termin auftaucht, soll der manuelle Termin nur ausgeblendet, nicht gelöscht werden. Verschwindet der SPH-Termin wieder, kann der lokale Termin erneut erscheinen.
+
+Duplikaterkennung basiert auf:
+
+- Datum
+- Art
+- Fach/Kurs
+- Stunden
+
+## 17. Lovelace-Karten
 
 Normale SPH-Karten:
 
 - `sph-stundenplan-card`
 - `sph-stundenplan-tag-card`
 - `sph-stundenplan-grid-card`
+- `sph-lerngruppen-card`
 
 KFG-Karten:
 
@@ -249,76 +418,60 @@ KFG-Karten:
 - `kfg-stundenplan-tag-card`
 - `kfg-stundenplan-grid-card`
 
-Die KFG-Karten sind eigenständige Varianten der normalen Karten. Die normalen SPH-Karten dürfen nicht durch KFG-Funktionen verändert werden.
+Gemeinsame KFG-Kompatibilitätslogik:
 
-## 15. Tageskarte
+- `kfg-stundenplan-compat.js`
 
-Die Tageskarte soll automatisch auf den nächsten Tag wechseln, wenn die letzte Unterrichtsstunde des aktuellen Tages beendet ist.
+Lovelace-Ressourcen werden automatisch und versioniert registriert. Nicht zusätzlich `add_extra_js_url()` verwenden.
 
-Beispiel: Dienstag Unterricht bis 15:20 → nach 15:20 Mittwoch anzeigen.
+## 18. `sph-lerngruppen-card`
 
-Wochenendlogik muss erhalten bleiben.
+Die Karte zeigt Leistungskontrollen tabellarisch und erlaubt:
 
-Die Karte soll Wochentag und Datum anzeigen, z. B.:
+- lokale Termine hinzufügen,
+- lokale Termine löschen.
 
-`Dienstag 18.08.2026`
+Die Karte nutzt intern die SPH-Services.
 
-bzw.:
+Home Assistant setzt `hass` häufig neu. Deshalb darf die Karte bei unveränderten Sensordaten nicht ständig den kompletten Shadow DOM ersetzen.
 
-`Dienstag 18.08. Woche B`
+Bei einem echten Rendern müssen möglichst erhalten bleiben:
 
-Die Aktualisierung des Tageswechsels soll über einen Timer erfolgen.
+- horizontale Scrollposition,
+- geöffneter Dialog,
+- Formularwerte,
+- Fokus,
+- Cursor-/Auswahlposition.
 
-## 16. Grid-Karten
+## 19. Grid-Scrollverhalten
 
-Die Grid-Karten sollen den Stundenplan über die gesamte verfügbare Breite darstellen.
+Die SPH- und KFG-Grid-Karten dürfen beim Update nicht den kompletten Shadow Root ersetzen, wenn dadurch die horizontale Scrollposition verloren geht.
 
-Raster:
+Bestehende `.table-wrap`-Elemente sollen aktualisiert werden, ohne sie selbst zu ersetzen.
 
-```text
-         Montag Dienstag Mittwoch Donnerstag Freitag
-1.
-2.
-3.
-...
-```
+Dies ist insbesondere für Safari/iOS wichtig.
 
-Zeilen entsprechen Unterrichtsstunden. Doppelstunden sollen sinnvoll dargestellt werden.
+## 20. KFG Vertretungsplan
 
-Neben dem Raum soll explizit stehen: `Raum: 123`.
+Vertretungssensor-Auswahl:
 
-## 17. KFG-Karten
+1. explizit gesetztes `vertretungsplan_sensor`,
+2. automatisch `sensor.vertretungsplan_<klasse>`,
+3. Fallback `sensor.vertretungsplan`.
 
-Die KFG-Karten sind für das Kaiserin-Friedrich-Gymnasium Bad Homburg gedacht.
+Ein explizit gesetzter Sensor darf nicht heimlich durch einen anderen Sensor ersetzt werden, wenn er fehlt.
 
-Sie verwenden zusätzlich:
+Vertretungen müssen zuerst anhand der Originalkürzel zugeordnet werden und erst danach in lesbare Fach-/Lehrernamen umgewandelt werden.
 
-- `sensor.kfg_kollegium`
-- `sensor.vertretungsplan`
+## 21. KFG Lehrerauflösung
 
-Die Karten dürfen aber nicht voraussetzen, dass diese Sensoren vorhanden sind. Wenn sie fehlen, soll die normale SPH-Darstellung verwendet werden.
+`sensor.kfg_kollegium` kann Lehrer-Kürzel auflösen.
 
-## 18. Lehrerauflösung
+Die Zuordnung muss case-insensitiv sein.
 
-`sensor.kfg_kollegium` enthält beispielsweise:
+## 22. Vertretungsarten
 
-`DRG: S.Düring`
-
-Die Auflösung muss unabhängig von Groß-/Kleinschreibung sein. `Drg`, `DRG` und `drg` sollen alle zu `S.Düring` führen.
-
-## 19. Vertretungsplan
-
-`sensor.vertretungsplan` enthält Vertretungen.
-
-Eine Vertretung darf nur auf eine Schülerstunde angewendet werden, wenn das Fach tatsächlich im Stundenplan dieses Schülers existiert.
-
-Beispiel: 7./8. Stunde Schüler A → Ethik, Schüler B → Religion. Eine Religion-Vertretung darf nur Schüler B ändern.
-
-Besonders wichtig: Zuerst mit den originalen Kürzeln arbeiten. Beispiel Stundenplan `F2`, Vertretungsplan `F2`; erst nach der Zuordnung `F2 → Französisch 2`. Gleiches gilt für Lehrer. Nicht `Französisch 2` gegen `F2` vergleichen.
-
-## 20. Vertretungsarten
-
-Abkürzungen sollen lesbar dargestellt werden:
+Lesbare Namen:
 
 - Betr → Betreuung
 - Vertr → Vertretung
@@ -331,168 +484,74 @@ Abkürzungen sollen lesbar dargestellt werden:
 - SES → Sonderunterricht
 - Vtr. ohne Lehrer → Vertretung ohne Lehrer
 
-Die verschiedenen Arten sollen farblich unterschiedlich dargestellt werden. Entfall soll z. B. durchgestrichen erscheinen.
+Entfall soll visuell als entfallen erkennbar sein.
 
-## 21. Nachricht des Tages
+## 23. Nachricht des Tages
 
-`sensor.vertretungsplan` kann Nachrichten enthalten:
+Die KFG-Wochen- und Tageskarte können `Nachricht des Tages` aus dem gewählten Vertretungsplan-Sensor anzeigen.
 
-```yaml
-weekday: Dienstag
-date: 18.8.
-news:
-  - ...
-```
+Nur anzeigen, wenn tatsächlich Inhalt vorhanden ist.
 
-Die Nachricht soll in `kfg-stundenplan-card` und `kfg-stundenplan-tag-card` angezeigt werden, aber nicht in `kfg-stundenplan-grid-card`.
+Die Grid-Karte zeigt diese Nachricht nicht.
 
-Die Nachricht muss anhand von Wochentag und Datum zugeordnet werden. Der Vertretungsplan kann Daten für mehrere Wochen enthalten. Beim Wechsel auf die nächste Woche muss die passende Nachricht dieser Woche verwendet werden.
+## 24. Titel
 
-Wenn keine Nachricht vorhanden ist, darf kein leerer Nachrichtenblock angezeigt werden.
+Wenn in YAML kein `title:` angegeben wurde, darf kein künstlicher Standardtitel erzeugt werden.
 
-## 22. KFG Grid
+## 25. Versions- und Frontend-Regeln
 
-Die KFG Grid Karte soll:
+Bei Backend-Änderungen `manifest.json` angemessen erhöhen.
 
-- Woche A/B anzeigen
-- Vertretungen anzeigen
-- Lehrer auflösen
-- Fachkürzel korrekt zuordnen
-- Raum anzeigen
-- Kalenderinformationen anzeigen
+`CARD_VERSION` nur erhöhen, wenn statische Lovelace-JavaScript-Dateien geändert wurden oder ein Cache-Bust erforderlich ist.
 
-Die Nachricht des Tages wird nicht angezeigt.
+Keine unnötige CARD_VERSION-Erhöhung bei reinen Backend-/Dokumentationsänderungen.
 
-## 23. Arbeiten und Klausuren
+## 26. Home-Assistant- und HACS-Validierung
 
-Beide Grid-Karten sollen den Schulkalender auswerten.
+Vor einem Release prüfen:
 
-Wenn in der aktuellen Woche ein Kalendereintrag mit `art = Arbeiten` oder `art = Klausuren` existiert, soll dessen `summary` im passenden Unterrichtsfach / Tag / Stunde angezeigt werden.
+- HACS validation
+- Home Assistant / Hassfest validation
+- JSON/Translations
+- manifest
+- services
+- config_flow
+- Python-Syntax
+- JavaScript-Syntax bei Frontend-Änderungen
 
-Beispiel: `Arbeit in Englisch 7n`.
+Ein grüner HACS-Check reicht nicht aus; Hassfest muss ebenfalls erfolgreich sein.
 
-Die Zuordnung muss auf den passenden Tag und möglichst auf das passende Fach bzw. die Unterrichtsstunde erfolgen.
-
-Vorschlag für Farben:
-
-- Arbeiten → orange
-- Klausuren → rot
-
-Die Funktion soll sowohl in `sph-stundenplan-grid-card` als auch `kfg-stundenplan-grid-card` funktionieren.
-
-## 24. Title
-
-Wenn in YAML kein `title:` angegeben ist, darf kein automatischer Titel wie `Tagesstundenplan MK` angezeigt werden. Nur bei explizitem `title` soll ein Titel erscheinen.
-
-## 25. Installation / HACS
-
-Die Integration muss HACS-kompatibel sein.
-
-Wichtig:
-
-- korrekte Version in `manifest.json`
-- vollständige MIT-Lizenz
-- `README.md`
-- `info.md`
-- HACS-relevante Repository-Struktur
-- korrekte Releases/Tags
-- Lovelace-JavaScript-Dateien korrekt registrieren
-- keine fehlerhaften oder nicht unterstützten Dateien im Repository
-
-Vor Abschluss:
-
-- Git-Status prüfen
-- Repository-Struktur prüfen
-- Python-Syntax prüfen
-- JavaScript-Syntax prüfen
-- HACS-Validierung durchführen
-- GitHub Actions prüfen
-
-## 26. Dokumentation
-
-`README.md` / `info.md`: nur wesentliche Informationen zu Installation, Konfiguration, Voraussetzungen, Sensoren und Lovelace-Karten.
-
-Technische Architektur gehört in `docs/ARCHITEKTUR.md`.
-
-KFG-spezifische Dokumentation gehört in `README-KFG.md` und beschreibt Voraussetzungen, `sensor.kfg_kollegium`, `sensor.vertretungsplan`, Konfiguration der kfg-* Karten und KFG-spezifische Funktionen.
-
-Verweis auf:
-
-https://github.com/leonsio/kfg-vertretungsplan
+Insbesondere Übersetzungsschlüssel für Selector-Optionen müssen den Home-Assistant-Regeln entsprechen.
 
 ## 27. Coding-Regeln
 
-Keine monolithische `client.py`.
+- Keine monolithische `client.py`.
+- Fachlogik in das passende Modul.
+- Gemeinsame SPH-Technik nach `api/`.
+- Keine manuellen YAML-Strings für strukturierte Daten.
+- Benutzer- und Portalwerte korrekt serialisieren/escapen.
+- Bestehende erfolgreiche Daten bei temporären Fehlern behalten.
+- Keine Regressionsänderungen an funktionierenden Karten oder Sensoren.
+- Große Frontend-Dateien nur gezielt verändern.
+- Bei Dateischreiboperationen immer aktuellen Stand/SHA verwenden.
 
-Gemeinsame Funktionen → `api/`.
-
-Stundenplan → `module/stundenplan/`.
-
-Kalender → `module/kalender/`.
-
-Mein Unterricht → `module/meinunterricht/`.
-
-Sensorlogik möglichst in den jeweiligen Modulen. Coordinator ebenfalls im jeweiligen Modul. Lovelace-Karten getrennt halten. KFG-Code darf normale SPH-Karten nicht beeinflussen.
-
-Keine manuellen YAML-Strings erzeugen, wenn strukturierte Daten serialisiert werden können. Alle Benutzer-/Schulportal-Daten korrekt escapen. Fehler abfangen. Bestehende erfolgreiche Daten bei temporären Fehlern erhalten.
-
-## 28. Fehlerbehandlung
-
-Folgende Fälle müssen sauber behandelt werden:
-
-- Login fehlgeschlagen
-- Login erfolgreich, aber Seite enthält keine erwarteten Daten
-- Schulportal HTTP-Fehler
-- Internet nicht erreichbar
-- Session abgelaufen
-- CSV leer
-- iCal leer
-- HTML-Struktur geändert
-- Kalender nicht verfügbar
-- Mein Unterricht nicht verfügbar
-- KFG-Sensoren nicht vorhanden
-- Sensorattribute zu groß
-- ungültige/fehlende Termine
-- ungültige Lehrer-/Fachkürzel
-
-Ein Fehler in einem Modul darf andere Module nicht unbrauchbar machen.
-
-## 29. Vorgehensweise
-
-Arbeite inkrementell.
-
-Vor jeder größeren Änderung:
-
-1. bestehende Architektur analysieren
-2. betroffene Dateien identifizieren
-3. Änderung minimal halten
-4. bestehende Funktionen nicht unnötig verändern
-5. Tests/Validierungen durchführen
-
-Nach jeder Änderung:
-
-- Python-Syntax prüfen
-- JavaScript-Syntax prüfen
-- Imports prüfen
-- Entity-Namen prüfen
-- HACS-Kompatibilität prüfen
-- Git-Diff kontrollieren
-
-Besonders wichtig: Bestehende Funktionen wie Stundenplan, Kalender, Wochenkennung, KFG-Vertretungsplan und Lovelace-Karten dürfen durch neue Module nicht regressieren.
-
-## 30. Anweisung für eine Coding-KI mit Repository-Zugriff
-
-Arbeite direkt im vorhandenen Repository und analysiere zuerst den aktuellen Stand des Codes. Verwende nicht automatisch die oben beschriebene Struktur als Ersatz für den vorhandenen Code. Die beschriebene Struktur und Funktionalität dient als Soll-Zustand.
+## 28. Vorgehensweise für Coding-KI
 
 Vor Änderungen:
 
-- Repository-Struktur untersuchen
-- aktuelle Version feststellen
-- bestehende Module und Imports prüfen
-- aktuelle Lovelace-Karten prüfen
-- vorhandene Tests und CI prüfen
-- aktuelle README und `docs/ARCHITEKTUR.md` lesen
+1. aktuellen Repository-Stand lesen,
+2. aktuelle Version prüfen,
+3. betroffene Module bestimmen,
+4. relevante Architektur-/README-Dokumentation lesen,
+5. bestehende Implementierung als maßgeblich betrachten.
 
-Bestehende Implementierungen haben Vorrang vor Annahmen aus diesem Prompt. Wenn der aktuelle Repository-Stand von der Beschreibung abweicht, analysiere die Abweichung und erhalte die bereits funktionierenden Funktionen.
+Nach Änderungen:
 
-Führe Änderungen direkt im Repository durch und erstelle nach erfolgreicher Validierung einen Commit mit einer aussagekräftigen Commit-Nachricht.
+1. Imports und Syntax prüfen,
+2. Entity-Namen prüfen,
+3. Datenkompatibilität prüfen,
+4. Home-Assistant-/HACS-Validierung beachten,
+5. Diff kontrollieren,
+6. aussagekräftige Commits erstellen.
+
+Bei Fehlern aus GitHub Actions zuerst die konkrete fehlgeschlagene Job-/Step-Ausgabe lesen und die Ursache minimal beheben.
