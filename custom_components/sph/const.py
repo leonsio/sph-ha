@@ -8,6 +8,7 @@ CONF_UPDATE_INTERVAL = "update_interval"
 CONF_CALENDAR_EVENT_TYPES = "calendar_event_types"
 CONF_ACTIVE_MODULES = "active_modules"
 CONF_TIMETABLE_OUTPUT = "timetable_output"
+CONF_SCHOOL_DISTRICT = "school_district"
 CONF_MODULE_STUNDENPLAN = "module_stundenplan"
 CONF_MODULE_KALENDER = "module_kalender"
 CONF_MODULE_MEINUNTERRICHT = "module_meinunterricht"
@@ -21,6 +22,8 @@ DEFAULT_MODULE_ENABLED = True
 TIMETABLE_OUTPUT_OWN = "own"
 TIMETABLE_OUTPUT_ALL = "all"
 DEFAULT_TIMETABLE_OUTPUT = TIMETABLE_OUTPUT_OWN
+# Existing installations default to no district until explicitly selected.
+SCHOOL_DISTRICT_NONE = "none"
 
 # Authentication is hosted separately from the legacy school portal.
 SPH_BASE = "https://start.schulportal.hessen.de"
