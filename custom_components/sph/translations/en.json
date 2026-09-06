@@ -61,26 +61,6 @@
         "own": "Personal timetable only",
         "all": "Personal timetable + complete SPH timetable"
       }
-    },
-    "school_district": {
-      "options": {
-        "none": "Not selected",
-        "Bad Vilbel": "Bad Vilbel",
-        "Bebra": "Bebra",
-        "Darmstadt": "Darmstadt",
-        "Frankfurt am Main": "Frankfurt am Main",
-        "Fritzlar": "Fritzlar",
-        "Fulda": "Fulda",
-        "Gießen": "Gießen",
-        "Hanau": "Hanau",
-        "Heppenheim": "Heppenheim",
-        "Kassel": "Kassel",
-        "Marburg": "Marburg",
-        "Offenbach am Main": "Offenbach am Main",
-        "Rüsselsheim am Main": "Rüsselsheim am Main",
-        "Weilburg": "Weilburg",
-        "Wiesbaden": "Wiesbaden"
-      }
     }
   }
 }
