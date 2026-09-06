@@ -11,6 +11,7 @@
           "username": "Username",
           "password": "Password",
           "update_interval": "Update interval (minutes)",
+          "timetable_output": "Timetable output",
           "active_modules": "Active modules"
         }
       }
@@ -25,7 +26,7 @@
     "step": {
       "init": {
         "title": "Configure Schulportal Hessen",
-        "description": "Change the login credentials, school ID, child information, update interval, calendar event types, or active modules. If the calendar event types field is empty, all calendar event types are loaded. If types are entered, only those are kept. Multiple types may be separated by commas, semicolons, or line breaks. The integration will be reloaded automatically afterwards.",
+        "description": "Change the login credentials, school ID, child information, update interval, calendar event types, timetable output, or active modules. If the calendar event types field is empty, all calendar event types are loaded. If types are entered, only those are kept. Multiple types may be separated by commas, semicolons, or line breaks. The personal timetable is always included; optionally the complete SPH timetable can additionally be exposed in the 'tage' block. The integration will be reloaded automatically afterwards.",
         "data": {
           "child_name": "Child name",
           "child_shortcut": "Child shortcut",
@@ -33,6 +34,7 @@
           "username": "Username",
           "password": "Password",
           "update_interval": "Update interval (minutes)",
+          "timetable_output": "Timetable output",
           "calendar_event_types": "Calendar event types (empty = all)",
           "active_modules": "Active modules"
         }
@@ -50,6 +52,12 @@
         "kalender": "School calendar",
         "meinunterricht": "Mein Unterricht",
         "lerngruppen": "Learning groups"
+      }
+    },
+    "timetable_output": {
+      "options": {
+        "own": "Personal timetable only",
+        "all": "Personal timetable + complete SPH timetable"
       }
     }
   }
