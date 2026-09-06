@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Schulportal Hessen",
-        "description": "Set up a child and its Schulportal Hessen account. Select the modules that should fetch data.",
+        "description": "Set up a child and its Schulportal Hessen account. Select the modules that should fetch data. Optionally select a school authority district for movable holidays.",
         "data": {
           "child_name": "Child name",
           "child_shortcut": "Child shortcut",
@@ -12,6 +12,7 @@
           "password": "Password",
           "update_interval": "Update interval (minutes)",
           "timetable_output": "Timetable output",
+          "school_district": "School authority district for movable holidays",
           "active_modules": "Active modules"
         }
       }
@@ -26,7 +27,7 @@
     "step": {
       "init": {
         "title": "Configure Schulportal Hessen",
-        "description": "Change the login credentials, school ID, child information, update interval, calendar event types, timetable output, or active modules. If the calendar event types field is empty, all calendar event types are loaded. If types are entered, only those are kept. Multiple types may be separated by commas, semicolons, or line breaks. The personal timetable is always included; optionally the complete SPH timetable can additionally be exposed in the 'tage' block. The integration will be reloaded automatically afterwards.",
+        "description": "Change the login credentials, school ID, child information, update interval, calendar event types, timetable output, school authority district, or active modules. If the calendar event types field is empty, all calendar event types are loaded. The personal timetable is always included. Movable holidays are loaded only for the current school year explicitly listed on the school-authority page and refreshed once per day. The integration will be reloaded automatically afterwards.",
         "data": {
           "child_name": "Child name",
           "child_shortcut": "Child shortcut",
@@ -35,6 +36,7 @@
           "password": "Password",
           "update_interval": "Update interval (minutes)",
           "timetable_output": "Timetable output",
+          "school_district": "School authority district for movable holidays",
           "calendar_event_types": "Calendar event types (empty = all)",
           "active_modules": "Active modules"
         }
@@ -58,6 +60,26 @@
       "options": {
         "own": "Personal timetable only",
         "all": "Personal timetable + complete SPH timetable"
+      }
+    },
+    "school_district": {
+      "options": {
+        "none": "Not selected",
+        "Bad Vilbel": "Bad Vilbel",
+        "Bebra": "Bebra",
+        "Darmstadt": "Darmstadt",
+        "Frankfurt am Main": "Frankfurt am Main",
+        "Fritzlar": "Fritzlar",
+        "Fulda": "Fulda",
+        "Gießen": "Gießen",
+        "Hanau": "Hanau",
+        "Heppenheim": "Heppenheim",
+        "Kassel": "Kassel",
+        "Marburg": "Marburg",
+        "Offenbach am Main": "Offenbach am Main",
+        "Rüsselsheim am Main": "Rüsselsheim am Main",
+        "Weilburg": "Weilburg",
+        "Wiesbaden": "Wiesbaden"
       }
     }
   }
