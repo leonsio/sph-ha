@@ -3,6 +3,11 @@ from __future__ import annotations
 from datetime import date, datetime, time, timedelta
 import logging
 
+from homeassistant.helpers.event import (
+    async_call_later,
+    async_track_state_change_event,
+    async_track_time_interval,
+)
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
@@ -20,6 +25,8 @@ _LOGGER = logging.getLogger(__name__)
 FREE_DAY_CALENDAR_ENTITY = "calendar.deutschland_he"
 FREE_DAY_PAST_WEEKS = 2
 FREE_DAY_FUTURE_WEEKS = 8
+FREE_DAY_REFRESH_INTERVAL = timedelta(minutes=15)
+FREE_DAY_INITIAL_RETRY_SECONDS = 15
 
 
 class SphTimetableCoordinator(DataUpdateCoordinator):
@@ -30,6 +37,7 @@ class SphTimetableCoordinator(DataUpdateCoordinator):
         self.client = SphTimetableClient(auth)
         self.enabled = bool(entry.data.get(CONF_MODULE_STUNDENPLAN, DEFAULT_MODULE_ENABLED))
         self._last_successful_data = None
+        self._free_day_unsubs: list = []
         super().__init__(
             hass,
             logger=_LOGGER,
@@ -153,6 +161,80 @@ class SphTimetableCoordinator(DataUpdateCoordinator):
             len(result),
         )
         return result
+
+    async def async_refresh_free_days(self) -> None:
+        """Refresh only the free-day overlay without refetching the SPH timetable."""
+        if not self.enabled:
+            return
+
+        current = self.data or self._last_successful_data or {}
+        if not isinstance(current, dict) or not current:
+            return
+
+        updated = dict(current)
+        new_free_days = await self._async_free_days()
+        new_calendar = (
+            FREE_DAY_CALENDAR_ENTITY
+            if self.hass.states.get(FREE_DAY_CALENDAR_ENTITY) is not None
+            else ""
+        )
+
+        if (
+            list(updated.get("free_days", []) or []) == new_free_days
+            and str(updated.get("free_day_calendar", "")) == new_calendar
+        ):
+            return
+
+        updated["free_days"] = new_free_days
+        updated["free_day_calendar"] = new_calendar
+        self._last_successful_data = updated
+        self.async_set_updated_data(updated)
+        _LOGGER.debug(
+            "SPH: Stundenplan nach Änderung der freien Tage neu veröffentlicht (%d freie Tage)",
+            len(new_free_days),
+        )
+
+    def async_start_free_day_tracking(self) -> None:
+        """Track calendar readiness/changes and periodically refresh future free days."""
+        if not self.enabled or self._free_day_unsubs:
+            return
+
+        async def _refresh(_now=None):
+            await self.async_refresh_free_days()
+
+        def _calendar_changed(_event):
+            self.hass.async_create_task(self.async_refresh_free_days())
+
+        self._free_day_unsubs.append(
+            async_track_state_change_event(
+                self.hass,
+                [FREE_DAY_CALENDAR_ENTITY],
+                _calendar_changed,
+            )
+        )
+        self._free_day_unsubs.append(
+            async_track_time_interval(
+                self.hass,
+                _refresh,
+                FREE_DAY_REFRESH_INTERVAL,
+            )
+        )
+        self._free_day_unsubs.append(
+            async_call_later(
+                self.hass,
+                FREE_DAY_INITIAL_RETRY_SECONDS,
+                _refresh,
+            )
+        )
+
+    def async_stop_free_day_tracking(self) -> None:
+        """Remove listeners/timers created for the free-day calendar."""
+        for unsub in self._free_day_unsubs:
+            try:
+                unsub()
+            except Exception:
+                pass
+        self._free_day_unsubs.clear()
 
     async def _async_update_data(self):
         if not self.enabled:
