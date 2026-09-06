@@ -128,16 +128,16 @@ class SphTimetableCalendar(CoordinatorEntity, CalendarEntity):
             return current
         return "B" if current == "A" else "A"
 
-    def _week_event(self, monday: date, week: str) -> CalendarEvent | None:
-        """Create one all-day marker for an A/B school week."""
+    def _week_day_event(self, target: date, week: str) -> CalendarEvent | None:
+        """Create one all-day A/B marker for a single school day."""
         code = _week_code(week)
         if code not in {"A", "B"}:
             return None
         return CalendarEvent(
-            start=monday,
-            end=monday + timedelta(days=7),
+            start=target,
+            end=target + timedelta(days=1),
             summary=f"Schulwoche {code}",
-            uid=f"sph-schulwoche-{self.entry.entry_id}-{monday.isoformat()}-{code}",
+            uid=f"sph-schulwoche-{self.entry.entry_id}-{target.isoformat()}-{code}",
         )
 
     def _lesson_event(self, lesson: dict, target: date, week: str) -> CalendarEvent | None:
@@ -204,24 +204,21 @@ class SphTimetableCalendar(CoordinatorEntity, CalendarEntity):
         current_week = str(data.get("week_badge") or "")
         events: list[CalendarEvent] = []
 
-        # Add one all-day marker per school week. The event spans Monday through
-        # Sunday (exclusive end on the following Monday), so the week label is
-        # visible independently from individual lessons.
-        first_monday = start_day - timedelta(days=start_day.weekday())
-        monday = first_monday
-        while monday < end_day:
-            week = self._week_for_date(monday, current_week)
-            week_event = self._week_event(monday, week)
-            if week_event is not None:
-                events.append(week_event)
-            monday += timedelta(days=7)
-
         target = start_day
         while target < end_day:
             weekday = target.weekday()
             if 0 <= weekday < len(days):
                 week = self._week_for_date(target, current_week)
                 lessons = _filter_day_for_week(days[weekday], week)
+
+                # Add the A/B marker only on an actual timetable day. This is
+                # intentionally day-scoped so a future holiday/vacation filter
+                # can suppress all school-related entries for that date.
+                if lessons:
+                    week_event = self._week_day_event(target, week)
+                    if week_event is not None:
+                        events.append(week_event)
+
                 for lesson in lessons:
                     event = self._lesson_event(lesson, target, week)
                     if event is not None:
