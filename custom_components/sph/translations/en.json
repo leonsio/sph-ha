@@ -28,7 +28,7 @@
     "step": {
       "init": {
         "title": "Configure Schulportal Hessen",
-        "description": "Change the login credentials, school ID, child information, update interval, calendar event types, or active modules. Disabled modules do not fetch data from Schulportal; their sensors/calendars remain empty. Calendar event types can be freely extended as a comma-separated list; Arbeiten and Klausuren are used by default. The integration will be reloaded automatically afterwards.",
+        "description": "Change the login credentials, school ID, child information, update interval, calendar event types, or active modules. For calendar event types: if the field is empty, all calendar event types are loaded. If types are entered, only those are kept. Multiple types may be separated by commas, semicolons, or line breaks. The integration will be reloaded automatically afterwards.",
         "data": {
           "child_name": "Child name",
           "child_shortcut": "Child shortcut",
@@ -36,7 +36,7 @@
           "username": "Username",
           "password": "Password",
           "update_interval": "Update interval (minutes)",
-          "calendar_event_types": "Calendar event types (comma-separated)",
+          "calendar_event_types": "Calendar event types (empty = all)",
           "module_stundenplan": "Enable timetable module",
           "module_kalender": "Enable school calendar module",
           "module_meinunterricht": "Enable Mein Unterricht module",
