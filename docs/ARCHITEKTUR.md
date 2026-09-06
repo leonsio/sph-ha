@@ -1,6 +1,6 @@
 # Schulportal Hessen – Architektur
 
-Die Home-Assistant-Integration ist modular aufgebaut. Gemeinsame technische Funktionen liegen unter `api/`. Fachliche Funktionen werden in den jeweiligen Modulen unter `module/` gekapselt. Der aktuelle Stand dieser Dokumentation entspricht Version **0.4.17**.
+Die Home-Assistant-Integration ist modular aufgebaut. Gemeinsame technische Funktionen liegen unter `api/`. Fachliche Funktionen werden in den jeweiligen Modulen unter `module/` gekapselt. Der aktuelle Stand dieser Dokumentation entspricht Version **0.4.18**.
 
 ## Quelltextstruktur
 
@@ -236,6 +236,8 @@ Die Termine werden über einen eigenen nativen Home-Assistant-Kalender bereitges
 - `calendar.bewegliche_ferientage_<kind>`
 
 Dieser Kalender wird vom Stundenplan genauso als Freie-Tage-Quelle verwendet wie `calendar.deutschland_he`.
+
+Die Schulbezirksnamen werden als echte Werte gespeichert. Da Namen wie `Bad Vilbel` oder `Gießen` keine gültigen Home-Assistant-Translationsschlüssel sind, verwendet der Config Flow für diese Auswahl explizite `value`/`label`-Paare statt eines `translation_key`.
 
 ## `module/kalender/`
 
