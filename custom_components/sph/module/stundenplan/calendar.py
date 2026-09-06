@@ -214,18 +214,22 @@ class SphTimetableCalendar(CoordinatorEntity, CalendarEntity):
         start_day = window_start.date()
         end_day = window_end.date()
         current_week = str(data.get("week_badge") or "")
+        free_days = {str(value) for value in (data.get("free_days", []) or [])}
         events: list[CalendarEvent] = []
 
         target = start_day
         while target < end_day:
+            # Any entry in calendar.deutschland_he marks the complete date as
+            # school-free. Suppress both lessons and the Schulwoche A/B marker.
+            if target.isoformat() in free_days:
+                target += timedelta(days=1)
+                continue
+
             weekday = target.weekday()
             if 0 <= weekday < len(days):
                 week = self._week_for_date(target, current_week)
                 lessons = _filter_day_for_week(days[weekday], week)
 
-                # Add the A/B marker only on an actual timetable day. This is
-                # intentionally day-scoped so a future holiday/vacation filter
-                # can suppress all school-related entries for that date.
                 if lessons:
                     week_event = self._week_day_event(target, week)
                     if week_event is not None:
@@ -237,9 +241,6 @@ class SphTimetableCalendar(CoordinatorEntity, CalendarEntity):
                         events.append(event)
             target += timedelta(days=1)
 
-        # CalendarEvent.start may be a date for all-day entries and a datetime
-        # for timed lessons. Python cannot directly order those two types, so
-        # normalize both before sorting.
         return sorted(events, key=self._event_start)
 
     @property
