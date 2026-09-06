@@ -54,6 +54,8 @@ class SphMeinUnterrichtSensor(CoordinatorEntity, SensorEntity):
     def extra_state_attributes(self):
         payload = meinunterricht_payload(self.coordinator, self.entry)
         return {
+            "kind": payload["kind"],
+            "kind_kürzel": payload["kind_kürzel"],
             "aufgaben": payload["aufgaben"],
             "anzahl": payload["anzahl"],
             "unerledigt": payload["unerledigt"],
