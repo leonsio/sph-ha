@@ -44,6 +44,7 @@ sensor.mein_unterricht_maxim_mk
 sensor.mein_unterricht_maxim_mk_json
 sensor.lerngruppen_maxim_mk
 sensor.lerngruppen_maxim_mk_json
+calendar.stundenplan_maxim_mk
 calendar.schulkalender_maxim_mk
 calendar.lerngruppen_maxim_mk
 ```
@@ -52,9 +53,11 @@ calendar.lerngruppen_maxim_mk
 
 Der Stundenplan enthält unter anderem persönliche Stunden, Fach, Lehrkraft, Raum, Uhrzeit und Badge. Badges wie `A` oder `B` kennzeichnen wochenabhängige Stunden.
 
+Zusätzlich wird ein rollierender Stundenplan-Kalender für zwei Wochen rückwirkend und acht Wochen im Voraus erzeugt.
+
 ### Schulkalender
 
-Der Kalender verwendet automatisch das aktuelle **hessische Schuljahr** und bevorzugt den CSV-Export des Schulportals. iCal wird als Fallback verwendet. Die anzuzeigenden Kalenderarten können in den Integrationseinstellungen festgelegt werden.
+Der Kalender verwendet automatisch das aktuelle **hessische Schuljahr** und bevorzugt den CSV-Export des Schulportals. iCal wird als Fallback verwendet. Die anzuzeigenden Kalenderarten können in den Integrationseinstellungen festgelegt werden. Ist das Feld für Kalenderarten leer, werden alle Arten übernommen.
 
 ### Mein Unterricht
 
@@ -62,14 +65,14 @@ Das Modul stellt aktuelle Aufgaben aus „Mein Unterricht“ mit Kurs, Thema, Au
 
 ### Lerngruppen
 
-Das Modul liest die **Leistungskontrollen** aus `lerngruppen.php`. Der Kursname wird ohne die technische Kennung in Klammern gespeichert. Die Lehrkraft wird über die zugehörige Lerngruppe ermittelt.
+Das Modul liest die **Leistungskontrollen** aus `lerngruppen.php`. Der Kursname wird ohne die technische Kennung in Klammern gespeichert. Wenn der Kursname die Klasse des Kindes enthält, wird diese für die kompakte Darstellung entfernt. Die Lehrkraft wird über die zugehörige Lerngruppe ermittelt.
 
 Für Kalendertermine werden die angegebenen Schulstunden mit dem persönlichen Stundenplan abgeglichen. Beginn und Ende richten sich nach der ersten bzw. letzten angegebenen Schulstunde. Art und angegebene Prüfungsdauer bleiben als eigene Felder erhalten.
 
 Beispiel:
 
 ```text
-Arbeit: Englisch 7n
+14.09 Arbeit: Englisch (60 Min)
 ```
 
 Gespeichert werden unter anderem:
@@ -86,6 +89,9 @@ Gespeichert werden unter anderem:
 - `end`
 - `summary`
 - `uid`
+- `quelle` (`sph` oder `manuell`)
+
+Manuell ergänzte Leistungskontrollen werden persistent in Home Assistant gespeichert und bei SPH-Aktualisierungen nicht überschrieben. Sensor und Kalender enthalten immer die zusammengeführten Daten. Wenn später ein gleichartiger SPH-Termin mit gleichem Datum, Art, Kurs und Stunden vorhanden ist, hat der SPH-Eintrag in der Anzeige Vorrang; der lokale Eintrag bleibt gespeichert.
 
 ## Lovelace-Karten
 
@@ -105,11 +111,28 @@ entity: sensor.stundenplan_maxim_mk
 title: Heute – Maxim
 ```
 
+Lerngruppen / Leistungskontrollen:
+
+```yaml
+type: custom:sph-lerngruppen-card
+entity: sensor.lerngruppen_maxim_mk
+title: Leistungskontrollen Maxim
+```
+
+Die Lerngruppen-Karte zeigt alle Termine tabellarisch. Über **+ Termin hinzufügen** können lokale Termine mit Datum, Art, Fach/Kurs, Dauer, Schulstunden und optionaler Lehrkraft ergänzt werden. Manuelle Einträge können direkt in der Tabelle wieder gelöscht werden. Aus dem Schulportal geladene Termine sind schreibgeschützt und können über die Karte nicht gelöscht werden.
+
+Intern verwendet die Karte die Home-Assistant-Dienste:
+
+```text
+sph.lerngruppen_termin_hinzufuegen
+sph.lerngruppen_termin_loeschen
+```
+
 Die Karten werden von der Integration automatisch als Lovelace-Ressourcen registriert. Für Home Assistant 2026.2+ ist keine manuelle `/local/...`-Ressource erforderlich.
 
 ## Verhalten bei Verbindungsproblemen
 
-Bei einem fehlgeschlagenen Abruf bleiben die zuletzt erfolgreich geladenen Daten erhalten, soweit das jeweilige Modul bereits Daten geladen hat. Sobald das Schulportal wieder erreichbar ist, werden die Daten beim nächsten erfolgreichen Aktualisierungsversuch aktualisiert.
+Bei einem fehlgeschlagenen Abruf bleiben die zuletzt erfolgreich geladenen Daten erhalten, soweit das jeweilige Modul bereits Daten geladen hat. Lokal gespeicherte Lerngruppen-Termine bleiben unabhängig von der Erreichbarkeit des Schulportals erhalten. Sobald das Schulportal wieder erreichbar ist, werden die Daten beim nächsten erfolgreichen Aktualisierungsversuch aktualisiert und erneut mit den lokalen Terminen zusammengeführt.
 
 ## Hinweis
 
