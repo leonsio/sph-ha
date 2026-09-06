@@ -14,11 +14,14 @@ from homeassistant.util import dt as dt_util
 from ...api.client import SphAuthClient
 from ...const import (
     CONF_MODULE_STUNDENPLAN,
+    CONF_SCHOOL_DISTRICT,
     CONF_UPDATE_INTERVAL,
     DEFAULT_MODULE_ENABLED,
     DEFAULT_UPDATE_INTERVAL,
+    SCHOOL_DISTRICT_NONE,
 )
 from .client import SphTimetableClient
+from .movable_holidays import movable_holiday_calendar_entity_id
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -68,6 +71,14 @@ class SphTimetableCoordinator(DataUpdateCoordinator):
             datetime.combine(end_day, time.min, tzinfo=tz),
         )
 
+    def _configured_free_day_calendars(self) -> list[str]:
+        """Return calendars that may suppress school timetable entries."""
+        result = [FREE_DAY_CALENDAR_ENTITY]
+        district = str(self.entry.data.get(CONF_SCHOOL_DISTRICT, SCHOOL_DISTRICT_NONE)).strip()
+        if district and district != SCHOOL_DISTRICT_NONE:
+            result.append(movable_holiday_calendar_entity_id(self.entry))
+        return result
+
     @staticmethod
     def _parse_calendar_value(value) -> date | datetime | None:
         """Parse a Home Assistant calendar start/end value."""
@@ -112,19 +123,18 @@ class SphTimetableCoordinator(DataUpdateCoordinator):
             target += timedelta(days=1)
         return result
 
-    async def _async_free_days(self) -> list[str]:
-        """Read free days from calendar.deutschland_he when that entity exists."""
-        if self.hass.states.get(FREE_DAY_CALENDAR_ENTITY) is None:
-            _LOGGER.debug(
-                "SPH: %s nicht vorhanden; Stundenplan wird nicht nach freien Tagen gefiltert",
-                FREE_DAY_CALENDAR_ENTITY,
-            )
-            return []
+    async def _async_free_days(self) -> tuple[list[str], list[str]]:
+        """Read all configured free-day calendars and return dates plus used entities."""
+        configured = self._configured_free_day_calendars()
+        available = [entity_id for entity_id in configured if self.hass.states.get(entity_id) is not None]
+        if not available:
+            _LOGGER.debug("SPH: kein Kalender für freie Tage verfügbar")
+            return [], []
         if not self.hass.services.has_service("calendar", "get_events"):
             _LOGGER.debug(
                 "SPH: calendar.get_events noch nicht verfügbar; freie Tage werden vorerst nicht gefiltert"
             )
-            return []
+            return [], available
 
         start, end = self._free_day_window()
         try:
@@ -132,7 +142,7 @@ class SphTimetableCoordinator(DataUpdateCoordinator):
                 "calendar",
                 "get_events",
                 {
-                    "entity_id": FREE_DAY_CALENDAR_ENTITY,
+                    "entity_id": available,
                     "start_date_time": start.isoformat(),
                     "end_date_time": end.isoformat(),
                 },
@@ -142,25 +152,27 @@ class SphTimetableCoordinator(DataUpdateCoordinator):
         except Exception as err:
             _LOGGER.warning(
                 "SPH: freie Tage konnten nicht aus %s gelesen werden: %s",
-                FREE_DAY_CALENDAR_ENTITY,
+                ", ".join(available),
                 err,
             )
-            return []
+            current = self.data or self._last_successful_data or {}
+            return list(current.get("free_days", []) or []), list(current.get("free_day_calendars", []) or available)
 
-        entity_result = (response or {}).get(FREE_DAY_CALENDAR_ENTITY, {})
-        events = entity_result.get("events", []) if isinstance(entity_result, dict) else []
         free_days: set[str] = set()
-        for event in events or []:
-            if isinstance(event, dict):
-                free_days.update(self._event_dates(event))
+        for entity_id in available:
+            entity_result = (response or {}).get(entity_id, {})
+            events = entity_result.get("events", []) if isinstance(entity_result, dict) else []
+            for event in events or []:
+                if isinstance(event, dict):
+                    free_days.update(self._event_dates(event))
 
         result = sorted(free_days)
         _LOGGER.debug(
-            "SPH: %s liefert %d freie Tage im Stundenplan-Zeitraum",
-            FREE_DAY_CALENDAR_ENTITY,
+            "SPH: freie-Tage-Kalender %s liefern %d freie Tage im Stundenplan-Zeitraum",
+            ", ".join(available),
             len(result),
         )
-        return result
+        return result, available
 
     async def async_refresh_free_days(self) -> None:
         """Refresh only the free-day overlay without refetching the SPH timetable."""
@@ -172,21 +184,19 @@ class SphTimetableCoordinator(DataUpdateCoordinator):
             return
 
         updated = dict(current)
-        new_free_days = await self._async_free_days()
-        new_calendar = (
-            FREE_DAY_CALENDAR_ENTITY
-            if self.hass.states.get(FREE_DAY_CALENDAR_ENTITY) is not None
-            else ""
-        )
+        new_free_days, calendars = await self._async_free_days()
+        primary_calendar = FREE_DAY_CALENDAR_ENTITY if FREE_DAY_CALENDAR_ENTITY in calendars else ""
 
         if (
             list(updated.get("free_days", []) or []) == new_free_days
-            and str(updated.get("free_day_calendar", "")) == new_calendar
+            and list(updated.get("free_day_calendars", []) or []) == calendars
+            and str(updated.get("free_day_calendar", "")) == primary_calendar
         ):
             return
 
         updated["free_days"] = new_free_days
-        updated["free_day_calendar"] = new_calendar
+        updated["free_day_calendar"] = primary_calendar
+        updated["free_day_calendars"] = calendars
         self._last_successful_data = updated
         self.async_set_updated_data(updated)
         _LOGGER.debug(
@@ -208,7 +218,7 @@ class SphTimetableCoordinator(DataUpdateCoordinator):
         self._free_day_unsubs.append(
             async_track_state_change_event(
                 self.hass,
-                [FREE_DAY_CALENDAR_ENTITY],
+                self._configured_free_day_calendars(),
                 _calendar_changed,
             )
         )
@@ -228,7 +238,7 @@ class SphTimetableCoordinator(DataUpdateCoordinator):
         )
 
     def async_stop_free_day_tracking(self) -> None:
-        """Remove listeners/timers created for the free-day calendar."""
+        """Remove listeners/timers created for the free-day calendars."""
         for unsub in self._free_day_unsubs:
             try:
                 unsub()
@@ -247,12 +257,12 @@ class SphTimetableCoordinator(DataUpdateCoordinator):
                 raise ValueError("Stundenplan-Antwort enthält keine gültigen Daten.")
 
             data = dict(data)
-            data["free_days"] = await self._async_free_days()
+            free_days, calendars = await self._async_free_days()
+            data["free_days"] = free_days
             data["free_day_calendar"] = (
-                FREE_DAY_CALENDAR_ENTITY
-                if self.hass.states.get(FREE_DAY_CALENDAR_ENTITY) is not None
-                else ""
+                FREE_DAY_CALENDAR_ENTITY if FREE_DAY_CALENDAR_ENTITY in calendars else ""
             )
+            data["free_day_calendars"] = calendars
             self._last_successful_data = data
             return data
         except Exception as err:
