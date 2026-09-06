@@ -128,6 +128,18 @@ class SphTimetableCalendar(CoordinatorEntity, CalendarEntity):
             return current
         return "B" if current == "A" else "A"
 
+    def _week_event(self, monday: date, week: str) -> CalendarEvent | None:
+        """Create one all-day marker for an A/B school week."""
+        code = _week_code(week)
+        if code not in {"A", "B"}:
+            return None
+        return CalendarEvent(
+            start=monday,
+            end=monday + timedelta(days=7),
+            summary=f"Schulwoche {code}",
+            uid=f"sph-schulwoche-{self.entry.entry_id}-{monday.isoformat()}-{code}",
+        )
+
     def _lesson_event(self, lesson: dict, target: date, week: str) -> CalendarEvent | None:
         start_time = self._parse_time(lesson.get("start"))
         end_time = self._parse_time(lesson.get("end"))
@@ -159,10 +171,6 @@ class SphTimetableCalendar(CoordinatorEntity, CalendarEntity):
                 description_parts.append(f"Stunden: {first}" if last == first else f"Stunden: {first}-{last}")
             except (TypeError, ValueError):
                 pass
-        if week:
-            description_parts.append(f"Woche: {week}")
-        if badge:
-            description_parts.append(f"Badge: {badge}")
 
         uid_parts = [
             self.entry.entry_id,
@@ -196,6 +204,18 @@ class SphTimetableCalendar(CoordinatorEntity, CalendarEntity):
         current_week = str(data.get("week_badge") or "")
         events: list[CalendarEvent] = []
 
+        # Add one all-day marker per school week. The event spans Monday through
+        # Sunday (exclusive end on the following Monday), so the week label is
+        # visible independently from individual lessons.
+        first_monday = start_day - timedelta(days=start_day.weekday())
+        monday = first_monday
+        while monday < end_day:
+            week = self._week_for_date(monday, current_week)
+            week_event = self._week_event(monday, week)
+            if week_event is not None:
+                events.append(week_event)
+            monday += timedelta(days=7)
+
         target = start_day
         while target < end_day:
             weekday = target.weekday()
@@ -214,9 +234,19 @@ class SphTimetableCalendar(CoordinatorEntity, CalendarEntity):
     def event(self) -> CalendarEvent | None:
         now = dt_util.now()
         for event in self._events():
-            if event.end > now:
+            if self._event_end(event) > now:
                 return event
         return None
+
+    def _event_start(self, event: CalendarEvent) -> datetime:
+        if isinstance(event.start, datetime):
+            return event.start
+        return datetime.combine(event.start, time.min, tzinfo=self._timezone())
+
+    def _event_end(self, event: CalendarEvent) -> datetime:
+        if isinstance(event.end, datetime):
+            return event.end
+        return datetime.combine(event.end, time.min, tzinfo=self._timezone())
 
     async def async_get_events(
         self,
@@ -234,5 +264,5 @@ class SphTimetableCalendar(CoordinatorEntity, CalendarEntity):
         return [
             event
             for event in self._events()
-            if event.end > requested_start and event.start < requested_end
+            if self._event_end(event) > requested_start and self._event_start(event) < requested_end
         ]
