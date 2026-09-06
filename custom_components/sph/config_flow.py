@@ -23,11 +23,15 @@ from .const import (
     CONF_MODULE_MEINUNTERRICHT,
     CONF_MODULE_STUNDENPLAN,
     CONF_SCHOOL_ID,
+    CONF_TIMETABLE_OUTPUT,
     CONF_UPDATE_INTERVAL,
     DEFAULT_CALENDAR_EVENT_TYPES,
     DEFAULT_MODULE_ENABLED,
+    DEFAULT_TIMETABLE_OUTPUT,
     DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
+    TIMETABLE_OUTPUT_ALL,
+    TIMETABLE_OUTPUT_OWN,
 )
 
 MODULE_STUNDENPLAN = "stundenplan"
@@ -114,6 +118,16 @@ def _module_selector(default_modules: list[str]):
     )
 
 
+def _timetable_output_selector():
+    return SelectSelector(
+        SelectSelectorConfig(
+            options=[TIMETABLE_OUTPUT_OWN, TIMETABLE_OUTPUT_ALL],
+            multiple=False,
+            translation_key="timetable_output",
+        )
+    )
+
+
 class SphConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
@@ -158,6 +172,10 @@ class SphConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_UPDATE_INTERVAL,
                     default=values.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL),
                 ): vol.All(vol.Coerce(int), vol.Range(min=5, max=1440)),
+                vol.Required(
+                    CONF_TIMETABLE_OUTPUT,
+                    default=values.get(CONF_TIMETABLE_OUTPUT, DEFAULT_TIMETABLE_OUTPUT),
+                ): _timetable_output_selector(),
                 vol.Required(CONF_ACTIVE_MODULES, default=active_modules): _module_selector(active_modules),
             }
         )
@@ -198,6 +216,9 @@ class SphOptionsFlow(OptionsFlow):
                     CONF_USERNAME: user_input[CONF_USERNAME].strip(),
                     CONF_PASSWORD: user_input[CONF_PASSWORD],
                     CONF_UPDATE_INTERVAL: int(user_input[CONF_UPDATE_INTERVAL]),
+                    CONF_TIMETABLE_OUTPUT: str(
+                        user_input.get(CONF_TIMETABLE_OUTPUT, DEFAULT_TIMETABLE_OUTPUT)
+                    ),
                     CONF_CALENDAR_EVENT_TYPES: _parse_calendar_types(
                         user_input.get(CONF_CALENDAR_EVENT_TYPES)
                     ),
@@ -254,6 +275,10 @@ class SphOptionsFlow(OptionsFlow):
                     CONF_UPDATE_INTERVAL,
                     default=values.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL),
                 ): vol.All(vol.Coerce(int), vol.Range(min=5, max=1440)),
+                vol.Required(
+                    CONF_TIMETABLE_OUTPUT,
+                    default=values.get(CONF_TIMETABLE_OUTPUT, DEFAULT_TIMETABLE_OUTPUT),
+                ): _timetable_output_selector(),
                 vol.Optional(
                     CONF_CALENDAR_EVENT_TYPES,
                     description={"suggested_value": calendar_types},
