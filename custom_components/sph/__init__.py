@@ -27,11 +27,12 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
-CARD_VERSION = "0.4.4"
+CARD_VERSION = "0.4.9"
 CARD_URLS = (
     f"/api/{DOMAIN}/static/sph-stundenplan-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/sph-stundenplan-tag-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/sph-stundenplan-grid-card.js?v={CARD_VERSION}",
+    f"/api/{DOMAIN}/static/sph-lerngruppen-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/kfg-stundenplan-compat.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/kfg-stundenplan-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/kfg-stundenplan-tag-card.js?v={CARD_VERSION}",
@@ -69,10 +70,13 @@ async def _register_lovelace_resources(hass: HomeAssistant) -> None:
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    from .module.lerngruppen.services import async_register_services
+
     static_dir = Path(__file__).parent / "static"
     await hass.http.async_register_static_paths(
         [StaticPathConfig(f"/api/{DOMAIN}/static", str(static_dir), False)]
     )
+    await async_register_services(hass)
 
     if hass.is_running:
         hass.async_create_task(_register_lovelace_resources(hass))
@@ -168,6 +172,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.warning("Schulportal Hessen Mein Unterricht für %s aktuell nicht verfügbar: %s", entry.title, err)
 
     lerngruppen = SphLearningGroupsCoordinator(hass, entry, auth, timetable)
+    await lerngruppen.async_load_manual_items()
     try:
         await lerngruppen.async_config_entry_first_refresh()
     except Exception as err:
