@@ -6,7 +6,17 @@ class SphLerngruppenCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    this._render();
+    const entity = this._findEntity();
+
+    // Home Assistant calls the hass setter for many unrelated state changes.
+    // Do not rebuild the Shadow DOM unless this card's own entity changed.
+    // Replacing the DOM on every hass update resets horizontal scrolling,
+    // closes dialogs and interrupts text input/focus.
+    if (this._renderedEntity === entity && this.shadowRoot?.childNodes?.length) {
+      return;
+    }
+
+    this._render(entity);
   }
 
   _findEntity() {
@@ -32,9 +42,74 @@ class SphLerngruppenCard extends HTMLElement {
     ) || null;
   }
 
-  _render() {
+  _captureUiState() {
+    const wrap = this.shadowRoot?.querySelector(".table-wrap");
+    const dialog = this.shadowRoot?.querySelector("dialog");
+    const form = dialog?.querySelector("form");
+    const active = this.shadowRoot?.activeElement;
+    const values = {};
+
+    if (form) {
+      new FormData(form).forEach((value, key) => {
+        values[key] = value;
+      });
+    }
+
+    return {
+      scrollLeft: wrap?.scrollLeft || 0,
+      dialogOpen: Boolean(dialog?.open),
+      values,
+      activeName: active?.name || "",
+      selectionStart: typeof active?.selectionStart === "number" ? active.selectionStart : null,
+      selectionEnd: typeof active?.selectionEnd === "number" ? active.selectionEnd : null,
+    };
+  }
+
+  _restoreUiState(state) {
+    if (!state) return;
+
+    const wrap = this.shadowRoot?.querySelector(".table-wrap");
+    if (wrap) wrap.scrollLeft = state.scrollLeft || 0;
+
+    if (!state.dialogOpen) return;
+
+    const dialog = this.shadowRoot?.querySelector("dialog");
+    const form = dialog?.querySelector("form");
+    if (!dialog || !form) return;
+
+    Object.entries(state.values || {}).forEach(([name, value]) => {
+      const field = form.elements.namedItem(name);
+      if (field && "value" in field) field.value = value;
+    });
+
+    if (!dialog.open) dialog.showModal();
+
+    if (state.activeName) {
+      queueMicrotask(() => {
+        const field = form.elements.namedItem(state.activeName);
+        if (!field || typeof field.focus !== "function") return;
+        field.focus();
+        if (
+          typeof field.setSelectionRange === "function" &&
+          state.selectionStart !== null &&
+          state.selectionEnd !== null
+        ) {
+          try {
+            field.setSelectionRange(state.selectionStart, state.selectionEnd);
+          } catch (_err) {
+            // Some input types such as date/number do not support selections.
+          }
+        }
+      });
+    }
+  }
+
+  _render(entity = this._findEntity()) {
     if (!this.shadowRoot || !this._hass) return;
-    const entity = this._findEntity();
+
+    // Preserve interaction state even when the Lerngruppen sensor itself is
+    // updated while the user is scrolling or editing the dialog.
+    const uiState = this._captureUiState();
     const items = Array.isArray(entity?.attributes?.leistungskontrollen)
       ? [...entity.attributes.leistungskontrollen]
       : [];
@@ -83,6 +158,8 @@ class SphLerngruppenCard extends HTMLElement {
         </div>
       </ha-card>`;
 
+    this._renderedEntity = entity;
+
     if (!entity) return;
     this.shadowRoot.querySelector(".add")?.addEventListener("click", () => {
       const dialog = this.shadowRoot.querySelector("dialog");
@@ -93,6 +170,8 @@ class SphLerngruppenCard extends HTMLElement {
     this.shadowRoot.querySelectorAll(".delete").forEach(button => {
       button.addEventListener("click", () => this._delete(entity.entity_id, button.dataset.id));
     });
+
+    this._restoreUiState(uiState);
   }
 
   _row(item) {
