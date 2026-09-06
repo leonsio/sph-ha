@@ -191,6 +191,18 @@ class SphTimetableCalendar(CoordinatorEntity, CalendarEntity):
             uid=uid,
         )
 
+    def _event_start(self, event: CalendarEvent) -> datetime:
+        """Normalize all-day and timed event starts to timezone-aware datetimes."""
+        if isinstance(event.start, datetime):
+            return event.start if event.start.tzinfo else event.start.replace(tzinfo=self._timezone())
+        return datetime.combine(event.start, time.min, tzinfo=self._timezone())
+
+    def _event_end(self, event: CalendarEvent) -> datetime:
+        """Normalize all-day and timed event ends to timezone-aware datetimes."""
+        if isinstance(event.end, datetime):
+            return event.end if event.end.tzinfo else event.end.replace(tzinfo=self._timezone())
+        return datetime.combine(event.end, time.min, tzinfo=self._timezone())
+
     def _events(self) -> list[CalendarEvent]:
         """Generate only the rolling -2/+8 week event set in memory."""
         data = self._data()
@@ -225,7 +237,10 @@ class SphTimetableCalendar(CoordinatorEntity, CalendarEntity):
                         events.append(event)
             target += timedelta(days=1)
 
-        return sorted(events, key=lambda event: event.start)
+        # CalendarEvent.start may be a date for all-day entries and a datetime
+        # for timed lessons. Python cannot directly order those two types, so
+        # normalize both before sorting.
+        return sorted(events, key=self._event_start)
 
     @property
     def event(self) -> CalendarEvent | None:
@@ -234,16 +249,6 @@ class SphTimetableCalendar(CoordinatorEntity, CalendarEntity):
             if self._event_end(event) > now:
                 return event
         return None
-
-    def _event_start(self, event: CalendarEvent) -> datetime:
-        if isinstance(event.start, datetime):
-            return event.start
-        return datetime.combine(event.start, time.min, tzinfo=self._timezone())
-
-    def _event_end(self, event: CalendarEvent) -> datetime:
-        if isinstance(event.end, datetime):
-            return event.end
-        return datetime.combine(event.end, time.min, tzinfo=self._timezone())
 
     async def async_get_events(
         self,
