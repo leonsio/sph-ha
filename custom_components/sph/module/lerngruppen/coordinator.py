@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, time, timedelta
 import logging
+import re
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -53,8 +54,57 @@ class SphLearningGroupsCoordinator(DataUpdateCoordinator):
             or {}
         )
 
+    def _student_class(self) -> str:
+        """Return the student's class reported by the personal timetable."""
+        return str(self._timetable_data().get("klasse", "")).strip()
+
+    def _clean_course(self, value: str) -> str:
+        """Remove the student's class token from a Lerngruppen course name."""
+        course = str(value or "").strip()
+        student_class = self._student_class()
+        if not course or not student_class:
+            return course
+
+        # Remove only a standalone class token (for example "7n"), not the
+        # same characters when they are part of another word/code.
+        pattern = re.compile(
+            rf"(?<![\w]){re.escape(student_class)}(?![\w])",
+            flags=re.IGNORECASE,
+        )
+        course = pattern.sub("", course)
+        course = re.sub(r"\s+", " ", course).strip()
+        course = re.sub(r"^[\s,;:/\-–—]+|[\s,;:/\-–—]+$", "", course).strip()
+        return course
+
+    @staticmethod
+    def _display_summary(item: dict, course: str) -> str:
+        """Build the compact calendar/sensor label for a Leistungskontrolle."""
+        date_text = ""
+        try:
+            date_text = datetime.fromisoformat(str(item.get("datum", ""))).strftime("%d.%m")
+        except (TypeError, ValueError):
+            pass
+
+        art = str(item.get("art", "")).strip()
+        if art and course:
+            title = f"{art}: {course}"
+        else:
+            title = art or course or "Leistungskontrolle"
+
+        duration = item.get("dauer_minuten")
+        try:
+            duration_text = f" ({int(duration)} Min)" if duration is not None else ""
+        except (TypeError, ValueError):
+            duration_text = ""
+
+        return f"{date_text} {title}{duration_text}".strip()
+
     def _with_timetable_times(self, item: dict) -> dict:
         result = dict(item)
+        cleaned_course = self._clean_course(result.get("kurs", ""))
+        result["kurs"] = cleaned_course
+        result["summary"] = self._display_summary(result, cleaned_course)
+
         try:
             day = datetime.fromisoformat(str(item.get("datum", ""))).date()
         except ValueError:
