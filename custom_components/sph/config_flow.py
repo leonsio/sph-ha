@@ -12,9 +12,14 @@ from .const import (
     CONF_CALENDAR_EVENT_TYPES,
     CONF_CHILD_NAME,
     CONF_CHILD_SHORTCUT,
+    CONF_MODULE_KALENDER,
+    CONF_MODULE_LERNGRUPPEN,
+    CONF_MODULE_MEINUNTERRICHT,
+    CONF_MODULE_STUNDENPLAN,
     CONF_SCHOOL_ID,
     CONF_UPDATE_INTERVAL,
     DEFAULT_CALENDAR_EVENT_TYPES,
+    DEFAULT_MODULE_ENABLED,
     DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
 )
@@ -90,6 +95,22 @@ class SphConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_UPDATE_INTERVAL,
                     default=values.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL),
                 ): vol.All(vol.Coerce(int), vol.Range(min=5, max=1440)),
+                vol.Required(
+                    CONF_MODULE_STUNDENPLAN,
+                    default=values.get(CONF_MODULE_STUNDENPLAN, DEFAULT_MODULE_ENABLED),
+                ): bool,
+                vol.Required(
+                    CONF_MODULE_KALENDER,
+                    default=values.get(CONF_MODULE_KALENDER, DEFAULT_MODULE_ENABLED),
+                ): bool,
+                vol.Required(
+                    CONF_MODULE_MEINUNTERRICHT,
+                    default=values.get(CONF_MODULE_MEINUNTERRICHT, DEFAULT_MODULE_ENABLED),
+                ): bool,
+                vol.Required(
+                    CONF_MODULE_LERNGRUPPEN,
+                    default=values.get(CONF_MODULE_LERNGRUPPEN, DEFAULT_MODULE_ENABLED),
+                ): bool,
             }
         )
 
@@ -132,6 +153,10 @@ class SphOptionsFlow(OptionsFlow):
                     CONF_CALENDAR_EVENT_TYPES: _parse_calendar_types(
                         user_input.get(CONF_CALENDAR_EVENT_TYPES)
                     ),
+                    CONF_MODULE_STUNDENPLAN: bool(user_input[CONF_MODULE_STUNDENPLAN]),
+                    CONF_MODULE_KALENDER: bool(user_input[CONF_MODULE_KALENDER]),
+                    CONF_MODULE_MEINUNTERRICHT: bool(user_input[CONF_MODULE_MEINUNTERRICHT]),
+                    CONF_MODULE_LERNGRUPPEN: bool(user_input[CONF_MODULE_LERNGRUPPEN]),
                 }
             )
 
@@ -141,8 +166,8 @@ class SphOptionsFlow(OptionsFlow):
                 title=f"Schulportal Hessen – {child_name} ({child_shortcut})",
             )
 
-            # Recreate the integration so credentials, school ID, update interval
-            # and calendar filters are applied immediately without a HA restart.
+            # Recreate the integration so credentials, module switches and
+            # filters are applied immediately without a HA restart.
             await self.hass.config_entries.async_reload(self.config_entry.entry_id)
             return self.async_create_entry(title="", data={})
 
@@ -182,5 +207,21 @@ class SphOptionsFlow(OptionsFlow):
                         values.get(CONF_CALENDAR_EVENT_TYPES, DEFAULT_CALENDAR_EVENT_TYPES)
                     ),
                 ): str,
+                vol.Required(
+                    CONF_MODULE_STUNDENPLAN,
+                    default=values.get(CONF_MODULE_STUNDENPLAN, DEFAULT_MODULE_ENABLED),
+                ): bool,
+                vol.Required(
+                    CONF_MODULE_KALENDER,
+                    default=values.get(CONF_MODULE_KALENDER, DEFAULT_MODULE_ENABLED),
+                ): bool,
+                vol.Required(
+                    CONF_MODULE_MEINUNTERRICHT,
+                    default=values.get(CONF_MODULE_MEINUNTERRICHT, DEFAULT_MODULE_ENABLED),
+                ): bool,
+                vol.Required(
+                    CONF_MODULE_LERNGRUPPEN,
+                    default=values.get(CONF_MODULE_LERNGRUPPEN, DEFAULT_MODULE_ENABLED),
+                ): bool,
             }
         )
