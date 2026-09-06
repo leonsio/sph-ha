@@ -14,6 +14,7 @@ from ...const import (
     DEFAULT_UPDATE_INTERVAL,
 )
 from .client import SphLearningGroupsClient
+from .storage import SphLearningGroupsManualStore
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,6 +27,9 @@ class SphLearningGroupsCoordinator(DataUpdateCoordinator):
         self.client = SphLearningGroupsClient(auth)
         self.timetable_coordinator = timetable_coordinator
         self.enabled = bool(entry.data.get(CONF_MODULE_LERNGRUPPEN, DEFAULT_MODULE_ENABLED))
+        self.manual_store = SphLearningGroupsManualStore(hass, entry.entry_id)
+        self._manual_items: list[dict] = []
+        self._sph_items: list[dict] = []
         super().__init__(
             hass,
             logger=_LOGGER,
@@ -37,15 +41,55 @@ class SphLearningGroupsCoordinator(DataUpdateCoordinator):
             ),
         )
 
+    async def async_load_manual_items(self) -> None:
+        """Load locally stored appointments before the first SPH refresh."""
+        self._manual_items = await self.manual_store.async_load()
+        if self.enabled and self._manual_items:
+            self.async_set_updated_data(self._merged_items())
+
+    async def async_add_manual_item(self, item: dict) -> dict:
+        """Persist one manual appointment and publish merged data immediately."""
+        stored = await self.manual_store.async_add(item)
+        self._manual_items = self.manual_store.items
+        if self.enabled:
+            self.async_set_updated_data(self._merged_items())
+        return self._with_timetable_times(stored)
+
+    async def async_delete_manual_item(self, item_id: str) -> bool:
+        """Delete one manual appointment and publish merged data immediately."""
+        changed = await self.manual_store.async_delete(item_id)
+        if changed:
+            self._manual_items = self.manual_store.items
+            if self.enabled:
+                self.async_set_updated_data(self._merged_items())
+        return changed
+
     async def _async_update_data(self):
         if not self.enabled:
             return []
 
         try:
             items = await self.hass.async_add_executor_job(self.client.get_assessments)
-            return [self._with_timetable_times(item) for item in (items or [])]
+            self._sph_items = [
+                {**dict(item), "quelle": "sph"}
+                for item in (items or [])
+            ]
+            return self._merged_items()
         except Exception as err:
             raise UpdateFailed(str(err)) from err
+
+    def _merged_items(self) -> list[dict]:
+        """Combine remote SPH data with local appointments without overwriting either source."""
+        combined = [*self._sph_items, *self._manual_items]
+        prepared = [self._with_timetable_times(item) for item in combined]
+        return sorted(
+            prepared,
+            key=lambda item: (
+                str(item.get("datum", "")),
+                item.get("stunden", []),
+                str(item.get("summary", "")),
+            ),
+        )
 
     def _timetable_data(self):
         return (
@@ -65,8 +109,6 @@ class SphLearningGroupsCoordinator(DataUpdateCoordinator):
         if not course or not student_class:
             return course
 
-        # Remove only a standalone class token (for example "7n"), not the
-        # same characters when they are part of another word/code.
         pattern = re.compile(
             rf"(?<![\w]){re.escape(student_class)}(?![\w])",
             flags=re.IGNORECASE,
@@ -101,6 +143,7 @@ class SphLearningGroupsCoordinator(DataUpdateCoordinator):
 
     def _with_timetable_times(self, item: dict) -> dict:
         result = dict(item)
+        result["quelle"] = str(result.get("quelle") or "sph")
         cleaned_course = self._clean_course(result.get("kurs", ""))
         result["kurs"] = cleaned_course
         result["summary"] = self._display_summary(result, cleaned_course)
