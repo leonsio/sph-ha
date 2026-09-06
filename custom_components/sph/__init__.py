@@ -18,10 +18,12 @@ from .const import (
     CONF_CHILD_SHORTCUT,
     CONF_MODULE_KALENDER,
     CONF_PASSWORD,
+    CONF_SCHOOL_DISTRICT,
     CONF_SCHOOL_ID,
     CONF_USERNAME,
     DEFAULT_MODULE_ENABLED,
     DOMAIN,
+    SCHOOL_DISTRICT_NONE,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -104,6 +106,19 @@ async def _remove_disabled_calendar_entities(hass: HomeAssistant, entry: ConfigE
             _LOGGER.debug("SPH: deaktivierte Schulkalender-Entity %s entfernt", entity_id)
 
 
+async def _remove_unconfigured_movable_holiday_calendar(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Remove an old movable-holiday calendar when no district is selected."""
+    district = str(entry.data.get(CONF_SCHOOL_DISTRICT, SCHOOL_DISTRICT_NONE)).strip()
+    if district and district != SCHOOL_DISTRICT_NONE:
+        return
+    registry = er.async_get(hass)
+    entity_id = registry.async_get_entity_id(
+        "calendar", DOMAIN, f"{entry.entry_id}_movable_holidays_calendar"
+    )
+    if entity_id:
+        registry.async_remove(entity_id)
+
+
 async def _migrate_sensor_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> None:
     registry = er.async_get(hass)
     name = str(entry.data.get(CONF_CHILD_NAME, "")).strip()
@@ -135,6 +150,7 @@ async def _migrate_sensor_entity_ids(hass: HomeAssistant, entry: ConfigEntry) ->
         (f"{entry.entry_id}_native_calendar", f"schulkalender_{suffix}"),
         (f"{entry.entry_id}_timetable_calendar", f"stundenplan_{suffix}"),
         (f"{entry.entry_id}_lerngruppen_calendar", f"lerngruppen_{suffix}"),
+        (f"{entry.entry_id}_movable_holidays_calendar", f"bewegliche_ferientage_{suffix}"),
     ):
         entity_id = registry.async_get_entity_id("calendar", DOMAIN, unique_id)
         desired = f"calendar.{object_id}"
@@ -147,12 +163,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     from .module.lerngruppen.coordinator import SphLearningGroupsCoordinator
     from .module.meinunterricht.coordinator import SphMeinUnterrichtCoordinator
     from .module.stundenplan.coordinator import SphTimetableCoordinator
+    from .module.stundenplan.movable_holidays import SphMovableHolidaysCoordinator
 
     auth = SphAuthClient(
         entry.data[CONF_SCHOOL_ID],
         entry.data[CONF_USERNAME],
         entry.data[CONF_PASSWORD],
     )
+
+    movable_holidays = SphMovableHolidaysCoordinator(hass, entry)
+    await movable_holidays.async_load_cache()
+    if movable_holidays.enabled:
+        try:
+            await movable_holidays.async_config_entry_first_refresh()
+        except Exception as err:
+            _LOGGER.warning("Bewegliche Ferientage für %s aktuell nicht verfügbar: %s", entry.title, err)
+
     timetable = SphTimetableCoordinator(hass, entry, auth)
     try:
         await timetable.async_config_entry_first_refresh()
@@ -184,15 +210,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "calendar": calendar,
         "meinunterricht": meinunterricht,
         "lerngruppen": lerngruppen,
+        "movable_holidays": movable_holidays,
     }
 
     await _remove_disabled_calendar_entities(hass, entry)
+    await _remove_unconfigured_movable_holiday_calendar(hass, entry)
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "calendar"])
     await _migrate_sensor_entity_ids(hass, entry)
 
-    # The Germany calendar may still be restoring/loading when SPH performs its
-    # first refresh. Track it after all SPH entities have been set up and refresh
-    # the free-day overlay independently from the SPH polling cycle.
+    # Free-day calendars may still be restoring/loading when SPH performs its
+    # first refresh. Track them after all SPH entities have been set up and
+    # refresh the overlay independently from the SPH polling cycle.
     timetable.async_start_free_day_tracking()
     return True
 
