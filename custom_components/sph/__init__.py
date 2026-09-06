@@ -13,7 +13,16 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.util import slugify
 
 from .api.client import SphAuthClient
-from .const import CONF_CHILD_NAME, CONF_CHILD_SHORTCUT, CONF_PASSWORD, CONF_SCHOOL_ID, CONF_USERNAME, DOMAIN
+from .const import (
+    CONF_CHILD_NAME,
+    CONF_CHILD_SHORTCUT,
+    CONF_MODULE_KALENDER,
+    CONF_PASSWORD,
+    CONF_SCHOOL_ID,
+    CONF_USERNAME,
+    DEFAULT_MODULE_ENABLED,
+    DOMAIN,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -72,6 +81,23 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
             await _register_lovelace_resources(hass)
         hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _on_started)
     return True
+
+
+async def _remove_disabled_calendar_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Remove school-calendar entities entirely when the module is disabled."""
+    if bool(entry.data.get(CONF_MODULE_KALENDER, DEFAULT_MODULE_ENABLED)):
+        return
+
+    registry = er.async_get(hass)
+    for platform, unique_id in (
+        ("sensor", f"{entry.entry_id}_calendar"),
+        ("sensor", f"{entry.entry_id}_calendar_json"),
+        ("calendar", f"{entry.entry_id}_native_calendar"),
+    ):
+        entity_id = registry.async_get_entity_id(platform, DOMAIN, unique_id)
+        if entity_id:
+            registry.async_remove(entity_id)
+            _LOGGER.debug("SPH: deaktivierte Schulkalender-Entity %s entfernt", entity_id)
 
 
 async def _migrate_sensor_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -153,6 +179,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "meinunterricht": meinunterricht,
         "lerngruppen": lerngruppen,
     }
+
+    await _remove_disabled_calendar_entities(hass, entry)
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "calendar"])
     await _migrate_sensor_entity_ids(hass, entry)
     return True
