@@ -138,12 +138,6 @@ class SphLearningGroupsCoordinator(DataUpdateCoordinator):
     @staticmethod
     def _display_summary(item: dict, course: str) -> str:
         """Build the compact calendar/sensor label for a Leistungskontrolle."""
-        date_text = ""
-        try:
-            date_text = datetime.fromisoformat(str(item.get("datum", ""))).strftime("%d.%m")
-        except (TypeError, ValueError):
-            pass
-
         art = str(item.get("art", "")).strip()
         if art and course:
             title = f"{art}: {course}"
@@ -156,7 +150,7 @@ class SphLearningGroupsCoordinator(DataUpdateCoordinator):
         except (TypeError, ValueError):
             duration_text = ""
 
-        return f"{date_text} {title}{duration_text}".strip()
+        return f"{title}{duration_text}".strip()
 
     def _with_timetable_times(self, item: dict) -> dict:
         result = dict(item)
