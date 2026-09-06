@@ -28,7 +28,7 @@
     "step": {
       "init": {
         "title": "Schulportal Hessen konfigurieren",
-        "description": "Ändere Zugangsdaten, Schulnummer, Kinderdaten, Aktualisierungsintervall, Kalenderarten oder die aktiven Module. Deaktivierte Module rufen keine Daten aus dem Schulportal ab; ihre Sensoren bzw. Kalender bleiben leer. Kalenderarten können als kommagetrennte Liste frei erweitert werden; standardmäßig werden Arbeiten und Klausuren verwendet. Die Integration wird anschließend automatisch neu geladen.",
+        "description": "Ändere Zugangsdaten, Schulnummer, Kinderdaten, Aktualisierungsintervall, Kalenderarten oder die aktiven Module. Für Kalenderarten gilt: Ist das Feld leer, werden alle Kalenderarten geladen. Werden Arten eingetragen, werden nur diese übernommen. Mehrere Arten können komma-, semikolon- oder zeilengetrennt angegeben werden. Die Integration wird anschließend automatisch neu geladen.",
         "data": {
           "child_name": "Name des Kindes",
           "child_shortcut": "Kürzel des Kindes",
@@ -36,7 +36,7 @@
           "username": "Benutzername",
           "password": "Passwort",
           "update_interval": "Aktualisierungsintervall (Minuten)",
-          "calendar_event_types": "Kalenderarten (kommagetrennt)",
+          "calendar_event_types": "Kalenderarten (leer = alle)",
           "module_stundenplan": "Modul Stundenplan aktiv",
           "module_kalender": "Modul Schulkalender aktiv",
           "module_meinunterricht": "Modul Mein Unterricht aktiv",
