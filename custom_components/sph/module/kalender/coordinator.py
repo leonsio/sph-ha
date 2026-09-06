@@ -9,8 +9,10 @@ from ...api import current_school_year_start
 from ...api.client import SphAuthClient
 from ...const import (
     CONF_CALENDAR_EVENT_TYPES,
+    CONF_MODULE_KALENDER,
     CONF_UPDATE_INTERVAL,
     DEFAULT_CALENDAR_EVENT_TYPES,
+    DEFAULT_MODULE_ENABLED,
     DEFAULT_UPDATE_INTERVAL,
 )
 from .client import SphCalendarClient
@@ -84,6 +86,7 @@ class SphCalendarCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, entry, auth: SphAuthClient):
         self.entry = entry
         self.client = SphCalendarClient(auth)
+        self.enabled = bool(entry.data.get(CONF_MODULE_KALENDER, DEFAULT_MODULE_ENABLED))
         self.event_types = normalize_calendar_event_types(
             entry.data.get(CONF_CALENDAR_EVENT_TYPES, DEFAULT_CALENDAR_EVENT_TYPES)
         )
@@ -91,12 +94,17 @@ class SphCalendarCoordinator(DataUpdateCoordinator):
             hass,
             logger=_LOGGER,
             name="Schulportal Hessen Kalender",
-            update_interval=timedelta(
-                minutes=int(entry.data.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL))
+            update_interval=(
+                timedelta(minutes=int(entry.data.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)))
+                if self.enabled
+                else None
             ),
         )
 
     async def _async_update_data(self):
+        if not self.enabled:
+            return []
+
         try:
             today = datetime.now().date()
             school_year_start = current_school_year_start(today)
