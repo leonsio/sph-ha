@@ -9,6 +9,7 @@ CONF_CALENDAR_EVENT_TYPES = "calendar_event_types"
 CONF_ACTIVE_MODULES = "active_modules"
 CONF_TIMETABLE_OUTPUT = "timetable_output"
 CONF_SCHOOL_DISTRICT = "school_district"
+CONF_COMBINE_CALENDARS = "combine_calendars"
 CONF_MODULE_STUNDENPLAN = "module_stundenplan"
 CONF_MODULE_KALENDER = "module_kalender"
 CONF_MODULE_MEINUNTERRICHT = "module_meinunterricht"
@@ -17,6 +18,9 @@ DEFAULT_UPDATE_INTERVAL = 60
 # Empty means: do not filter calendar event types, keep all entries.
 DEFAULT_CALENDAR_EVENT_TYPES = []
 DEFAULT_MODULE_ENABLED = True
+# By default, timetable, school calendar and learning-group appointments are
+# exposed through one native SPH calendar. The individual sensors stay separate.
+DEFAULT_COMBINE_CALENDARS = True
 # The personal timetable is always exposed. "all" additionally fills the
 # legacy "tage" block with the complete timetable returned by SPH.
 TIMETABLE_OUTPUT_OWN = "own"
