@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Schulportal Hessen",
-        "description": "Set up a child and its Schulportal Hessen account. Select the modules that should fetch data. Optionally select a school authority district for movable holidays.",
+        "description": "Set up a child and its Schulportal Hessen account. Select the modules that should fetch data. By default, timetable, school calendar and learning groups are combined into one SPH calendar. Optionally select a school authority district for movable holidays.",
         "data": {
           "child_name": "Child name",
           "child_shortcut": "Child shortcut",
@@ -12,6 +12,7 @@
           "password": "Password",
           "update_interval": "Update interval (minutes)",
           "timetable_output": "Timetable output",
+          "combine_calendars": "Use combined SPH calendar",
           "school_district": "School authority district for movable holidays",
           "active_modules": "Active modules"
         }
@@ -27,7 +28,7 @@
     "step": {
       "init": {
         "title": "Configure Schulportal Hessen",
-        "description": "Change the login credentials, school ID, child information, update interval, calendar event types, timetable output, school authority district, or active modules. If the calendar event types field is empty, all calendar event types are loaded. The personal timetable is always included. Movable holidays are loaded only for the current school year explicitly listed on the school-authority page and refreshed once per day. The integration will be reloaded automatically afterwards.",
+        "description": "Change the login credentials, school ID, child information, update interval, calendar event types, timetable output, calendar layout, school authority district, or active modules. If the calendar event types field is empty, all calendar event types are loaded. The personal timetable is always included. When the combined SPH calendar is enabled, timetable, school calendar and learning groups are merged into calendar.sph_<name>_<shortcut>; otherwise the three calendars are created separately. Sensors remain independent. Movable holidays are loaded only for the current school year explicitly listed on the school-authority page and refreshed once per day. The integration will be reloaded automatically afterwards.",
         "data": {
           "child_name": "Child name",
           "child_shortcut": "Child shortcut",
@@ -36,6 +37,7 @@
           "password": "Password",
           "update_interval": "Update interval (minutes)",
           "timetable_output": "Timetable output",
+          "combine_calendars": "Use combined SPH calendar",
           "school_district": "School authority district for movable holidays",
           "calendar_event_types": "Calendar event types (empty = all)",
           "active_modules": "Active modules"
