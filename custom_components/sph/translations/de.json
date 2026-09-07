@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Schulportal Hessen",
-        "description": "Einrichtung eines Kindes und seines Schulportal-Hessen-Kontos. Wähle die Module aus, die Daten abrufen sollen. Optional kann ein Schulamtsbezirk für die beweglichen Ferientage ausgewählt werden.",
+        "description": "Einrichtung eines Kindes und seines Schulportal-Hessen-Kontos. Wähle die Module aus, die Daten abrufen sollen. Standardmäßig werden Stundenplan, Schulkalender und Lerngruppen in einem gemeinsamen SPH-Kalender zusammengeführt. Optional kann ein Schulamtsbezirk für die beweglichen Ferientage ausgewählt werden.",
         "data": {
           "child_name": "Name des Kindes",
           "child_shortcut": "Kürzel des Kindes",
@@ -12,6 +12,7 @@
           "password": "Passwort",
           "update_interval": "Aktualisierungsintervall (Minuten)",
           "timetable_output": "Stundenplan-Ausgabe",
+          "combine_calendars": "Gemeinsamen SPH-Kalender verwenden",
           "school_district": "Schulamtsbezirk für bewegliche Ferientage",
           "active_modules": "Aktive Module"
         }
@@ -27,7 +28,7 @@
     "step": {
       "init": {
         "title": "Schulportal Hessen konfigurieren",
-        "description": "Ändere Zugangsdaten, Schulnummer, Kinderdaten, Aktualisierungsintervall, Kalenderarten, Stundenplan-Ausgabe, Schulamtsbezirk oder die aktiven Module. Ist das Feld Kalenderarten leer, werden alle Kalenderarten geladen. Der persönliche Stundenplan bleibt immer enthalten. Bewegliche Ferientage werden für das auf der Schulamtsseite ausdrücklich angegebene aktuelle Schuljahr geladen und einmal täglich aktualisiert. Die Integration wird anschließend automatisch neu geladen.",
+        "description": "Ändere Zugangsdaten, Schulnummer, Kinderdaten, Aktualisierungsintervall, Kalenderarten, Stundenplan-Ausgabe, Kalenderdarstellung, Schulamtsbezirk oder die aktiven Module. Ist das Feld Kalenderarten leer, werden alle Kalenderarten geladen. Der persönliche Stundenplan bleibt immer enthalten. Ist der gemeinsame SPH-Kalender aktiv, werden Stundenplan, Schulkalender und Lerngruppen in calendar.sph_<Name>_<Kürzel> zusammengeführt; andernfalls werden die drei Kalender getrennt angelegt. Die Sensoren bleiben davon unberührt. Bewegliche Ferientage werden für das auf der Schulamtsseite ausdrücklich angegebene aktuelle Schuljahr geladen und einmal täglich aktualisiert. Die Integration wird anschließend automatisch neu geladen.",
         "data": {
           "child_name": "Name des Kindes",
           "child_shortcut": "Kürzel des Kindes",
@@ -36,6 +37,7 @@
           "password": "Passwort",
           "update_interval": "Aktualisierungsintervall (Minuten)",
           "timetable_output": "Stundenplan-Ausgabe",
+          "combine_calendars": "Gemeinsamen SPH-Kalender verwenden",
           "school_district": "Schulamtsbezirk für bewegliche Ferientage",
           "calendar_event_types": "Kalenderarten (leer = alle)",
           "active_modules": "Aktive Module"
