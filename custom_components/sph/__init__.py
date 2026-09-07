@@ -16,11 +16,13 @@ from .api.client import SphAuthClient
 from .const import (
     CONF_CHILD_NAME,
     CONF_CHILD_SHORTCUT,
+    CONF_COMBINE_CALENDARS,
     CONF_MODULE_KALENDER,
     CONF_PASSWORD,
     CONF_SCHOOL_DISTRICT,
     CONF_SCHOOL_ID,
     CONF_USERNAME,
+    DEFAULT_COMBINE_CALENDARS,
     DEFAULT_MODULE_ENABLED,
     DOMAIN,
     SCHOOL_DISTRICT_NONE,
@@ -109,6 +111,27 @@ async def _remove_disabled_calendar_entities(hass: HomeAssistant, entry: ConfigE
             _LOGGER.debug("SPH: deaktivierte Schulkalender-Entity %s entfernt", entity_id)
 
 
+async def _remove_inactive_calendar_layout_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Keep only the configured combined or separate user-facing calendars."""
+    combine = bool(entry.data.get(CONF_COMBINE_CALENDARS, DEFAULT_COMBINE_CALENDARS))
+    registry = er.async_get(hass)
+
+    if combine:
+        unique_ids = (
+            f"{entry.entry_id}_native_calendar",
+            f"{entry.entry_id}_timetable_calendar",
+            f"{entry.entry_id}_lerngruppen_calendar",
+        )
+    else:
+        unique_ids = (f"{entry.entry_id}_sph_calendar",)
+
+    for unique_id in unique_ids:
+        entity_id = registry.async_get_entity_id("calendar", DOMAIN, unique_id)
+        if entity_id:
+            registry.async_remove(entity_id)
+            _LOGGER.debug("SPH: nicht verwendete Kalender-Entity %s entfernt", entity_id)
+
+
 async def _remove_unconfigured_movable_holiday_calendar(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Remove an old movable-holiday calendar when no district is selected."""
     district = str(entry.data.get(CONF_SCHOOL_DISTRICT, SCHOOL_DISTRICT_NONE)).strip()
@@ -153,6 +176,7 @@ async def _migrate_sensor_entity_ids(hass: HomeAssistant, entry: ConfigEntry) ->
         (f"{entry.entry_id}_native_calendar", f"schulkalender_{suffix}"),
         (f"{entry.entry_id}_timetable_calendar", f"stundenplan_{suffix}"),
         (f"{entry.entry_id}_lerngruppen_calendar", f"lerngruppen_{suffix}"),
+        (f"{entry.entry_id}_sph_calendar", f"sph_{suffix}"),
         (f"{entry.entry_id}_movable_holidays_calendar", f"bewegliche_ferientage_{suffix}"),
     ):
         entity_id = registry.async_get_entity_id("calendar", DOMAIN, unique_id)
@@ -218,6 +242,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     }
 
     await _remove_disabled_calendar_entities(hass, entry)
+    await _remove_inactive_calendar_layout_entities(hass, entry)
     await _remove_unconfigured_movable_holiday_calendar(hass, entry)
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "calendar"])
     await _migrate_sensor_entity_ids(hass, entry)
