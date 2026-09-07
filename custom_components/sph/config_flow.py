@@ -8,6 +8,7 @@ from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry, OptionsFlow
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers.selector import (
+    BooleanSelector,
     SelectSelector,
     SelectSelectorConfig,
     TextSelector,
@@ -18,6 +19,7 @@ from .const import (
     CONF_CALENDAR_EVENT_TYPES,
     CONF_CHILD_NAME,
     CONF_CHILD_SHORTCUT,
+    CONF_COMBINE_CALENDARS,
     CONF_MODULE_KALENDER,
     CONF_MODULE_LERNGRUPPEN,
     CONF_MODULE_MEINUNTERRICHT,
@@ -27,6 +29,7 @@ from .const import (
     CONF_TIMETABLE_OUTPUT,
     CONF_UPDATE_INTERVAL,
     DEFAULT_CALENDAR_EVENT_TYPES,
+    DEFAULT_COMBINE_CALENDARS,
     DEFAULT_MODULE_ENABLED,
     DEFAULT_TIMETABLE_OUTPUT,
     DEFAULT_UPDATE_INTERVAL,
@@ -198,6 +201,10 @@ class SphConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     default=values.get(CONF_TIMETABLE_OUTPUT, DEFAULT_TIMETABLE_OUTPUT),
                 ): _timetable_output_selector(),
                 vol.Required(
+                    CONF_COMBINE_CALENDARS,
+                    default=values.get(CONF_COMBINE_CALENDARS, DEFAULT_COMBINE_CALENDARS),
+                ): BooleanSelector(),
+                vol.Required(
                     CONF_SCHOOL_DISTRICT,
                     default=values.get(CONF_SCHOOL_DISTRICT, SCHOOL_DISTRICT_NONE),
                 ): _school_district_selector(),
@@ -243,6 +250,9 @@ class SphOptionsFlow(OptionsFlow):
                     CONF_UPDATE_INTERVAL: int(user_input[CONF_UPDATE_INTERVAL]),
                     CONF_TIMETABLE_OUTPUT: str(
                         user_input.get(CONF_TIMETABLE_OUTPUT, DEFAULT_TIMETABLE_OUTPUT)
+                    ),
+                    CONF_COMBINE_CALENDARS: bool(
+                        user_input.get(CONF_COMBINE_CALENDARS, DEFAULT_COMBINE_CALENDARS)
                     ),
                     CONF_SCHOOL_DISTRICT: str(
                         user_input.get(CONF_SCHOOL_DISTRICT, SCHOOL_DISTRICT_NONE)
@@ -307,6 +317,10 @@ class SphOptionsFlow(OptionsFlow):
                     CONF_TIMETABLE_OUTPUT,
                     default=values.get(CONF_TIMETABLE_OUTPUT, DEFAULT_TIMETABLE_OUTPUT),
                 ): _timetable_output_selector(),
+                vol.Required(
+                    CONF_COMBINE_CALENDARS,
+                    default=values.get(CONF_COMBINE_CALENDARS, DEFAULT_COMBINE_CALENDARS),
+                ): BooleanSelector(),
                 vol.Required(
                     CONF_SCHOOL_DISTRICT,
                     default=values.get(CONF_SCHOOL_DISTRICT, SCHOOL_DISTRICT_NONE),
