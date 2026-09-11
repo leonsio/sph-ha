@@ -1,3 +1,4 @@
+import { schoolCard, schoolTeacher } from "./school-hacks.js?v=0.4.22";
 class SphMeinUnterrichtCard extends HTMLElement {
   setConfig(config) {
     this.config = config || {};
@@ -197,7 +198,7 @@ class SphMeinUnterrichtCard extends HTMLElement {
       <td>${this._esc(subject)}</td>
       <td>${this._esc(item.thema || "")}</td>
       <td class="task">${this._esc(item.aufgabe || "")}</td>
-      <td>${this._esc(item.lehrer || "")}</td>
+      <td>${this._esc(schoolTeacher(this, item.lehrer || ""))}</td>
       <td class="status ${done ? "done" : "open"}">${done ? "Erledigt" : "Offen"}</td>
       <td class="source ${manual ? "manual" : ""}">${manual ? "Manuell" : "SPH"}</td>
       <td>${manual ? `<button class="delete" type="button" title="Hausaufgabe löschen" data-id="${this._esc(item.id || "")}">✕</button>` : ""}</td>
@@ -276,7 +277,7 @@ class SphMeinUnterrichtCard extends HTMLElement {
 }
 
 if (!customElements.get("sph-meinunterricht-card")) {
-  customElements.define("sph-meinunterricht-card", SphMeinUnterrichtCard);
+  customElements.define("sph-meinunterricht-card", schoolCard(SphMeinUnterrichtCard));
 }
 
 window.customCards = window.customCards || [];

@@ -1,5 +1,9 @@
 # SPH Stundenplan Raster
 
+> Schulprofile: Normale SPH-Karten unterstützen `school-hacks: kfg`.
+> [Konfiguration und Umstieg](school-hacks.md).
+
+
 Kartentyp: `custom:sph-stundenplan-grid-card`
 
 ## Funktionsweise

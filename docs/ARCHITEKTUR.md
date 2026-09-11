@@ -1,5 +1,13 @@
 # Schulportal Hessen – Architektur
 
+> Stand Schulprofile: KFG-Anpassungen werden über `school-hacks: kfg` in normalen
+> SPH-Karten aktiviert. Die Datei `static/school-hacks/kfg.js` enthält das Schulprofil,
+> `static/school-hacks.js` die gemeinsame Logik. Die alten KFG-Karten und ihre
+> Kompatibilitätsschicht wurden vollständig entfernt.
+> Neue Schulanpassungen in Profilen pflegen, keine eigenen Kartenkopien anlegen.
+> Details: [Schulprofile](lovelace/school-hacks.md).
+
+
 Die Home-Assistant-Integration ist modular aufgebaut. Gemeinsame technische Funktionen liegen unter `api/`. Fachliche Funktionen werden in den jeweiligen Modulen unter `module/` gekapselt. Der aktuelle Stand dieser Dokumentation entspricht Version **0.4.18**.
 
 ## Quelltextstruktur
@@ -47,10 +55,9 @@ custom_components/sph/
 │   ├── sph-stundenplan-tag-card.js
 │   ├── sph-stundenplan-grid-card.js
 │   ├── sph-lerngruppen-card.js
-│   ├── kfg-stundenplan-compat.js
-│   ├── kfg-stundenplan-card.js
-│   ├── kfg-stundenplan-tag-card.js
-│   └── kfg-stundenplan-grid-card.js
+│   ├── school-hacks.js
+│   └── school-hacks/
+│       └── kfg.js
 └── translations/
 ```
 
@@ -175,7 +182,7 @@ Zeitfenster:
 
 Dadurch verschwinden ältere Termine automatisch, sobald sie außerhalb dieses Fensters liegen.
 
-A/B-Wochen werden aus der aktuellen SPH-Wochenkennung fortgeschrieben. Die Auswahl der Stunden folgt den gleichen Gegenstück-Regeln wie die KFG-Karten.
+A/B-Wochen werden aus der aktuellen SPH-Wochenkennung fortgeschrieben. Die Auswahl der Stunden folgt den gleichen Gegenstück-Regeln wie das KFG-Schulprofil.
 
 Neben Unterrichtsstunden wird pro tatsächlichem Schultag ein ganztägiger Eintrag `Schulwoche A` bzw. `Schulwoche B` erzeugt.
 
@@ -370,14 +377,10 @@ Normale SPH-Karten:
 - `sph-stundenplan-grid-card`
 - `sph-lerngruppen-card`
 
-KFG-Karten:
+Schulprofile: `school-hacks: kfg` aktiviert die gemeinsamen Anpassungen.
+Die KFG-Einstellungen liegen in `static/school-hacks/kfg.js`.
 
-- `kfg-stundenplan-card`
-- `kfg-stundenplan-tag-card`
-- `kfg-stundenplan-grid-card`
-- gemeinsame Kompatibilitätslogik in `kfg-stundenplan-compat.js`
-
-KFG-spezifische Funktionen dürfen normale SPH-Karten nicht verändern.
+KFG-spezifische Funktionen gelten nur bei aktiviertem Schulprofil.
 
 ### KFG Vertretungsplan-Sensor
 

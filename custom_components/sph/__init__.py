@@ -31,7 +31,7 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
-CARD_VERSION = "0.4.20"
+CARD_VERSION = "0.4.22"
 CARD_URLS = (
     f"/api/{DOMAIN}/static/sph-stundenplan-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/sph-stundenplan-tag-card.js?v={CARD_VERSION}",
@@ -39,10 +39,6 @@ CARD_URLS = (
     f"/api/{DOMAIN}/static/sph-lerngruppen-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/sph-meinunterricht-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/sph-kalender-card.js?v={CARD_VERSION}",
-    f"/api/{DOMAIN}/static/kfg-stundenplan-compat.js?v={CARD_VERSION}",
-    f"/api/{DOMAIN}/static/kfg-stundenplan-card.js?v={CARD_VERSION}",
-    f"/api/{DOMAIN}/static/kfg-stundenplan-tag-card.js?v={CARD_VERSION}",
-    f"/api/{DOMAIN}/static/kfg-stundenplan-grid-card.js?v={CARD_VERSION}",
 )
 
 
@@ -58,6 +54,22 @@ async def _register_lovelace_resources(hass: HomeAssistant) -> None:
         resources.loaded = True
 
     items = resources.async_items() or []
+    # Remove only resources previously registered by this integration. Existing
+    # dashboards must switch their card types to sph-* with school-hacks: kfg.
+    obsolete = {
+        f"/api/{DOMAIN}/static/{name}.js"
+        for name in (
+            "kfg-stundenplan-card",
+            "kfg-stundenplan-tag-card",
+            "kfg-stundenplan-grid-card",
+            "kfg-stundenplan-compat",
+        )
+    }
+    if hasattr(resources, "async_delete_item"):
+        for item in list(items):
+            if item.get("url", "").split("?", 1)[0] in obsolete:
+                await resources.async_delete_item(item["id"])
+        items = resources.async_items() or []
     for url in CARD_URLS:
         base_url = url.split("?", 1)[0]
         existing = next(

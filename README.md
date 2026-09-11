@@ -4,6 +4,12 @@ Home-Assistant-Custom-Integration für Daten aus dem **Schulportal Hessen (SPH)*
 
 Die Installation erfolgt einmalig als Integration **Schulportal Hessen**. Sie umfasst aktuell die Module **Stundenplan**, **Schulkalender**, **Mein Unterricht** und **Lerngruppen**.
 
+## Schulabhängige Kartenanpassungen
+
+Normale SPH-Karten unterstützen `school-hacks: kfg`. Lehrerauflösung, A/B-Filter
+und Vertretungsanzeige verwenden ein gemeinsames Schulprofil; separate KFG-Karten
+sind nicht mehr erforderlich. [Konfiguration und Umstieg](docs/lovelace/school-hacks.md).
+
 ## Installation über HACS
 
 In HACS das Repository hinzufügen:
