@@ -127,6 +127,8 @@ Manuell ergänzte Leistungskontrollen werden persistent in Home Assistant gespei
 
 ## Lovelace-Karten
 
+Eine vollständige Übersicht aller Karten mit Funktionsweise und sämtlichen YAML-Konfigurationsparametern befindet sich unter [`docs/lovelace/README.md`](docs/lovelace/README.md).
+
 ### Stundenplan
 
 ```yaml

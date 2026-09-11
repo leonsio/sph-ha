@@ -31,13 +31,14 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
-CARD_VERSION = "0.4.19"
+CARD_VERSION = "0.4.20"
 CARD_URLS = (
     f"/api/{DOMAIN}/static/sph-stundenplan-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/sph-stundenplan-tag-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/sph-stundenplan-grid-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/sph-lerngruppen-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/sph-meinunterricht-card.js?v={CARD_VERSION}",
+    f"/api/{DOMAIN}/static/sph-kalender-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/kfg-stundenplan-compat.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/kfg-stundenplan-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/kfg-stundenplan-tag-card.js?v={CARD_VERSION}",
@@ -213,6 +214,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.warning("Schulportal Hessen Stundenplan für %s aktuell nicht verfügbar: %s", entry.title, err)
 
     calendar = SphCalendarCoordinator(hass, entry, auth)
+    await calendar.async_load_manual_items()
     try:
         await calendar.async_config_entry_first_refresh()
     except Exception as err:

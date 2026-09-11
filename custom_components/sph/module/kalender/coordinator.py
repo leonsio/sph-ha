@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 import logging
 
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from ...api import current_school_year_start
@@ -16,6 +17,7 @@ from ...const import (
     DEFAULT_UPDATE_INTERVAL,
 )
 from .client import SphCalendarClient
+from .storage import SphCalendarManualStore
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -98,6 +100,9 @@ class SphCalendarCoordinator(DataUpdateCoordinator):
         self.event_types = normalize_calendar_event_types(
             entry.data.get(CONF_CALENDAR_EVENT_TYPES, DEFAULT_CALENDAR_EVENT_TYPES)
         )
+        self.manual_store = SphCalendarManualStore(hass, entry.entry_id)
+        self._manual_items: list[dict] = []
+        self._sph_items: list[dict] = []
         super().__init__(
             hass,
             logger=_LOGGER,
@@ -109,9 +114,67 @@ class SphCalendarCoordinator(DataUpdateCoordinator):
             ),
         )
 
+    async def async_load_manual_items(self) -> None:
+        """Load locally stored calendar entries before the first SPH refresh."""
+        self._manual_items = await self.manual_store.async_load()
+        if self._manual_items:
+            self.async_set_updated_data(self._merged_items())
+
+    async def async_add_manual_event(self, **kwargs) -> dict:
+        """Persist a local event created through the Home Assistant calendar API."""
+        if kwargs.get("rrule"):
+            raise HomeAssistantError(
+                "Wiederholende eigene SPH-Kalendertermine werden derzeit nicht unterstützt"
+            )
+
+        start = kwargs.get("dtstart")
+        end = kwargs.get("dtend")
+        summary = str(kwargs.get("summary") or "").strip()
+        if start is None or end is None or not summary:
+            raise HomeAssistantError("Start, Ende und Titel sind erforderlich")
+
+        all_day = isinstance(start, date) and not isinstance(start, datetime)
+        if all_day != (isinstance(end, date) and not isinstance(end, datetime)):
+            raise HomeAssistantError("Start und Ende müssen denselben Zeittyp verwenden")
+
+        item = {
+            "start": start.isoformat(),
+            "end": end.isoformat(),
+            "all_day": all_day,
+            "summary": summary,
+            "description": str(kwargs.get("description") or "").strip(),
+            "location": str(kwargs.get("location") or "").strip(),
+            "art": "Eigener Termin",
+        }
+        stored = await self.manual_store.async_add(item)
+        self._manual_items = self.manual_store.items
+        self.async_set_updated_data(self._merged_items())
+        return stored
+
+    async def async_delete_manual_event(self, uid: str) -> bool:
+        """Delete a locally created event by its calendar UID."""
+        changed = await self.manual_store.async_delete(uid)
+        if changed:
+            self._manual_items = self.manual_store.items
+            self.async_set_updated_data(self._merged_items())
+        return changed
+
+    def _merged_items(self) -> list[dict]:
+        """Merge remote SPH entries with local user-created entries."""
+        combined = [*self._sph_items, *self._manual_items]
+        return sorted(
+            combined,
+            key=lambda item: (
+                str(item.get("start", "")),
+                str(item.get("end", "")),
+                str(item.get("summary", "")),
+            ),
+        )
+
     async def _async_update_data(self):
         if not self.enabled:
-            return []
+            self._sph_items = []
+            return self._merged_items()
 
         try:
             today = datetime.now().date()
@@ -128,6 +191,10 @@ class SphCalendarCoordinator(DataUpdateCoordinator):
                 self.client.get_calendar, start, end, school_year_start
             )
             filtered = relevant_calendar_events(events, self.event_types)
+            self._sph_items = [
+                {**dict(item), "quelle": "sph"}
+                for item in filtered
+            ]
             if self.event_types:
                 _LOGGER.debug(
                     "SPH: Kalender liefert für Schuljahr %s/%s %d Termine der ausgewählten Arten %s von %d insgesamt",
@@ -144,6 +211,6 @@ class SphCalendarCoordinator(DataUpdateCoordinator):
                     school_year_start + 1,
                     len(filtered),
                 )
-            return filtered
+            return self._merged_items()
         except Exception as err:
             raise UpdateFailed(str(err)) from err
