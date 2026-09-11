@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta
 
-from homeassistant.components.calendar import CalendarEntity, CalendarEvent
+from homeassistant.components.calendar import (
+    CalendarEntity,
+    CalendarEntityFeature,
+    CalendarEvent,
+)
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
@@ -30,7 +35,13 @@ def _event_datetime(value: str, all_day: bool, hass) -> date | datetime | None:
     try:
         parsed = datetime.fromisoformat(str(value))
     except (TypeError, ValueError):
-        return None
+        try:
+            parsed_date = date.fromisoformat(str(value))
+        except (TypeError, ValueError):
+            return None
+        if all_day:
+            return parsed_date
+        parsed = datetime.combine(parsed_date, datetime.min.time())
     if all_day:
         return parsed.date()
     if parsed.tzinfo is None:
@@ -55,7 +66,7 @@ def _calendar_event(item: dict, hass) -> CalendarEvent | None:
 
     art = str(item.get("art", "")).strip()
     description = str(item.get("description", "")).strip()
-    if art:
+    if art and str(item.get("quelle", "")).strip().lower() != "manuell":
         description = f"Art: {art}" + (f"\n{description}" if description else "")
 
     return CalendarEvent(
@@ -69,10 +80,13 @@ def _calendar_event(item: dict, hass) -> CalendarEvent | None:
 
 
 class SphSchoolCalendar(CoordinatorEntity, CalendarEntity):
-    """Read-only calendar containing selected SPH calendar categories."""
+    """Calendar containing selected SPH categories plus local user events."""
 
     _attr_has_entity_name = False
     _attr_icon = "mdi:calendar-school"
+    _attr_supported_features = (
+        CalendarEntityFeature.CREATE_EVENT | CalendarEntityFeature.DELETE_EVENT
+    )
 
     def __init__(self, coordinator, entry):
         super().__init__(coordinator)
@@ -121,9 +135,29 @@ class SphSchoolCalendar(CoordinatorEntity, CalendarEntity):
                 result.append(event)
         return result
 
+    async def async_create_event(self, **kwargs) -> None:
+        """Create one locally stored SPH calendar event."""
+        await self.coordinator.async_add_manual_event(**kwargs)
+        self.async_update_event_listeners()
+
+    async def async_delete_event(
+        self,
+        uid: str,
+        recurrence_id: str | None = None,
+        recurrence_range: str | None = None,
+    ) -> None:
+        """Delete a locally stored SPH calendar event."""
+        if recurrence_id or recurrence_range:
+            raise HomeAssistantError(
+                "Wiederholende eigene SPH-Kalendertermine werden derzeit nicht unterstützt"
+            )
+        if not await self.coordinator.async_delete_manual_event(uid):
+            raise HomeAssistantError("Der Termin ist kein löschbarer eigener SPH-Termin")
+        self.async_update_event_listeners()
+
 
 class SphCombinedCalendar(CalendarEntity):
-    """Read-only calendar combining enabled SPH calendar sources for one child."""
+    """Calendar combining enabled SPH calendar sources for one child."""
 
     _attr_has_entity_name = False
     _attr_icon = "mdi:calendar-multiple"
@@ -134,6 +168,7 @@ class SphCombinedCalendar(CalendarEntity):
         self._attr_name = f"SPH {child_label(entry)}"
         self._sources: list[CalendarEntity] = []
         self._coordinators = []
+        self._school_calendar: SphSchoolCalendar | None = None
 
         if bool(entry.data.get(CONF_MODULE_STUNDENPLAN, DEFAULT_MODULE_ENABLED)):
             self._sources.append(SphTimetableCalendar(data["timetable"], entry))
@@ -144,8 +179,12 @@ class SphCombinedCalendar(CalendarEntity):
             self._coordinators.append(data["lerngruppen"])
 
         if bool(entry.data.get(CONF_MODULE_KALENDER, DEFAULT_MODULE_ENABLED)):
-            self._sources.append(SphSchoolCalendar(data["calendar"], entry))
+            self._school_calendar = SphSchoolCalendar(data["calendar"], entry)
+            self._sources.append(self._school_calendar)
             self._coordinators.append(data["calendar"])
+            self._attr_supported_features = (
+                CalendarEntityFeature.CREATE_EVENT | CalendarEntityFeature.DELETE_EVENT
+            )
 
     async def async_added_to_hass(self) -> None:
         """Attach source helpers and react to every underlying coordinator update."""
@@ -197,6 +236,30 @@ class SphCombinedCalendar(CalendarEntity):
         for source in self._sources:
             result.extend(await source.async_get_events(hass, start_date, end_date))
         return sorted(result, key=lambda event: self._sort_key(event.start))
+
+    async def async_create_event(self, **kwargs) -> None:
+        """Create a local event in the writable SPH school-calendar source."""
+        if self._school_calendar is None:
+            raise HomeAssistantError("Das SPH-Kalendermodul ist deaktiviert")
+        await self._school_calendar.coordinator.async_add_manual_event(**kwargs)
+        self.async_update_event_listeners()
+
+    async def async_delete_event(
+        self,
+        uid: str,
+        recurrence_id: str | None = None,
+        recurrence_range: str | None = None,
+    ) -> None:
+        """Delete a local event from the writable SPH school-calendar source."""
+        if self._school_calendar is None:
+            raise HomeAssistantError("Das SPH-Kalendermodul ist deaktiviert")
+        if recurrence_id or recurrence_range:
+            raise HomeAssistantError(
+                "Wiederholende eigene SPH-Kalendertermine werden derzeit nicht unterstützt"
+            )
+        if not await self._school_calendar.coordinator.async_delete_manual_event(uid):
+            raise HomeAssistantError("Der Termin ist kein löschbarer eigener SPH-Termin")
+        self.async_update_event_listeners()
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
