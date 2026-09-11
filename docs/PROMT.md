@@ -1,5 +1,13 @@
 # Aufgabe: Home-Assistant-Integration „Schulportal Hessen (SPH)“
 
+> Stand Schulprofile: KFG-Anpassungen werden über `school-hacks: kfg` in normalen
+> SPH-Karten aktiviert. Die Datei `static/school-hacks/kfg.js` enthält das Schulprofil,
+> `static/school-hacks.js` die gemeinsame Logik. Die alten KFG-Karten und ihre
+> Kompatibilitätsschicht wurden vollständig entfernt.
+> Neue Schulanpassungen in Profilen pflegen, keine eigenen Kartenkopien anlegen.
+> Details: [Schulprofile](lovelace/school-hacks.md).
+
+
 Arbeite direkt im bestehenden Repository:
 
 https://github.com/leonsio/sph-ha
@@ -19,7 +27,7 @@ Aktuell existieren folgende fachliche Module:
 - Mein Unterricht
 - Lerngruppen
 
-Zusätzlich existieren normale SPH-Lovelace-Karten sowie KFG-spezifische Varianten für das Kaiserin-Friedrich-Gymnasium.
+Die normalen SPH-Lovelace-Karten unterstützen ein optionales KFG-Schulprofil für das Kaiserin-Friedrich-Gymnasium.
 
 KFG-Sonderfunktionen dürfen normale SPH-Funktionen nicht verändern.
 
@@ -205,7 +213,7 @@ Bei gleichen Zeitslots gelten Gegenstück-Regeln:
 | nur B | nichts | B |
 | nur unmarkiert | unmarkiert | unmarkiert |
 
-Diese Logik gilt sowohl für den nativen Stundenplan-Kalender als auch für die KFG-Kompatibilitätslogik.
+Diese Logik gilt sowohl für den nativen Stundenplan-Kalender als auch für die gemeinsame Schulprofil-Logik.
 
 ## 10. Nativer Stundenplan-Kalender
 
@@ -412,15 +420,8 @@ Normale SPH-Karten:
 - `sph-stundenplan-grid-card`
 - `sph-lerngruppen-card`
 
-KFG-Karten:
-
-- `kfg-stundenplan-card`
-- `kfg-stundenplan-tag-card`
-- `kfg-stundenplan-grid-card`
-
-Gemeinsame KFG-Kompatibilitätslogik:
-
-- `kfg-stundenplan-compat.js`
+Schulprofile: `school-hacks: kfg` aktiviert die gemeinsamen Anpassungen.
+Die KFG-Einstellungen liegen in `static/school-hacks/kfg.js`.
 
 Lovelace-Ressourcen werden automatisch und versioniert registriert. Nicht zusätzlich `add_extra_js_url()` verwenden.
 

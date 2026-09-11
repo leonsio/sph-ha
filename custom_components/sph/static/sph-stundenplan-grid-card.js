@@ -1,3 +1,4 @@
+import { schoolCard, schoolDays, schoolLesson, schoolHeading, schoolBadges, schoolClasses, schoolStyles } from "./school-hacks.js?v=0.4.22";
 class SphStundenplanGridCard extends HTMLElement {
   setConfig(config) {
     this.config = config || {};
@@ -15,7 +16,7 @@ class SphStundenplanGridCard extends HTMLElement {
 
     const entity = this._findEntity(hass);
     const attrs = entity?.attributes || {};
-    const days = Array.isArray(attrs.eigener_plan) ? attrs.eigener_plan.slice(0, 5) : [];
+    const days = Array.isArray(attrs.eigener_plan) ? schoolDays(this, attrs.eigener_plan, attrs.wochenkennung).slice(0, 5) : [];
     const calendarEvents = this._calendarEvents(hass);
     const title = this.config.title || "";
     const header = title ? ` header="${this._esc(title)}"` : "";
@@ -42,7 +43,7 @@ class SphStundenplanGridCard extends HTMLElement {
     }
 
     this.shadowRoot.innerHTML = `
-      <style>
+      <style>${schoolStyles}
         :host { display:block; width:100%; box-sizing:border-box; }
         ha-card { width:100%; overflow:hidden; }
         .table-wrap { width:100%; overflow-x:auto; }
@@ -73,7 +74,7 @@ class SphStundenplanGridCard extends HTMLElement {
     const covered = Array.from({ length:5 }, () => new Set());
     const monday = this._monday(new Date());
     let html = "<table><thead><tr><th>Stunde</th>";
-    names.forEach(name => { html += `<th>${this._esc(name)}</th>`; });
+    names.forEach((name, i) => { const date = new Date(monday); date.setDate(date.getDate() + i); html += `<th>${this._esc(name)}${schoolHeading(this, date)}</th>`; });
     html += "</tr></thead><tbody>";
 
     for (const slot of slots) {
@@ -94,9 +95,10 @@ class SphStundenplanGridCard extends HTMLElement {
   }
 
   _renderLessons(lessons, date, calendarEvents) {
-    return `<div class="lessons">${lessons.map(lesson => {
+    return `<div class="lessons">${lessons.map(rawLesson => {
+      const lesson = schoolLesson(this, rawLesson, date);
       const events = this._calendarEventsForLesson(calendarEvents, date, lesson);
-      return `<div class="lesson"><div class="subject">${this._esc(lesson.fach || lesson.subject || "Unterricht")}${this._renderBadge(lesson.badge)}</div>${events.map(event => `<span class="calendar-event ${event.cssClass}">${this._esc(event.summary)}</span>`).join("")}<div class="teacher">${this._esc(lesson.teacher || "")}${lesson.room ? ` <span>· Raum: ${this._esc(lesson.room)}</span>` : ""}</div></div>`;
+      return `<div class="lesson${schoolClasses(lesson)}"><div class="subject">${this._esc(lesson.displaySubject || lesson.fach || lesson.subject || "Unterricht")}${this._renderBadge(lesson.badge)}</div>${schoolBadges(lesson)}${events.map(event => `<span class="calendar-event ${event.cssClass}">${this._esc(event.summary)}</span>`).join("")}<div class="teacher">${this._esc(lesson.displayTeacher || lesson.teacher || "")}${lesson.room ? ` <span>· Raum: ${this._esc(lesson.room)}</span>` : ""}</div></div>`;
     }).join("")}</div>`;
   }
 
@@ -221,6 +223,6 @@ class SphStundenplanGridCard extends HTMLElement {
   getGridOptions() { return { columns:"full", min_columns:12, rows:8, min_rows:5 }; }
 }
 
-if (!customElements.get("sph-stundenplan-grid-card")) customElements.define("sph-stundenplan-grid-card",SphStundenplanGridCard);
+if (!customElements.get("sph-stundenplan-grid-card")) customElements.define("sph-stundenplan-grid-card",schoolCard(SphStundenplanGridCard));
 window.customCards=window.customCards||[];
 if (!window.customCards.some(card=>card.type==="sph-stundenplan-grid-card")) window.customCards.push({type:"sph-stundenplan-grid-card",name:"SPH Stundenplan Raster",description:"Breiter Wochenstundenplan im Rasterformat"});

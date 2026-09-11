@@ -1,3 +1,4 @@
+import { schoolCard, schoolDescription } from "./school-hacks.js?v=0.4.22";
 class SphKalenderCard extends HTMLElement {
   constructor() {
     super();
@@ -748,7 +749,7 @@ class SphKalenderCard extends HTMLElement {
     setText("time", this._detailTimeText(event));
     setText("source", `${this._sourceLabel(event.source)} · ${event.calendar_name}`);
     setText("location", event.location);
-    setText("description", event.description);
+    setText("description", schoolDescription(this, event.description));
     dialog.querySelector("[data-detail-row='location']")?.classList.toggle("hidden", !event.location);
     dialog.querySelector("[data-detail-row='description']")?.classList.toggle("hidden", !event.description);
     const deleteButton = dialog.querySelector(".delete-detail");
@@ -957,7 +958,7 @@ class SphKalenderCard extends HTMLElement {
 }
 
 if (!customElements.get("sph-kalender-card")) {
-  customElements.define("sph-kalender-card", SphKalenderCard);
+  customElements.define("sph-kalender-card", schoolCard(SphKalenderCard));
 }
 
 window.customCards = window.customCards || [];

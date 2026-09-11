@@ -1,3 +1,4 @@
+import { schoolCard, schoolTeacher } from "./school-hacks.js?v=0.4.22";
 class SphLerngruppenCard extends HTMLElement {
   setConfig(config) {
     this.config = config || {};
@@ -184,7 +185,7 @@ class SphLerngruppenCard extends HTMLElement {
       <td>${this._esc(item.kurs || "")}</td>
       <td>${this._esc(duration)}</td>
       <td>${this._esc(periods)}</td>
-      <td>${this._esc(item.lehrkraft || "")}</td>
+      <td>${this._esc(schoolTeacher(this, item.lehrkraft || item.lehrkraft_kürzel || ""))}</td>
       <td class="source ${manual ? "manual" : ""}">${manual ? "Manuell" : "SPH"}</td>
       <td>${manual ? `<button class="delete" type="button" title="Termin löschen" data-id="${this._esc(item.id || "")}">✕</button>` : ""}</td>
     </tr>`;
@@ -259,7 +260,7 @@ class SphLerngruppenCard extends HTMLElement {
 }
 
 if (!customElements.get("sph-lerngruppen-card")) {
-  customElements.define("sph-lerngruppen-card", SphLerngruppenCard);
+  customElements.define("sph-lerngruppen-card", schoolCard(SphLerngruppenCard));
 }
 
 window.customCards = window.customCards || [];
