@@ -28,25 +28,26 @@ Anschließend unter **Einstellungen → Geräte & Dienste → Integration hinzuf
 
 ## Einrichtung
 
-Für jedes Kind wird ein eigener Integrationseintrag angelegt. Benötigt werden insbesondere:
+Für jedes Kind wird ein eigener Integrationseintrag angelegt. Benötigt werden insbesondere Schulnummer, SPH-Zugangsdaten sowie Name und Kürzel des Kindes.
 
-- Schulnummer
-- SPH-Benutzername
-- SPH-Passwort
-- Name des Kindes
-- Kürzel des Kindes
-- Aktualisierungsintervall
+### Konfigurationsparameter
 
-Das Standardintervall beträgt **60 Minuten**. Module, Zugangsdaten und weitere Optionen können später geändert werden.
+| Parameter | Beschreibung |
+| --- | --- |
+| **Name des Kindes** | Anzeigename des Kindes. Er wird unter anderem für den Integrationstitel und die daraus erzeugten Entity-Namen verwendet. |
+| **Kürzel des Kindes** | Kurzes eindeutiges Kürzel, das zusammen mit dem Namen zur Benennung der erzeugten Entities verwendet wird. |
+| **Schulnummer** | Numerische Schulnummer des Schulportal-Hessen-Zugangs. Es sind nur Ziffern zulässig. |
+| **Benutzername** | Benutzername des SPH-Kontos für dieses Kind. |
+| **Passwort** | Passwort des SPH-Kontos. |
+| **Aktualisierungsintervall (Minuten)** | Legt fest, wie häufig die SPH-Daten regulär aktualisiert werden. Zulässig sind **5 bis 1440 Minuten**, Standard sind **60 Minuten**. |
+| **Bezugsstunde für Entfall-Sensoren** | Schulstunde, auf die sich die Binärsensoren `erste_stunde_entfaellt_heute_*` und `erste_stunde_entfaellt_morgen_*` beziehen. Zulässig sind Stunden **1 bis 12**, Standard ist **1**. |
+| **Stundenplan-Ausgabe** | **Nur eigener Plan** stellt den persönlichen Stundenplan bereit. **Eigener Plan + vollständiger SPH-Stundenplan** füllt zusätzlich den vollständigen vom SPH gelieferten Stundenplan in der erweiterten Ausgabe. Der persönliche Stundenplan bleibt in beiden Varianten enthalten. |
+| **Gemeinsamen SPH-Kalender verwenden** | Standardmäßig aktiviert. Ist die Option aktiv, werden die aktivierten Kalenderquellen aus Stundenplan, Schulkalender und Lerngruppen in `calendar.sph_NAME_KUERZEL` zusammengeführt. Ist sie deaktiviert, werden die jeweiligen Kalender getrennt angelegt. Die zugehörigen Sensoren bleiben unabhängig davon getrennte Entities. |
+| **Schulamtsbezirk für bewegliche Ferientage** | Optionaler hessischer Schulamtsbezirk. Bei Auswahl werden die auf der offiziellen Schulamtsseite für das aktuelle Schuljahr veröffentlichten beweglichen Ferientage geladen. Die Daten werden einmal täglich aktualisiert und zusätzlich in `calendar.bewegliche_ferientage_NAME_KUERZEL` bereitgestellt. Dieser Kalender bleibt auch bei aktiviertem gemeinsamen SPH-Kalender separat und dient zusätzlich als Quelle für schulfreie Tage im Stundenplan. |
+| **Kalenderarten** | Nur in den nachträglichen Integrationsoptionen vorhanden. Filtert die Arten des SPH-Schulkalenders. Mehrere Werte können durch Komma, Semikolon oder Zeilenumbruch getrennt werden. Bleibt das Feld leer, werden **alle Kalenderarten** übernommen. |
+| **Aktive Module** | Legt fest, welche Module geladen werden: **Stundenplan**, **Schulkalender**, **Mein Unterricht**, **Lerngruppen** und **Vertretungsplan**. Standardmäßig sind alle Module aktiviert. Deaktivierte Module erzeugen bzw. behalten ihre zugehörigen Entities nicht als aktive Datenquelle. |
 
-Zusätzliche Optionen betreffen unter anderem:
-
-- aktive Module,
-- Stundenplan-Ausgabe,
-- Schulkalenderarten,
-- Bezugsstunde für die Vertretungsplan-Binärsensoren,
-- Schulamtsbezirk für bewegliche Ferientage,
-- getrennte oder zusammengefasste SPH-Kalender.
+Änderungen an den Integrationsoptionen werden gespeichert und der Integrationseintrag anschließend automatisch neu geladen.
 
 ## Beispiel-Entities
 
