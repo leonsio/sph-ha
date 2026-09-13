@@ -10,11 +10,14 @@ CONF_ACTIVE_MODULES = "active_modules"
 CONF_TIMETABLE_OUTPUT = "timetable_output"
 CONF_SCHOOL_DISTRICT = "school_district"
 CONF_COMBINE_CALENDARS = "combine_calendars"
+CONF_FIRST_LESSON = "first_lesson"
 CONF_MODULE_STUNDENPLAN = "module_stundenplan"
 CONF_MODULE_KALENDER = "module_kalender"
 CONF_MODULE_MEINUNTERRICHT = "module_meinunterricht"
 CONF_MODULE_LERNGRUPPEN = "module_lerngruppen"
+CONF_MODULE_VERTRETUNG = "module_vertretung"
 DEFAULT_UPDATE_INTERVAL = 60
+DEFAULT_FIRST_LESSON = 1
 # Empty means: do not filter calendar event types, keep all entries.
 DEFAULT_CALENDAR_EVENT_TYPES = []
 DEFAULT_MODULE_ENABLED = True
