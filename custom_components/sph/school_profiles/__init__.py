@@ -15,6 +15,7 @@ SCHOOL_PROFILE_NONE = "none"
 DEFAULT_SCHOOL_PROFILE = SCHOOL_PROFILE_NONE
 _PROFILE_ID = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 _PROFILE_ROOT = Path(__file__).parent
+_FRONTEND_ENTRYPOINT = "lovelace.js"
 
 
 def _discover_school_profiles() -> dict[str, SchoolProfile]:
@@ -62,15 +63,21 @@ def _discover_school_profiles() -> dict[str, SchoolProfile]:
             continue
 
         frontend_module = str(profile.frontend_module or "").strip()
-        if frontend_module:
-            frontend_file = directory / "frontend" / frontend_module
-            if not frontend_file.is_file():
-                _LOGGER.error(
-                    "Schul-Profil %s verweist auf fehlendes Frontend %s",
-                    profile_id,
-                    frontend_file,
-                )
-                continue
+        if frontend_module != _FRONTEND_ENTRYPOINT:
+            _LOGGER.error(
+                "Schul-Profil %s muss frontend_module=%r verwenden",
+                profile_id,
+                _FRONTEND_ENTRYPOINT,
+            )
+            continue
+        frontend_file = directory / "frontend" / frontend_module
+        if not frontend_file.is_file():
+            _LOGGER.error(
+                "Schul-Profil %s verweist auf fehlendes Frontend %s",
+                profile_id,
+                frontend_file,
+            )
+            continue
 
         profiles[profile_id] = profile
 
@@ -107,13 +114,12 @@ def school_profile_metadata() -> dict[str, dict]:
 
 
 def school_profile_frontend_paths() -> list[tuple[str, Path]]:
-    """Return URL ids and frontend directories for profiles with UI assets."""
-    result: list[tuple[str, Path]] = []
-    for profile_id, profile in _PROFILES.items():
-        if profile_id == SCHOOL_PROFILE_NONE or not profile.frontend_module:
-            continue
-        result.append((profile_id, _PROFILE_ROOT / profile_id / "frontend"))
-    return result
+    """Return URL ids and frontend directories for discovered profiles."""
+    return [
+        (profile_id, _PROFILE_ROOT / profile_id / "frontend")
+        for profile_id in _PROFILES
+        if profile_id != SCHOOL_PROFILE_NONE
+    ]
 
 
 __all__ = [
