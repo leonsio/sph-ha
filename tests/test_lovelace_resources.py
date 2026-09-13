@@ -1,6 +1,7 @@
 """Exercise Lovelace resource registration without importing Home Assistant."""
 import ast
 import asyncio
+import json
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
@@ -35,6 +36,12 @@ class LovelaceResourceTest(unittest.TestCase):
             ),
             namespace,
         )
+
+        manifest = json.loads(
+            Path('custom_components/sph/manifest.json').read_text()
+        )
+        version = namespace['CARD_VERSION']
+        self.assertEqual(version, manifest['version'])
 
         class Resources:
             loaded = True
@@ -81,13 +88,13 @@ class LovelaceResourceTest(unittest.TestCase):
         self.assertIn('/local/custom-card.js', urls)
         self.assertTrue(
             any(
-                url == '/api/sph/static/sph-stundenplan-card.js?v=0.6.0'
+                url == f'/api/sph/static/sph-stundenplan-card.js?v={version}'
                 for url in urls
             )
         )
         self.assertTrue(
             any(
-                url == '/api/sph/static/sph-vertretungsplan-card.js?v=0.6.0'
+                url == f'/api/sph/static/sph-vertretungsplan-card.js?v={version}'
                 for url in urls
             )
         )

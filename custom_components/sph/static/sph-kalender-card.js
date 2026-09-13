@@ -1,4 +1,4 @@
-import { schoolCard, schoolDescription } from "./school-hacks.js?v=0.4.24";
+import { schoolCard, schoolDescription } from "./school-profile.js?v=0.6.0";
 class SphKalenderCard extends HTMLElement {
   constructor() {
     super();
