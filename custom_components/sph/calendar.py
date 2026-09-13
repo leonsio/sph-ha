@@ -146,7 +146,7 @@ class SphSchoolCalendar(CoordinatorEntity, CalendarEntity):
         recurrence_id: str | None = None,
         recurrence_range: str | None = None,
     ) -> None:
-        """Delete a locally stored SPH calendar event."""
+        """Delete one locally stored SPH calendar event."""
         if recurrence_id or recurrence_range:
             raise HomeAssistantError(
                 "Wiederholende eigene SPH-Kalendertermine werden derzeit nicht unterstützt"
@@ -171,8 +171,13 @@ class SphCombinedCalendar(CalendarEntity):
         self._school_calendar: SphSchoolCalendar | None = None
 
         if bool(entry.data.get(CONF_MODULE_STUNDENPLAN, DEFAULT_MODULE_ENABLED)):
-            self._sources.append(SphTimetableCalendar(data["timetable"], entry))
+            self._sources.append(
+                SphTimetableCalendar(data["timetable"], entry, data.get("vertretung"))
+            )
             self._coordinators.append(data["timetable"])
+            substitution = data.get("vertretung")
+            if substitution is not None and getattr(substitution, "enabled", False):
+                self._coordinators.append(substitution)
 
         if bool(entry.data.get(CONF_MODULE_LERNGRUPPEN, DEFAULT_MODULE_ENABLED)):
             self._sources.append(SphLearningGroupsCalendar(data["lerngruppen"], entry))
@@ -270,7 +275,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         entities: list[CalendarEntity] = [SphCombinedCalendar(data, entry)]
     else:
         entities = [
-            SphTimetableCalendar(data["timetable"], entry),
+            SphTimetableCalendar(data["timetable"], entry, data.get("vertretung")),
             SphLearningGroupsCalendar(data["lerngruppen"], entry),
         ]
         if bool(entry.data.get(CONF_MODULE_KALENDER, DEFAULT_MODULE_ENABLED)):
