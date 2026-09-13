@@ -113,6 +113,29 @@ class SchoolProfileTransformTest(unittest.TestCase):
         self.assertEqual(profile.resolve_teacher("BÄR", hass), "Herr Beispiel")
         self.assertEqual(profile.resolve_teacher("UNBEKANNT", hass), "UNBEKANNT")
 
+    def test_kfg_epoch_subject_names_are_cleaned_and_expanded(self):
+        profile = KFGProfile()
+
+        self.assertEqual(profile.resolve_subject("Mu (epo1)"), "Musik")
+        self.assertEqual(profile.resolve_subject("Ku (epo2)"), "Kunst")
+        self.assertEqual(profile.resolve_subject("mu (EPO2)"), "Musik")
+        self.assertEqual(
+            profile.resolve_subject("Darstellendes Spiel (epo1)"),
+            "Darstellendes Spiel",
+        )
+        self.assertEqual(profile.resolve_subject("Mu"), "Mu")
+
+        display = {
+            "subject": "Ku (epo2)",
+            "teacher": "",
+            "room": "123",
+            "label": "",
+            "cancelled": False,
+            "original_subject": "",
+        }
+        result = profile.transform_timetable_display(display, _Hass())
+        self.assertEqual(result["subject"], "Kunst")
+
     def test_timetable_profile_transforms_personal_and_complete_output_but_not_grundplan(self):
         profile = KFGProfile()
         hass = _Hass(
