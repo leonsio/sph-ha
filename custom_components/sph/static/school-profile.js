@@ -23,7 +23,7 @@ export function filterDay(day, week, profile) {
   const matching = new Set(lessons.filter(l => weekBadges(l).includes(wanted)).map(slot));
   return lessons.filter(l => {
     const values = weekBadges(l);
-    return values.length ? values.includes(wanted) : !(profile.unbadgedFallback && matching.has(slot(l));
+    return values.length ? values.includes(wanted) : !(profile.unbadgedFallback && matching.has(slot(l)));
   });
 }
 
@@ -60,8 +60,6 @@ export function weekForDate(attrs, date, now = new Date()) {
 }
 
 const planForDate = (attrs, date, profile, now) => {
-  // A profile must never switch to eigener_grundplan. The integration's
-  // child-specific published plan remains authoritative.
   const source = Array.isArray(attrs.eigener_plan) ? attrs.eigener_plan : [];
   if ((attrs.freie_tage || []).includes(dateKey(date))) return [];
   return filterDay(source?.[(date.getDay()+6)%7], weekForDate(attrs,date,now), profile);
