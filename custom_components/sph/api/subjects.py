@@ -31,6 +31,9 @@ SUBJECT_NAMES = {
 
 # Class designations as they appear inside course names: 05cG, 7n, 9c, 5, 10b.
 CLASS_TOKEN = re.compile(r"^\d{1,2}[A-Za-zÄÖÜäöü]{0,3}$")
+# Technical course identifiers are commonly appended as a separate token, e.g.
+# (E2vd). Requiring a digit avoids dropping ordinary descriptive parentheses.
+COURSE_ID_TOKEN = re.compile(r"^\((?=[^()]*\d)[A-Za-zÄÖÜäöü0-9._/-]+\)$")
 
 
 def subject_name(subject):
@@ -50,17 +53,25 @@ def subject_name(subject):
 def subject_from_course(course: str) -> str:
     """Reduce a course name to a normalized subject name.
 
-    Course names mix subject and class in both orders and spellings, e.g.
-    ``Biologie 05cg``, ``D 05cG``, ``Ethik 5`` or ``7c, 7n Ethik``. Class
-    tokens are removed and subject abbreviations are expanded so that courses
-    such as ``D 05cG`` and ``Deutsch 7n`` are grouped under the same subject.
+    Course names mix subject, class and technical identifiers in different
+    orders and spellings, e.g. ``Biologie 05cg``, ``D 05cG``, ``Ethik 5``,
+    ``7c, 7n Ethik`` or ``Englisch (E2vd)``. Class tokens and technical course
+    identifiers are removed and subject abbreviations are expanded so that
+    courses such as ``D 05cG`` and ``Deutsch 7n`` are grouped under the same
+    subject.
     """
     value = str(course or "").strip()
     if not value:
         return ""
 
     tokens = [token.strip(",") for token in value.split()]
-    kept = [token for token in tokens if token and not CLASS_TOKEN.match(token)]
+    kept = [
+        token
+        for token in tokens
+        if token
+        and not CLASS_TOKEN.match(token)
+        and not COURSE_ID_TOKEN.match(token)
+    ]
     if not kept:
         return value
 
