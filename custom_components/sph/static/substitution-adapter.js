@@ -1,4 +1,4 @@
-import { escapeHtml, schoolLesson, schoolNews, schoolTeacher } from "./school-hacks.js?v=0.5.1";
+import { escapeHtml, schoolLesson, schoolNews, schoolTeacher } from "./school-profile.js?v=0.6.0";
 
 const norm = value => String(value ?? "")
   .trim()
@@ -100,9 +100,6 @@ function findInternalEntry(card, rawLesson, date) {
   });
   if (!candidates.length) return null;
 
-  // Prefer an exact subject match. SPH sometimes omits Fach_alt and only returns
-  // a shortened/current subject value. If class + period identify one unique
-  // entry, still apply it instead of silently dropping a teacher/room change.
   return candidates.find(entry => subjectMatches(entry, rawLesson))
     || (candidates.length === 1 ? candidates[0] : null);
 }
@@ -162,9 +159,6 @@ export function substitutionLesson(card, rawLesson, date) {
     : { ...rawLesson, displaySubject: rawLesson?.fach || rawLesson?.subject || "Unterricht", displayTeacher: rawLesson?.teacher || "" };
 
   if (card?._school) {
-    // Explicit per-card sources remain authoritative, including a deliberately
-    // missing entity. Otherwise every school profile gets first chance and the
-    // built-in SPH Vertretungsplan acts only as fallback.
     if (explicitSchoolSource(card) !== undefined || hasSchoolSubstitution(schoolAdjusted)) return schoolAdjusted;
   }
   return applyInternal(card, schoolAdjusted, rawLesson, date);
