@@ -36,9 +36,10 @@ class ResourceMigrationTest(unittest.TestCase):
         register = namespace['_register_lovelace_resources']
         asyncio.run(register(hass))
         urls = [i['url'] for i in resources.items]
-        self.assertEqual(len(urls), 8)
+        self.assertEqual(len(urls), 9)
         self.assertIn('/local/kfg-stundenplan-card.js', urls)
         self.assertIn('/api/kfg_vertretungsplan/static/vertretungsplan-card.js', urls)
+        self.assertTrue(any('/api/sph/static/sph-vertretungsplan-card.js' in url for url in urls))
         self.assertFalse(any(url.startswith('/api/sph/static/kfg-') for url in urls))
         asyncio.run(register(hass))
         self.assertEqual([i['url'] for i in resources.items], urls)

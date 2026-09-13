@@ -6,6 +6,7 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ...const import CONF_CHILD_NAME, CONF_CHILD_SHORTCUT
+from .helpers import subject_overview
 
 
 def child_label(entry) -> str:
@@ -19,6 +20,7 @@ def child_label(entry) -> str:
 def meinunterricht_payload(coordinator, entry) -> dict:
     """Build the complete Mein Unterricht payload."""
     tasks = coordinator.data or []
+    subjects = subject_overview(tasks)
     return {
         "kind": entry.data.get(CONF_CHILD_NAME, ""),
         "kind_kürzel": entry.data.get(CONF_CHILD_SHORTCUT, ""),
@@ -26,6 +28,9 @@ def meinunterricht_payload(coordinator, entry) -> dict:
         "anzahl": len(tasks),
         "unerledigt": sum(not task.get("erledigt", False) for task in tasks),
         "erledigt": sum(bool(task.get("erledigt", False)) for task in tasks),
+        "faecher": subjects,
+        "faecher_gesamt": len(subjects),
+        "faecher_offen": sum(1 for subject in subjects if subject["offen"]),
     }
 
 
@@ -52,15 +57,7 @@ class SphMeinUnterrichtSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self):
-        payload = meinunterricht_payload(self.coordinator, self.entry)
-        return {
-            "kind": payload["kind"],
-            "kind_kürzel": payload["kind_kürzel"],
-            "aufgaben": payload["aufgaben"],
-            "anzahl": payload["anzahl"],
-            "unerledigt": payload["unerledigt"],
-            "erledigt": payload["erledigt"],
-        }
+        return meinunterricht_payload(self.coordinator, self.entry)
 
 
 class SphMeinUnterrichtJsonSensor(CoordinatorEntity, SensorEntity):

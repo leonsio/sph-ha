@@ -20,16 +20,19 @@ from .const import (
     CONF_CHILD_NAME,
     CONF_CHILD_SHORTCUT,
     CONF_COMBINE_CALENDARS,
+    CONF_FIRST_LESSON,
     CONF_MODULE_KALENDER,
     CONF_MODULE_LERNGRUPPEN,
     CONF_MODULE_MEINUNTERRICHT,
     CONF_MODULE_STUNDENPLAN,
+    CONF_MODULE_VERTRETUNG,
     CONF_SCHOOL_DISTRICT,
     CONF_SCHOOL_ID,
     CONF_TIMETABLE_OUTPUT,
     CONF_UPDATE_INTERVAL,
     DEFAULT_CALENDAR_EVENT_TYPES,
     DEFAULT_COMBINE_CALENDARS,
+    DEFAULT_FIRST_LESSON,
     DEFAULT_MODULE_ENABLED,
     DEFAULT_TIMETABLE_OUTPUT,
     DEFAULT_UPDATE_INTERVAL,
@@ -44,11 +47,13 @@ MODULE_STUNDENPLAN = "stundenplan"
 MODULE_KALENDER = "kalender"
 MODULE_MEINUNTERRICHT = "meinunterricht"
 MODULE_LERNGRUPPEN = "lerngruppen"
+MODULE_VERTRETUNG = "vertretung"
 ALL_MODULES = [
     MODULE_STUNDENPLAN,
     MODULE_KALENDER,
     MODULE_MEINUNTERRICHT,
     MODULE_LERNGRUPPEN,
+    MODULE_VERTRETUNG,
 ]
 
 MODULE_CONFIG_KEYS = {
@@ -56,11 +61,11 @@ MODULE_CONFIG_KEYS = {
     MODULE_KALENDER: CONF_MODULE_KALENDER,
     MODULE_MEINUNTERRICHT: CONF_MODULE_MEINUNTERRICHT,
     MODULE_LERNGRUPPEN: CONF_MODULE_LERNGRUPPEN,
+    MODULE_VERTRETUNG: CONF_MODULE_VERTRETUNG,
 }
 
 
 def _calendar_types_to_text(value: Any) -> str:
-    """Render stored calendar types as an editable comma-separated string."""
     if isinstance(value, (list, tuple, set)):
         items = [str(item).strip() for item in value if str(item).strip()]
     else:
@@ -73,11 +78,6 @@ def _calendar_types_to_text(value: Any) -> str:
 
 
 def _parse_calendar_types(value: Any) -> list[str]:
-    """Parse a user-editable list and remove duplicates case-insensitively.
-
-    An empty list intentionally means that no type filter is applied and all
-    SPH calendar entries are kept.
-    """
     if isinstance(value, (list, tuple, set)):
         raw_items = [str(item) for item in value]
     else:
@@ -96,7 +96,6 @@ def _parse_calendar_types(value: Any) -> list[str]:
 
 
 def _active_modules(values: dict[str, Any]) -> list[str]:
-    """Return selected modules from the existing per-module boolean settings."""
     return [
         module
         for module, config_key in MODULE_CONFIG_KEYS.items()
@@ -105,7 +104,6 @@ def _active_modules(values: dict[str, Any]) -> list[str]:
 
 
 def _store_active_modules(data: dict[str, Any], selected: Any) -> None:
-    """Store the module multi-select as the existing boolean config keys."""
     selected_modules = {
         str(value).strip()
         for value in (selected if isinstance(selected, (list, tuple, set)) else [])
@@ -135,13 +133,6 @@ def _timetable_output_selector():
 
 
 def _school_district_selector():
-    """Return a selector whose stored values are the real district names.
-
-    District names contain spaces and umlauts and therefore cannot be used as
-    Home Assistant translation option keys. Supplying explicit value/label
-    pairs keeps the persisted values stable without requiring invalid
-    translation keys.
-    """
     options = [{"value": SCHOOL_DISTRICT_NONE, "label": "—"}]
     options.extend({"value": district, "label": district} for district in SCHOOL_DISTRICTS)
     return SelectSelector(
@@ -197,6 +188,10 @@ class SphConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     default=values.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL),
                 ): vol.All(vol.Coerce(int), vol.Range(min=5, max=1440)),
                 vol.Required(
+                    CONF_FIRST_LESSON,
+                    default=values.get(CONF_FIRST_LESSON, DEFAULT_FIRST_LESSON),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=12)),
+                vol.Required(
                     CONF_TIMETABLE_OUTPUT,
                     default=values.get(CONF_TIMETABLE_OUTPUT, DEFAULT_TIMETABLE_OUTPUT),
                 ): _timetable_output_selector(),
@@ -248,6 +243,9 @@ class SphOptionsFlow(OptionsFlow):
                     CONF_USERNAME: user_input[CONF_USERNAME].strip(),
                     CONF_PASSWORD: user_input[CONF_PASSWORD],
                     CONF_UPDATE_INTERVAL: int(user_input[CONF_UPDATE_INTERVAL]),
+                    CONF_FIRST_LESSON: int(
+                        user_input.get(CONF_FIRST_LESSON, DEFAULT_FIRST_LESSON)
+                    ),
                     CONF_TIMETABLE_OUTPUT: str(
                         user_input.get(CONF_TIMETABLE_OUTPUT, DEFAULT_TIMETABLE_OUTPUT)
                     ),
@@ -269,9 +267,6 @@ class SphOptionsFlow(OptionsFlow):
                 data=data,
                 title=f"Schulportal Hessen – {child_name} ({child_shortcut})",
             )
-
-            # Recreate the integration so credentials, module switches and
-            # filters are applied immediately without a HA restart.
             await self.hass.config_entries.async_reload(self.config_entry.entry_id)
             return self.async_create_entry(title="", data={})
 
@@ -313,6 +308,10 @@ class SphOptionsFlow(OptionsFlow):
                     CONF_UPDATE_INTERVAL,
                     default=values.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL),
                 ): vol.All(vol.Coerce(int), vol.Range(min=5, max=1440)),
+                vol.Required(
+                    CONF_FIRST_LESSON,
+                    default=values.get(CONF_FIRST_LESSON, DEFAULT_FIRST_LESSON),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=12)),
                 vol.Required(
                     CONF_TIMETABLE_OUTPUT,
                     default=values.get(CONF_TIMETABLE_OUTPUT, DEFAULT_TIMETABLE_OUTPUT),

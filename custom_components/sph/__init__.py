@@ -18,6 +18,7 @@ from .const import (
     CONF_CHILD_SHORTCUT,
     CONF_COMBINE_CALENDARS,
     CONF_MODULE_KALENDER,
+    CONF_MODULE_VERTRETUNG,
     CONF_PASSWORD,
     CONF_SCHOOL_DISTRICT,
     CONF_SCHOOL_ID,
@@ -31,7 +32,7 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
-CARD_VERSION = "0.4.24"
+CARD_VERSION = "0.4.25"
 CARD_URLS = (
     f"/api/{DOMAIN}/static/sph-stundenplan-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/sph-stundenplan-tag-card.js?v={CARD_VERSION}",
@@ -39,6 +40,7 @@ CARD_URLS = (
     f"/api/{DOMAIN}/static/sph-lerngruppen-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/sph-meinunterricht-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/sph-kalender-card.js?v={CARD_VERSION}",
+    f"/api/{DOMAIN}/static/sph-vertretungsplan-card.js?v={CARD_VERSION}",
 )
 
 
@@ -54,8 +56,6 @@ async def _register_lovelace_resources(hass: HomeAssistant) -> None:
         resources.loaded = True
 
     items = resources.async_items() or []
-    # Remove only resources previously registered by this integration. Existing
-    # dashboards must switch their card types to sph-* with school-hacks: kfg.
     obsolete = {
         f"/api/{DOMAIN}/static/{name}.js"
         for name in (
@@ -124,6 +124,24 @@ async def _remove_disabled_calendar_entities(hass: HomeAssistant, entry: ConfigE
             _LOGGER.debug("SPH: deaktivierte Schulkalender-Entity %s entfernt", entity_id)
 
 
+async def _remove_disabled_vertretung_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Remove substitution-plan entities when the module is disabled."""
+    if bool(entry.data.get(CONF_MODULE_VERTRETUNG, DEFAULT_MODULE_ENABLED)):
+        return
+
+    registry = er.async_get(hass)
+    for platform, unique_id in (
+        ("sensor", f"{entry.entry_id}_vertretungsplan"),
+        ("sensor", f"{entry.entry_id}_vertretungsplan_json"),
+        ("binary_sensor", f"{entry.entry_id}_erste_stunde_entfaellt_heute"),
+        ("binary_sensor", f"{entry.entry_id}_erste_stunde_entfaellt_morgen"),
+    ):
+        entity_id = registry.async_get_entity_id(platform, DOMAIN, unique_id)
+        if entity_id:
+            registry.async_remove(entity_id)
+            _LOGGER.debug("SPH: deaktivierte Vertretungsplan-Entity %s entfernt", entity_id)
+
+
 async def _remove_inactive_calendar_layout_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Keep only the configured combined or separate user-facing calendars."""
     combine = bool(entry.data.get(CONF_COMBINE_CALENDARS, DEFAULT_COMBINE_CALENDARS))
@@ -173,6 +191,8 @@ async def _migrate_sensor_entity_ids(hass: HomeAssistant, entry: ConfigEntry) ->
         (f"{entry.entry_id}_meinunterricht_json", f"mein_unterricht_{suffix}_json"),
         (f"{entry.entry_id}_lerngruppen", f"lerngruppen_{suffix}"),
         (f"{entry.entry_id}_lerngruppen_json", f"lerngruppen_{suffix}_json"),
+        (f"{entry.entry_id}_vertretungsplan", f"vertretungsplan_{suffix}"),
+        (f"{entry.entry_id}_vertretungsplan_json", f"vertretungsplan_{suffix}_json"),
     ):
         entity_id = registry.async_get_entity_id("sensor", DOMAIN, unique_id)
         if not entity_id:
@@ -184,6 +204,15 @@ async def _migrate_sensor_entity_ids(hass: HomeAssistant, entry: ConfigEntry) ->
             _LOGGER.warning("Kann %s nicht in %s umbenennen, da die Ziel-Entity bereits existiert", entity_id, desired)
             continue
         registry.async_update_entity(entity_id, new_entity_id=desired)
+
+    for unique_id, object_id in (
+        (f"{entry.entry_id}_erste_stunde_entfaellt_heute", f"erste_stunde_entfaellt_heute_{suffix}"),
+        (f"{entry.entry_id}_erste_stunde_entfaellt_morgen", f"erste_stunde_entfaellt_morgen_{suffix}"),
+    ):
+        entity_id = registry.async_get_entity_id("binary_sensor", DOMAIN, unique_id)
+        desired = f"binary_sensor.{object_id}"
+        if entity_id and entity_id != desired and not registry.async_get(desired):
+            registry.async_update_entity(entity_id, new_entity_id=desired)
 
     for unique_id, object_id in (
         (f"{entry.entry_id}_native_calendar", f"schulkalender_{suffix}"),
@@ -204,6 +233,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     from .module.meinunterricht.coordinator import SphMeinUnterrichtCoordinator
     from .module.stundenplan.coordinator import SphTimetableCoordinator
     from .module.stundenplan.movable_holidays import SphMovableHolidaysCoordinator
+    from .module.vertretung.coordinator import SphVertretungCoordinator
 
     auth = SphAuthClient(
         entry.data[CONF_SCHOOL_ID],
@@ -246,24 +276,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception as err:
         _LOGGER.warning("Schulportal Hessen Lerngruppen für %s aktuell nicht verfügbar: %s", entry.title, err)
 
+    vertretung = SphVertretungCoordinator(hass, entry, auth)
+    if vertretung.enabled:
+        try:
+            await vertretung.async_config_entry_first_refresh()
+        except Exception as err:
+            _LOGGER.warning("Schulportal Hessen Vertretungsplan für %s aktuell nicht verfügbar: %s", entry.title, err)
+
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "auth": auth,
         "timetable": timetable,
         "calendar": calendar,
         "meinunterricht": meinunterricht,
         "lerngruppen": lerngruppen,
+        "vertretung": vertretung,
         "movable_holidays": movable_holidays,
     }
 
     await _remove_disabled_calendar_entities(hass, entry)
+    await _remove_disabled_vertretung_entities(hass, entry)
     await _remove_inactive_calendar_layout_entities(hass, entry)
     await _remove_unconfigured_movable_holiday_calendar(hass, entry)
-    await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "calendar"])
+    await hass.config_entries.async_forward_entry_setups(
+        entry, ["sensor", "calendar", "binary_sensor"]
+    )
     await _migrate_sensor_entity_ids(hass, entry)
 
-    # Free-day calendars may still be restoring/loading when SPH performs its
-    # first refresh. Track them after all SPH entities have been set up and
-    # refresh the overlay independently from the SPH polling cycle.
     timetable.async_start_free_day_tracking()
     meinunterricht.async_start_manual_cleanup()
     return True
@@ -279,7 +317,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if meinunterricht is not None:
         meinunterricht.async_stop_manual_cleanup()
 
-    unloaded = await hass.config_entries.async_unload_platforms(entry, ["sensor", "calendar"])
+    unloaded = await hass.config_entries.async_unload_platforms(
+        entry, ["sensor", "calendar", "binary_sensor"]
+    )
     if unloaded:
         hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
     return unloaded

@@ -8,6 +8,7 @@ import re
 from bs4 import BeautifulSoup
 
 from ...api.client import SphAuthClient
+from ...api.subjects import subject_from_course
 from ...const import SPH_BASE
 
 _LOGGER = logging.getLogger(__name__)
@@ -48,7 +49,9 @@ class SphMeinUnterrichtClient:
                     if not location:
                         raise RuntimeError("Keine SPH-Weiterleitung für Mein Unterricht.")
                     response = self.session.get(
-                        location if location.startswith("http") else f"{SPH_BASE}/{location.lstrip('/')}",
+                        location
+                        if location.startswith("http")
+                        else f"{SPH_BASE}/{location.lstrip('/')}",
                         allow_redirects=False,
                         timeout=20,
                     )
@@ -102,9 +105,6 @@ class SphMeinUnterrichtClient:
             teacher_code = cls._extract_teacher_code(teacher)
             done = cls._is_visible(done_element)
             undone = cls._is_visible(undone_element)
-
-            # The site normally exposes exactly one of the two status elements.
-            # Prefer the explicit "done" state if both happen to be present.
             completed = done and not undone or done
 
             tasks.append(
@@ -141,13 +141,8 @@ class SphMeinUnterrichtClient:
 
     @staticmethod
     def _extract_subject(course: str) -> str:
-        # Course names are commonly "Deutsch 7n", "7c, 7n Ethik", etc.
-        # Keep the course text intact but provide a useful subject field.
-        value = course.strip()
-        if not value:
-            return ""
-        match = re.match(r"^(?:[^,]+,\s*)?(?:\d+[a-zA-Z]?\s+)?(.+?)(?:\s+\d+[a-zA-Z]?)?$", value)
-        return match.group(1).strip() if match else value
+        """Normalize a course name to its plain subject name."""
+        return subject_from_course(course)
 
     @staticmethod
     def _extract_teacher_code(element) -> str:
