@@ -25,23 +25,33 @@ Angezeigt werden:
 
 ## Vertretungen
 
-Ohne School Hack verwendet die Karte automatisch den internen SPH-Vertretungsplan des Kindes.
+Die Karte verwendet automatisch den internen SPH-Vertretungsplan des Kindes. Ein aktives Schul-Profil kann zusätzlich eine bevorzugte Vertretungsquelle definieren.
 
 Damit können Entfall, Vertretung, Fachwechsel, Raumänderung, Vertretungslehrkraft und Hinweise des tatsächlich ausgewählten Tages dargestellt werden.
 
-Mit `school-hacks: <profil>` wird zuerst die schulische Profilquelle verwendet. Der interne SPH-Vertretungsplan dient als Fallback, sofern die Profilquelle für die konkrete Stunde keinen Treffer liefert.
+Die Quellen-Priorität lautet:
+
+1. explizite Kartenquelle über `vertretungsplan_sensor`, `vertretungsplan` oder `substitution_sensor`,
+2. bevorzugte Quelle des aktiven Schul-Profils,
+3. interner SPH-Vertretungsplan als Fallback.
 
 Eine explizit gesetzte Vertretungsquelle bleibt autoritativ.
 
-## School Hacks
+## Schul-Profile
+
+Das im Integrationseintrag ausgewählte Profil wird über das Sensorattribut `school_profile` automatisch erkannt.
+
+Für Tests oder einen gezielten Override:
 
 ```yaml
 type: custom:sph-stundenplan-tag-card
 entity: sensor.stundenplan_maxim_mk
-school-hacks: kfg
+school-profile: kfg
 ```
 
-Allgemein: [School Hacks](school-hacks.md).
+Mit `school-profile: false` kann die Profil-Darstellung für eine einzelne Karte deaktiviert werden.
+
+Allgemein: [Schul-Profile](../SCHOOL_PROFILES.md).
 
 KFG: [Kaiserin-Friedrich-Gymnasium Bad Homburg](../schools/kfg/README.md).
 
@@ -60,7 +70,7 @@ KFG: [Kaiserin-Friedrich-Gymnasium Bad Homburg](../schools/kfg/README.md).
 | `entity` | Entity-ID | automatisch | Stundenplan-Sensor |
 | `sensor` | Entity-ID | automatisch | Alias |
 | `child` | String | leer | Kind/Kürzel |
-| `school-hacks` | String/false | false | Optionales Schulprofil |
+| `school-profile` | String/false | automatisch | Expliziter Schul-Profil-Override |
 | `vertretungsplan_sensor` | Entity-ID | automatisch | Explizite Vertretungsquelle |
 | `vertretungsplan` | Entity-ID | automatisch | Alias |
 | `substitution_sensor` | Entity-ID | automatisch | Alias |
