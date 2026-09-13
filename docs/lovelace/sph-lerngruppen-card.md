@@ -8,6 +8,10 @@ Die Karte zeigt Leistungskontrollen aus dem SPH-Lerngruppen-Modul. Angezeigt wer
 
 Neben SPH-Daten können lokale Termine angelegt werden. Nur lokal erstellte Termine sind über die Karte löschbar.
 
+## Screenshot
+
+![SPH Lerngruppen – Leistungskontrollen](images/lernkontrollen.webp)
+
 ## Zeitzuordnung
 
 Schulstunden wie `3`, `3,4` oder `3-4` werden im Backend normalisiert. Wenn der persönliche Stundenplan für diese Stunden Zeiten enthält, erzeugt das Modul zeitgebundene Kalendertermine; andernfalls bleibt der Termin ganztägig.
