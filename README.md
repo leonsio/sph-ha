@@ -2,7 +2,7 @@
 
 Home-Assistant-Custom-Integration für Daten aus dem **Schulportal Hessen (SPH)**.
 
-Die Installation erfolgt einmalig als Integration **Schulportal Hessen**. Sie umfasst aktuell die Module **Stundenplan**, **Schulkalender**, **Mein Unterricht** und **Lerngruppen**.
+Die Installation erfolgt einmalig als Integration **Schulportal Hessen**. Sie umfasst aktuell die Module **Stundenplan**, **Schulkalender**, **Mein Unterricht**, **Lerngruppen** und **Vertretungsplan**.
 
 ## Schulabhängige Kartenanpassungen
 
@@ -35,7 +35,7 @@ Für jedes Kind wird ein eigener Eintrag der Integration angelegt. Benötigt wer
 
 Das Standard-Aktualisierungsintervall beträgt **60 Minuten** und kann nach der Einrichtung geändert werden. Auch Zugangsdaten, Schulnummer, Name und Kürzel können über die Konfiguration angepasst werden.
 
-Die Module **Stundenplan**, **Schulkalender**, **Mein Unterricht** und **Lerngruppen** können in der Konfiguration einzeln aktiviert oder deaktiviert werden. Für den Stundenplan kann zusätzlich die gewünschte Ausgabe gewählt werden. Beim Schulkalender ist ein optionaler Filter nach Kalenderarten möglich; ein leerer Filter übernimmt alle Einträge.
+Die Module **Stundenplan**, **Schulkalender**, **Mein Unterricht**, **Lerngruppen** und **Vertretungsplan** können in der Konfiguration einzeln aktiviert oder deaktiviert werden. Für den Stundenplan kann zusätzlich die gewünschte Ausgabe gewählt werden. Beim Schulkalender ist ein optionaler Filter nach Kalenderarten möglich; ein leerer Filter übernimmt alle Einträge. Für den Vertretungsplan kann festgelegt werden, welche Schulstunde die Entfall-Binärsensoren als Bezugsstunde prüfen.
 
 Für bewegliche Ferientage kann ein Schulamtsbezirk ausgewählt werden. Die Integration berücksichtigt dabei das jeweilige Schuljahr und stellt die Termine zusätzlich über einen eigenen Kalender bereit.
 
@@ -54,6 +54,10 @@ sensor.mein_unterricht_maxim_mk
 sensor.mein_unterricht_maxim_mk_json
 sensor.lerngruppen_maxim_mk
 sensor.lerngruppen_maxim_mk_json
+sensor.vertretungsplan_maxim_mk
+sensor.vertretungsplan_maxim_mk_json
+binary_sensor.erste_stunde_entfaellt_heute_maxim_mk
+binary_sensor.erste_stunde_entfaellt_morgen_maxim_mk
 calendar.stundenplan_maxim_mk
 calendar.schulkalender_maxim_mk
 calendar.lerngruppen_maxim_mk
@@ -90,6 +94,14 @@ Das Modul stellt aktuelle Hausaufgaben aus **„Mein Unterricht“** bereit. Zu 
 - Erledigt-Status
 - Quelle (`sph` oder `manuell`)
 
+Kursnamen werden auf ein gemeinsames Fach normalisiert. Klassenkennungen wie `05cG`, `7n` oder `5` werden entfernt und bekannte Kürzel ausgeschrieben. Dadurch werden beispielsweise `D 05cG` und `Deutsch 7n` beide unter **Deutsch** geführt, während der ursprüngliche Kursname in `kurs` erhalten bleibt.
+
+Zusätzlich enthalten normaler Sensor und JSON-Sensor eine nach Fach gruppierte Übersicht:
+
+- `faecher` – Status, Anzahl, offene/erledigte Einträge, Kurse, Lehrkräfte, letzter Eintrag und offene Themen je Fach
+- `faecher_gesamt` – Anzahl der Fächer mit Einträgen
+- `faecher_offen` – Anzahl der Fächer mit mindestens einem offenen Eintrag
+
 Fehlende Hausaufgaben können lokal ergänzt werden, wenn sie beispielsweise vom Lehrer nicht im Schulportal eingetragen wurden. Diese Einträge werden persistent in Home Assistant gespeichert und bei SPH-Aktualisierungen nicht überschrieben.
 
 Manuelle Hausaufgaben werden **eine Woche nach ihrem Aufgabendatum automatisch gelöscht**. Sie können vorher auch direkt über die Lovelace-Karte entfernt werden. SPH-Einträge bleiben schreibgeschützt.
@@ -100,6 +112,25 @@ Intern verwendet die Funktion die Home-Assistant-Dienste:
 sph.meinunterricht_hausaufgabe_hinzufuegen
 sph.meinunterricht_hausaufgabe_loeschen
 ```
+
+### Vertretungsplan
+
+Das Modul liest `vertretungsplan.php` und stellt die veröffentlichten Tage mit Vertretungen, Raumänderungen, Ausfällen und allgemeinen Hinweisen bereit. Die Spalten werden anhand der `data-field`-Kennzeichnung des Schulportals ausgewertet und sind damit nicht an eine feste Tabellenreihenfolge gebunden.
+
+Vertretungsarten werden zusätzlich normalisiert. Abkürzungen wie `Vertr`, `Entf.` oder `Freis` bleiben im Rohfeld `art` erhalten und werden in `art_lang` beispielsweise zu **Vertretung**, **Entfall** oder **Freistunde** ausgeschrieben. Stundenbereiche wie `1 - 2` werden zusätzlich als Liste in `stunden` sowie als `von_stunde` und `bis_stunde` bereitgestellt.
+
+Der normale Sensor liefert unter anderem:
+
+- `tage` – alle veröffentlichten Tage samt Einträgen und Hinweisen
+- `heute` und `morgen`
+- `anzahl_heute`, `anzahl_morgen`
+- `entfaelle_heute`, `entfaelle_morgen`
+- `aktualisiert`
+- `wird_aktualisiert`
+
+Der JSON-Sensor `sensor.vertretungsplan_..._json` enthält im Attribut `json` denselben vollständigen Payload als kompaktes UTF-8-JSON und kann dadurch direkt von ESPHome oder anderen einfachen Clients verarbeitet werden.
+
+Die beiden Binärsensoren für heute und morgen prüfen die in den Integrationsoptionen konfigurierte Bezugsstunde. Solange für einen Tag noch kein Vertretungsplan veröffentlicht wurde, ist der betreffende Binärsensor `unavailable` statt `off`.
 
 ### Lerngruppen
 
@@ -163,6 +194,16 @@ Die Karte zeigt alle Hausaufgaben tabellarisch mit Datum, Fach, Thema, Aufgabe, 
 
 Die Karte berücksichtigt die bei Custom Cards relevante Shadow-DOM-Problematik: Unabhängige Home-Assistant-State-Updates führen nicht zu einem vollständigen Neuaufbau des Shadow DOM. Bei einem tatsächlichen Update des Mein-Unterricht-Sensors werden horizontale Scrollposition, geöffneter Dialog, Formularwerte und Fokus wiederhergestellt. Dadurch bleiben horizontales Scrollen und der Eingabedialog stabil.
 
+### Vertretungsplan
+
+```yaml
+type: custom:sph-vertretungsplan-card
+entity: sensor.vertretungsplan_maxim_mk
+title: Vertretungsplan Maxim
+```
+
+Die Karte kann leere Tage ausblenden, die Anzahl der Tage begrenzen oder mit `only_cancellations: true` ausschließlich erkannte Ausfälle anzeigen.
+
 ### Lerngruppen / Leistungskontrollen
 
 ```yaml
@@ -186,7 +227,7 @@ Die Karten werden von der Integration automatisch als Lovelace-Ressourcen regist
 
 ## Verhalten bei Verbindungsproblemen
 
-Bei einem fehlgeschlagenen Abruf bleiben die zuletzt erfolgreich geladenen Daten erhalten, soweit das jeweilige Modul bereits Daten geladen hat. Lokal gespeicherte Lerngruppen-Termine und Hausaufgaben bleiben unabhängig von der Erreichbarkeit des Schulportals erhalten. Sobald das Schulportal wieder erreichbar ist, werden die Daten beim nächsten erfolgreichen Aktualisierungsversuch aktualisiert und erneut mit den lokalen Daten zusammengeführt.
+Bei einem fehlgeschlagenen Abruf bleiben die zuletzt erfolgreich geladenen Daten erhalten, soweit das jeweilige Modul bereits Daten geladen hat. Das gilt auch für den Vertretungsplan. Lokal gespeicherte Lerngruppen-Termine und Hausaufgaben bleiben unabhängig von der Erreichbarkeit des Schulportals erhalten. Sobald das Schulportal wieder erreichbar ist, werden die Daten beim nächsten erfolgreichen Aktualisierungsversuch aktualisiert und erneut mit den lokalen Daten zusammengeführt.
 
 Auch die zwischengespeicherten beweglichen Ferientage werden bei einem fehlgeschlagenen Abruf nicht durch leere Daten ersetzt.
 
