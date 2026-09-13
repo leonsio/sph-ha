@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from datetime import timedelta
 import json
+import re
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from ...api.subjects import SUBJECT_NAMES, subject_name
+from ...api.subjects import SUBJECT_NAMES
 from ...const import (
     CONF_CHILD_NAME,
     CONF_CHILD_SHORTCUT,
@@ -15,6 +16,20 @@ from ...const import (
     DEFAULT_TIMETABLE_OUTPUT,
     TIMETABLE_OUTPUT_ALL,
 )
+
+
+def subject_name(subject):
+    """Keep the historical helper API while using the shared subject table."""
+    if not subject:
+        return subject
+    value = str(subject).strip()
+    match = re.match(r"^([A-Za-zÄÖÜäöü]+)(\d+)(.*)$", value)
+    if match:
+        code, number, suffix = match.groups()
+        base = SUBJECT_NAMES.get(code.upper())
+        if base:
+            return f"{base} {number}{suffix}"
+    return SUBJECT_NAMES.get(value.upper(), value)
 
 
 def enrich_days(days):
