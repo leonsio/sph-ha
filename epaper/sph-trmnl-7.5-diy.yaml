@@ -1,0 +1,4395 @@
+# Maxim ePaper Display - v30.9 - Child Entity Substitutions
+# Stable event-driven refresh architecture with partial refresh
+# Definition: definitions/boards/generic-esp32s3/manifest.yaml
+
+# ---------------------------------------------------------------------------
+# Child-specific Home Assistant entity IDs
+# Change these two values only when this display is assigned to another child.
+# Values must match the lowercase fragments used in Home Assistant entity IDs.
+# ---------------------------------------------------------------------------
+substitutions:
+  child_name: maxim
+  child_short: mk
+esphome:
+  name: maxim-epaper
+  friendly_name: Maxim ePaper Display
+  on_boot:
+    priority: 600
+    then:
+      - output.turn_on: bsp_battery_enable
+      - delay: 200ms
+      - component.update: battery_voltage
+      - component.update: battery_level
+        
+esp32:
+  variant: esp32s3
+  framework:
+    type: arduino
+logger:
+  level: DEBUG
+  logs:
+    homeassistant.text_sensor: WARN
+    homeassistant.sensor: WARN
+    api: INFO
+    api.connection: INFO
+
+psram:
+  mode: octal
+  speed: 80MHz
+  
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: XIAO Fallback Hotspot
+    password: !secret fallback_ap_password
+
+captive_portal:
+
+  
+# ESPHome JSON support. ArduinoJson is provided by ESPHome itself.
+json:
+
+
+# V29: Page changes use the normal partial-refresh cycle for maximum speed.
+# Every 12th refresh remains a normal full refresh to limit accumulated ghosting.
+
+# ---------------------------------------------------------------------------
+# Fonts
+# ---------------------------------------------------------------------------
+font:
+
+  - file: "gfonts://Inter@700"
+    id: font_day
+    size: 18
+    glyphsets:
+      - GF_Latin_Core
+
+  - file: "gfonts://Inter@700"
+    id: font_lesson
+    size: 15
+    glyphsets:
+      - GF_Latin_Core
+
+  - file: "gfonts://Inter@700"
+    id: font_small
+    size: 12
+    glyphsets:
+      - GF_Latin_Core
+
+  # V24.2: new typeface only for subject names.
+  - file: "fonts/NotoSans-Bold.ttf"
+    id: font_subject
+    size: 15
+    bpp: 4
+    glyphsets:
+      - GF_Latin_Core
+
+  - file: "fonts/NotoSans-Bold.ttf"
+    id: font_subject_small
+    size: 12
+    bpp: 4
+    glyphsets:
+      - GF_Latin_Core
+
+  - file: "gfonts://Inter@700"
+    id: font_meta
+    size: 10
+    glyphsets:
+      - GF_Latin_Core
+
+  # Start page: larger one-day timetable
+  - file: "gfonts://Inter@700"
+    id: font_start_schedule_header
+    size: 19
+    glyphsets:
+      - GF_Latin_Core
+
+  - file: "fonts/NotoSans-Bold.ttf"
+    id: font_start_schedule_subject
+    size: 17
+    bpp: 4
+    glyphsets:
+      - GF_Latin_Core
+
+  - file: "gfonts://Inter@600"
+    id: font_start_schedule_time
+    size: 13
+    glyphsets:
+      - GF_Latin_Core
+
+  - file: "gfonts://Inter@600"
+    id: font_start_schedule_meta
+    size: 12
+    glyphsets:
+      - GF_Latin_Core
+
+
+
+
+  # Start page clock: fixed-width digits.
+  # Local Noto Sans Mono ExtraBold font.
+  - file: "fonts/NotoSansMono-ExtraBold.ttf"
+    id: font_start_clock
+    size: 121
+    glyphs:
+      - "0123456789:"
+
+  - file: "gfonts://Inter@700"
+    id: font_start_date
+    size: 22
+    glyphsets:
+      - GF_Latin_Core
+
+  - file: "gfonts://Inter@700"
+    id: font_start_info
+    size: 20
+    glyphsets:
+      - GF_Latin_Core
+
+  - file: "gfonts://Inter@700"
+    id: font_weather_condition
+    size: 24
+    glyphsets:
+      - GF_Latin_Core
+
+  - file: "gfonts://Inter@700"
+    id: font_start_weather
+    size: 38
+    glyphsets:
+      - GF_Latin_Core
+
+  - file: "gfonts://Inter@700"
+    id: font_weather_current_temp
+    size: 96
+    glyphsets:
+      - GF_Latin_Core
+
+
+
+
+  # Bold subject font for homework entries.
+  - file: "fonts/NotoSans-Bold.ttf"
+    id: font_subject_homework
+    size: 15
+    bpp: 4
+    glyphsets:
+      - GF_Latin_Core
+
+
+
+  # v25.1: bold font for start page section headers
+  - file: "fonts/NotoSans-Bold.ttf"
+    id: font_start_header_bold
+    size: 18
+    bpp: 1
+    glyphsets:
+      - GF_Latin_Core
+
+  # Material Design Icons Desktop
+  # File path on the ESPHome host:
+  # /config/esphome/fonts/MaterialDesignIconsDesktop.ttf
+  - file: "fonts/MaterialDesignIconsDesktop.ttf"
+    id: mdi_weather_xlarge
+    size: 132
+    glyphs:
+      - "\U000F0590"
+      - "\U000F0591"
+      - "\U000F0592"
+      - "\U000F0593"
+      - "\U000F067E"
+      - "\U000F0594"
+      - "\U000F0595"
+      - "\U000F0596"
+      - "\U000F0597"
+      - "\U000F0598"
+      - "\U000F067F"
+      - "\U000F0599"
+      - "\U000F059D"
+      - "\U000F059E"
+      - "\U000F0F38"
+      - "\U000F059B" # weather-sunset-down
+      - "\U000F059C" # weather-sunset-up
+
+  - file: "fonts/MaterialDesignIconsDesktop.ttf"
+    id: mdi_weather_large
+    size: 88
+    glyphs: &mdi_weather_glyphs
+      - "\U000F0590" # weather-cloudy
+      - "\U000F0591" # weather-fog
+      - "\U000F0592" # weather-hail
+      - "\U000F0593" # weather-lightning
+      - "\U000F067E" # weather-lightning-rainy
+      - "\U000F0594" # weather-night / clear-night
+      - "\U000F0595" # weather-partly-cloudy
+      - "\U000F0596" # weather-pouring
+      - "\U000F0597" # weather-rainy
+      - "\U000F0598" # weather-snowy
+      - "\U000F067F" # weather-snowy-rainy
+      - "\U000F0599" # weather-sunny
+      - "\U000F059B" # weather-sunset-down
+      - "\U000F059C" # weather-sunset-up
+      - "\U000F059D" # weather-windy
+      - "\U000F059E" # weather-windy-variant
+      - "\U000F0F38" # weather-tornado / exceptional fallback
+
+  - file: "fonts/MaterialDesignIconsDesktop.ttf"
+    id: mdi_weather_medium
+    size: 48
+    glyphs: *mdi_weather_glyphs
+
+  - file: "fonts/MaterialDesignIconsDesktop.ttf"
+    id: mdi_weather_small
+    size: 34
+    glyphs: *mdi_weather_glyphs
+
+  - file: "fonts/MaterialDesignIconsDesktop.ttf"
+    id: mdi_weather_hourly
+    size: 38
+    glyphs: *mdi_weather_glyphs
+
+  - file: "fonts/MaterialDesignIconsDesktop.ttf"
+    id: mdi_sun_info
+    size: 22
+    glyphs:
+      - "\U000F059B" # weather-sunset-down
+      - "\U000F059C" # weather-sunset-up
+
+# ---------------------------------------------------------------------------
+# Time
+# ---------------------------------------------------------------------------
+# The grid reads the current Home Assistant time when it is rendered.
+# Time synchronization itself does NOT trigger an e-paper refresh.
+time:
+  # Local clock runs independently of Home Assistant.
+  # The existing id "ha_time" is intentionally kept so the display lambdas
+  # do not need to be changed.
+  - platform: sntp
+    id: ha_time
+    timezone: Europe/Berlin
+    servers:
+      - 0.pool.ntp.org
+      - 1.pool.ntp.org
+      - 2.pool.ntp.org
+
+    on_time_sync:
+      then:
+        - script.execute: schedule_initial_render
+
+    on_time:
+      # V30: update only the clock every minute between full content refreshes.
+      # At minute 00 and 30 the separate rule below performs a complete
+      # start-page render, so no duplicate e-paper update is triggered.
+      - seconds: 0
+        minutes: '*'
+        then:
+          - if:
+              condition:
+                lambda: |-
+                  const auto now = id(ha_time).now();
+                  return id(initial_render_done) &&
+                         !id(refresh_busy) &&
+                         id(current_page) == 1 &&
+                         now.is_valid() &&
+                         (now.minute % 30) != 0;
+              then:
+                - lambda: |-
+                    id(start_clock_only_refresh) = true;
+                    id(refresh_busy) = true;
+                - component.update: epaper
+                - lambda: |-
+                    id(start_clock_only_refresh) = false;
+                    id(refresh_busy) = false;
+
+      # Complete start-page content refresh every 30 minutes while visible.
+      # This picks up the latest cached Home Assistant states.
+      - seconds: 0
+        minutes: /30
+        then:
+          - if:
+              condition:
+                lambda: |-
+                  return id(initial_render_done) &&
+                         !id(refresh_busy) &&
+                         id(current_page) == 1;
+              then:
+                - lambda: |-
+                    id(start_clock_only_refresh) = false;
+                    id(refresh_busy) = true;
+                - component.update: epaper
+                - lambda: |-
+                    id(refresh_busy) = false;
+
+      # Weather page: redraw every 30 minutes while visible.
+      - seconds: 0
+        minutes: /30
+        then:
+          - if:
+              condition:
+                lambda: |-
+                  return id(initial_render_done) &&
+                         !id(refresh_busy) &&
+                         id(current_page) == 3;
+              then:
+                - lambda: 'id(refresh_busy) = true;'
+                - component.update: epaper
+                - lambda: 'id(refresh_busy) = false;'
+
+      # Weekly timetable: redraw once per hour while visible.
+      - seconds: 0
+        minutes: 0
+        then:
+          - if:
+              condition:
+                lambda: |-
+                  return id(initial_render_done) &&
+                         !id(refresh_busy) &&
+                         id(current_page) == 2;
+              then:
+                - lambda: 'id(refresh_busy) = true;'
+                - component.update: epaper
+                - lambda: 'id(refresh_busy) = false;'
+
+# ---------------------------------------------------------------------------
+# Home Assistant data
+#
+# Timetable data comes directly from sph-ha's JSON sensor:
+#   sensor.stundenplan_${child_name}_${child_short}_json / attribute "json"
+#
+# Both the start-page daily timetable and the weekly timetable use the
+# "eigener_plan" array from that JSON payload. "wochenkennung" remains the
+# source for all existing A/B-week selection rules.
+# ---------------------------------------------------------------------------
+text_sensor:
+  - platform: homeassistant
+    id: german_holiday_today
+    entity_id: calendar.deutschland_he
+    attribute: message
+    internal: true
+
+
+  # Home Assistant provides the next sunrise/sunset as ISO-8601 timestamps,
+  # e.g. 2026-08-22T18:30:30+00:00. They are converted on-device into the
+  # current local timezone (including DST) before HH:MM is displayed.
+  - platform: homeassistant
+    id: sunrise_time
+    entity_id: sensor.sun_next_rising
+    internal: true
+
+  - platform: homeassistant
+    id: sunset_time
+    entity_id: sensor.sun_next_setting
+    internal: true
+
+  # SPH Lerngruppen: complete sorted list of upcoming assessments.
+  # Using the integration's JSON sensor directly avoids an additional
+  # Home Assistant template/helper and provides more than just the next event.
+  - platform: homeassistant
+    id: epaper_learning_groups_json
+    entity_id: sensor.lerngruppen_${child_name}_${child_short}_json
+    attribute: json
+    internal: true
+
+  # SPH Mein Unterricht JSON: complete homework payload directly from sph-ha.
+  # Contains "aufgaben", "anzahl", "unerledigt" and "erledigt".
+  - platform: homeassistant
+    id: epaper_homework_json
+    entity_id: sensor.mein_unterricht_${child_name}_${child_short}_json
+    attribute: json
+    internal: true
+    on_value:
+      then:
+        - script.execute: schedule_initial_render
+
+  # Weather data prepared by sensor.maxim_epaper_wetter.
+  - platform: homeassistant
+    id: epaper_weather_condition
+    entity_id: sensor.maxim_epaper_wetter
+    attribute: condition
+    internal: true
+    on_value:
+      then:
+        - script.execute: schedule_initial_render
+
+  - platform: homeassistant
+    id: epaper_weather_daily
+    entity_id: sensor.maxim_epaper_wetter
+    attribute: daily_json
+    internal: true
+
+  - platform: homeassistant
+    id: epaper_weather_hourly
+    entity_id: sensor.maxim_epaper_wetter
+    attribute: hourly_json
+    internal: true
+
+  # Numeric weather attributes are intentionally imported as text.
+  # At HA startup some template attributes can briefly be None.  Reading them
+  # as text avoids ESPHome's "Can't convert 'None' to number!" warnings; the
+  # display lambda converts valid values and treats everything else as NAN.
+  - platform: homeassistant
+    id: weather_outdoor_temperature
+    entity_id: sensor.maxim_epaper_wetter
+    attribute: outdoor_temperature
+    internal: true
+
+  - platform: homeassistant
+    id: weather_outdoor_humidity
+    entity_id: sensor.maxim_epaper_wetter
+    attribute: outdoor_humidity
+    internal: true
+
+  - platform: homeassistant
+    id: weather_pressure
+    entity_id: sensor.maxim_epaper_wetter
+    attribute: pressure
+    internal: true
+
+  - platform: homeassistant
+    id: weather_wind_speed
+    entity_id: sensor.maxim_epaper_wetter
+    attribute: wind_speed
+    internal: true
+
+  - platform: homeassistant
+    id: weather_apparent_temperature
+    entity_id: sensor.maxim_epaper_wetter
+    attribute: apparent_temperature
+    internal: true
+
+  - platform: homeassistant
+    id: weather_indoor_temperature
+    entity_id: sensor.maxim_epaper_wetter
+    attribute: indoor_temperature
+    internal: true
+
+  - platform: homeassistant
+    id: weather_indoor_humidity
+    entity_id: sensor.maxim_epaper_wetter
+    attribute: indoor_humidity
+    internal: true
+
+
+  # SPH Stundenplan JSON: complete timetable payload directly from sph-ha.
+  # Only "eigener_plan" is rendered; "tage" remains unused.
+  - platform: homeassistant
+    id: epaper_timetable_json
+    entity_id: sensor.stundenplan_${child_name}_${child_short}_json
+    attribute: json
+    internal: true
+    on_value:
+      then:
+        - lambda: |-
+            ESP_LOGD("grid_timing", "HA-Daten empfangen: Stundenplan JSON");
+        - script.execute: schedule_initial_render
+
+
+
+# ---------------------------------------------------------------------------
+# Battery monitoring
+#
+# XIAO-ESP32S3 / TRMNL-style battery circuit:
+# GPIO6 enables the measurement circuit; GPIO1 measures the divided battery
+# voltage. The calibration follows the working configuration from the
+# referenced Home Assistant Community thread.
+# ---------------------------------------------------------------------------
+sensor:
+  # WiFi RSSI is diagnostic only. Its updates do NOT trigger the display.
+  - platform: wifi_signal
+    id: wifi_rssi
+    name: "WiFi Signal"
+    update_interval: 60s
+    internal: true
+
+  # Battery voltage measurement
+  - platform: adc
+    pin: GPIO1
+    name: "Battery Voltage"
+    id: battery_voltage
+    device_class: voltage
+    unit_of_measurement: "V"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    attenuation: 12db
+    # Measurement only; changes must not trigger an e-paper refresh.
+    update_interval: 5min
+    on_value:
+      then:
+        - lambda: |-
+            ESP_LOGD("grid_timing", "Batteriespannung gemessen");
+    filters:
+      - multiply: 2.0
+
+  - platform: template
+    name: "Battery"
+    id: battery_level
+    device_class: battery
+    unit_of_measurement: "%"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    lambda: |-
+      return id(battery_voltage).state;
+    # Diagnostic value only; do not attach on_value -> component.update here.
+    update_interval: 5min
+    filters:
+      - calibrate_linear:
+          - 4.15 -> 100.0
+          - 3.96 -> 90.0
+          - 3.91 -> 80.0
+          - 3.85 -> 70.0
+          - 3.80 -> 60.0
+          - 3.75 -> 50.0
+          - 3.68 -> 40.0
+          - 3.58 -> 30.0
+          - 3.49 -> 20.0
+          - 3.41 -> 10.0
+          - 3.30 -> 5.0
+          - 3.27 -> 0.0
+      - clamp:
+          min_value: 0
+          max_value: 100
+
+output:
+  - platform: gpio
+    pin: GPIO6
+    id: bsp_battery_enable
+
+# ---------------------------------------------------------------------------
+# Display state
+# ---------------------------------------------------------------------------
+globals:
+
+
+  - id: dbg_last_ms
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+  - id: dbg_refresh_start_ms
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+  # 1 = blank page, 2 = weekly grid, 3 = blank page
+  - id: current_page
+    type: int
+    restore_value: false
+    initial_value: '2'
+
+  # Prevent timer-driven refreshes from starting while a page switch refresh
+  # is already running.
+  - id: refresh_busy
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+
+  # Set after the first controlled display build. Until then the minute timer
+  # is disabled so API data can arrive without e-paper activity.
+  - id: initial_render_done
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+
+  # V30: true only for the minute refresh of the clock on the start page.
+  # The start-page lambda then changes only the clock rectangle in the retained
+  # framebuffer instead of rebuilding weather/timetable/homework/calendar data.
+  - id: start_clock_only_refresh
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+
+# ---------------------------------------------------------------------------
+# One-time initial display build
+# ---------------------------------------------------------------------------
+# V23.28: event-driven boot rendering.
+#
+# The previous implementation waited only for a valid HA clock. In practice
+# the time subscription and the Home Assistant text-sensor states can arrive
+# at slightly different times. This could leave the display untouched until
+# the next 5-minute clock event.
+#
+# schedule_initial_render is triggered by:
+#   - Home Assistant time synchronization
+#   - weather condition arrival
+#   - timetable week arrival
+#
+# The short restartable delay lets the remaining HA subscriptions arrive in
+# the same connection burst. A 10-second interval remains only as a fallback.
+interval:
+  - interval: 10s
+    then:
+      - script.execute: schedule_initial_render
+
+# ---------------------------------------------------------------------------
+# Physical page buttons
+#
+# Button 1: D1 / GPIO2 -> blank page 1
+# Button 2: D2 / GPIO3 -> weekly timetable/grid
+# Button 3: D4 / GPIO5 -> blank page 3
+#
+# INPUT_PULLUP + inverted assumes the physical button connects the GPIO to GND
+# when pressed.
+# ---------------------------------------------------------------------------
+binary_sensor:
+  - platform: gpio
+    id: button_1
+    internal: true
+    pin:
+      number: GPIO2
+      mode: INPUT_PULLUP
+      inverted: true
+    filters:
+      - delayed_on: 50ms
+      - delayed_off: 50ms
+    on_press:
+      then:
+        - script.execute: show_page_start_full
+
+  - platform: gpio
+    id: button_2
+    internal: true
+    pin:
+      number: GPIO3
+      mode: INPUT_PULLUP
+      inverted: true
+    filters:
+      - delayed_on: 50ms
+      - delayed_off: 50ms
+    on_press:
+      then:
+        - script.execute: show_page_week_full
+
+  - platform: gpio
+    id: button_3
+    internal: true
+    pin:
+      number: GPIO5
+      mode: INPUT_PULLUP
+      inverted: true
+    filters:
+      - delayed_on: 50ms
+      - delayed_off: 50ms
+    on_press:
+      then:
+        - script.execute: show_page_3_full
+
+# ---------------------------------------------------------------------------
+# Page switching
+# ---------------------------------------------------------------------------
+# Every page change gets one full refresh.
+#
+# IMPORTANT for 7.50inV2p:
+# The ESPHome driver uses an inverted buffer in its full-update path, while
+# partial updates use the normal buffer. Because this project intentionally
+# uses inverted drawing colors to match the physical panel, mixing full and
+# partial updates can make the complete screen appear color-inverted.
+#
+# V23.26 uses partial refreshes again for periodic updates.
+# Every physical page change still forces exactly one full refresh and then
+# restores the longer partial-refresh sequence.
+script:
+  - id: schedule_initial_render
+    mode: restart
+    then:
+      # Debounce the HA state burst after API connection / time sync.
+      - delay: 1500ms
+      - if:
+          condition:
+            lambda: |-
+              if (id(initial_render_done) || id(refresh_busy))
+                return false;
+
+              const auto now = id(ha_time).now();
+              if (!now.is_valid())
+                return false;
+
+              // Week and weather are good indicators that HA state
+              // subscriptions have actually arrived. Calendar/sunrise may
+              // legitimately be empty or slightly later, so they are not
+              // hard requirements.
+              if (id(epaper_timetable_json).state.empty() ||
+                  id(epaper_timetable_json).state == "unknown" ||
+                  id(epaper_timetable_json).state == "unavailable")
+                return false;
+
+              if (id(epaper_weather_condition).state.empty() ||
+                  id(epaper_weather_condition).state == "unknown" ||
+                  id(epaper_weather_condition).state == "unavailable")
+                return false;
+
+              if (id(epaper_homework_json).state.empty())
+                return false;
+
+              return true;
+          then:
+            - lambda: |-
+                ESP_LOGD(
+                  "start_timing",
+                  "HA-Daten bereit - initialer Startseiten-Aufbau startet"
+                );
+            - script.execute: show_page_start_full
+            # show_page_start_full is synchronous for component.update, so
+            # mark the boot render complete immediately afterwards.
+            - lambda: |-
+                id(initial_render_done) = true;
+                ESP_LOGD(
+                  "start_timing",
+                  "Initialer Startseiten-Aufbau abgeschlossen"
+                );
+
+  - id: show_page_start_full
+    mode: single
+    then:
+      - lambda: 'id(refresh_busy) = true; id(current_page) = 1; id(start_clock_only_refresh) = false;'
+      - display.page.show: page_start
+      - component.update: epaper
+      - lambda: |-
+          // Page change completed; normal partial-refresh cycle remains active.
+          id(refresh_busy) = false;
+
+  - id: show_page_week_full
+    mode: single
+    then:
+      - lambda: 'id(refresh_busy) = true; id(current_page) = 2; id(start_clock_only_refresh) = false;'
+      - display.page.show: page_week
+      - component.update: epaper
+      - lambda: |-
+          // Page change completed; normal partial-refresh cycle remains active.
+          id(refresh_busy) = false;
+
+  - id: show_page_3_full
+    mode: single
+    then:
+      - lambda: 'id(refresh_busy) = true; id(current_page) = 3; id(start_clock_only_refresh) = false;'
+      - display.page.show: page_3
+      - component.update: epaper
+      - lambda: |-
+          // Page change completed; normal partial-refresh cycle remains active.
+          id(refresh_busy) = false;
+
+# ---------------------------------------------------------------------------
+# SPI interface
+# ---------------------------------------------------------------------------
+spi:
+  clk_pin: GPIO7
+  mosi_pin: GPIO9
+
+# ---------------------------------------------------------------------------
+# E-Paper display
+# 7.5", 800x480, landscape
+# ---------------------------------------------------------------------------
+# update_interval is "never". Display refreshes are triggered only by:
+# - one controlled initial build of the Startseite
+# - page buttons (forced full refresh)
+# - Start-page clock every minute (clock rectangle only)
+# - complete Startseite every 30 minutes while visible
+# - weather page every 30 minutes while visible (normally partial)
+# - weekly timetable every hour while visible (normally partial)
+# Sensor changes themselves do not trigger display refreshes.
+display:
+  - platform: waveshare_epaper
+    id: epaper
+    # Normal updates and page changes use partial refreshes. Every 120th
+    # refresh becomes a full refresh to clear accumulated ghosting.
+    model: 7.50inV2p
+    full_update_every: 120
+    cs_pin: GPIO44
+    dc_pin: GPIO10
+    reset_pin: GPIO38
+    busy_pin:
+      number: GPIO4
+      inverted: true
+
+    # The display is only redrawn periodically. 30 minutes is sufficient
+    # because the timetable itself changes very rarely.
+    update_interval: never
+
+    # V30: retain the framebuffer so the minute clock refresh can modify only
+    # the clock rectangle. Full page lambdas explicitly clear their own page.
+    auto_clear_enabled: false
+
+    # The display is natively 800x480 in landscape orientation.
+    rotation: 0
+
+    # Periodic updates and page changes are partial; every 120th update is full.
+
+    pages:
+      - id: page_start
+        lambda: |-
+          const uint32_t start_page_t0 = millis();
+          uint32_t start_page_step = start_page_t0;
+          ESP_LOGD("start_timing", "Startseiten-Lambda gestartet");
+
+          // ================================================================
+          // STARTSEITE
+          // Styled after the provided reference:
+          // - very large time at top left
+          // - weekday + date below
+          // - sunrise / sunset stacked vertically with nicer icons
+          // - no weather content for now
+          // ================================================================
+          const int W = 800;
+          const int H = 480;
+          const auto INK = Color::WHITE;   // physical black
+          const auto PAPER = Color::BLACK; // physical white
+
+          const auto now = id(ha_time).now();
+
+          // V30 clock-only path:
+          // Keep the existing framebuffer and touch only the clock rectangle.
+          // This avoids re-parsing/re-rendering weather, timetable, homework
+          // and calendar content every minute.
+          if (id(start_clock_only_refresh)) {
+            const int clock_x = 17;
+            const int clock_y = 0;
+            const int clock_w = 360;
+            const int clock_h = 108;
+
+            it.filled_rectangle(
+              clock_x,
+              clock_y,
+              clock_w,
+              clock_h,
+              PAPER
+            );
+
+            char clock_only_text[8];
+            snprintf(
+              clock_only_text,
+              sizeof(clock_only_text),
+              "%02d:%02d",
+              now.hour,
+              now.minute
+            );
+
+            it.printf(
+              17,
+              -27,
+              id(font_start_clock),
+              INK,
+              "%s",
+              clock_only_text
+            );
+
+            ESP_LOGD(
+              "start_timing",
+              "V30 Uhr-only Render nach %u ms",
+              static_cast<unsigned>(millis() - start_page_t0)
+            );
+            return;
+          }
+
+          // Complete start-page build (every 30 minutes / page entry).
+          it.fill(PAPER);
+
+          auto start_weather_number = [](const std::string &raw) -> float {
+            if (raw.empty() ||
+                raw == "None" ||
+                raw == "none" ||
+                raw == "unknown" ||
+                raw == "unavailable") {
+              return NAN;
+            }
+
+            char *end = nullptr;
+            float value = strtof(raw.c_str(), &end);
+            if (end == raw.c_str() || !std::isfinite(value))
+              return NAN;
+
+            return value;
+          };
+
+          auto start_weather_lower = [](const char *raw) {
+            std::string s = raw ? raw : "";
+            for (char &c : s)
+              c = static_cast<char>(
+                tolower(static_cast<unsigned char>(c))
+              );
+            return s;
+          };
+
+          auto start_weather_glyph = [&](const char *raw) -> const char * {
+            std::string c = start_weather_lower(raw);
+
+            if (c == "sunny") return "\U000F0599";
+            if (c == "clear-night") return "\U000F0594";
+            if (c == "partlycloudy") return "\U000F0595";
+            if (c == "cloudy") return "\U000F0590";
+            if (c == "fog") return "\U000F0591";
+            if (c == "hail") return "\U000F0592";
+            if (c == "lightning") return "\U000F0593";
+            if (c == "lightning-rainy") return "\U000F067E";
+            if (c == "pouring") return "\U000F0596";
+            if (c == "rainy") return "\U000F0597";
+            if (c == "snowy") return "\U000F0598";
+            if (c == "snowy-rainy") return "\U000F067F";
+            if (c == "windy") return "\U000F059D";
+            if (c == "windy-variant") return "\U000F059E";
+            if (c == "exceptional") return "\U000F0F38";
+            return "\U000F0590";
+          };
+
+          auto start_condition_de = [&](const char *raw) -> const char * {
+            std::string c = start_weather_lower(raw);
+            if (c == "sunny") return "Sonnig";
+            if (c == "clear-night") return "Klare Nacht";
+            if (c == "partlycloudy") return "Teilweise bewölkt";
+            if (c == "cloudy") return "Bewölkt";
+            if (c == "fog") return "Nebel";
+            if (c == "rainy") return "Regen";
+            if (c == "pouring") return "Starker Regen";
+            if (c == "lightning") return "Gewitter";
+            if (c == "lightning-rainy") return "Gewitter / Regen";
+            if (c == "snowy") return "Schnee";
+            if (c == "snowy-rainy") return "Schneeregen";
+            if (c == "hail") return "Hagel";
+            if (c == "windy") return "Windig";
+            if (c == "windy-variant") return "Windig / bewölkt";
+            return "Wetter";
+          };
+
+          // ----------------------------------------------------------------
+          // Shared status area: WiFi + battery
+          // ----------------------------------------------------------------
+          float rssi = id(wifi_rssi).state;
+          int wifi_level = 0;
+          if (std::isfinite(rssi)) {
+            wifi_level =
+              rssi >= -55 ? 4 :
+              rssi >= -65 ? 3 :
+              rssi >= -75 ? 2 : 1;
+          }
+
+          const int wifi_x = 724;
+          const int wifi_y = 10;
+          const int bar_w = 3;
+          const int bar_gap = 2;
+
+          for (int i = 0; i < 4; i++) {
+            const int bar_h = 3 + i * 3;
+            const int bx = wifi_x + i * (bar_w + bar_gap);
+            const int by = wifi_y + 12 - bar_h;
+
+            it.rectangle(bx, by, bar_w, bar_h, INK);
+            if (i < wifi_level) {
+              it.filled_rectangle(bx, by, bar_w, bar_h, INK);
+            }
+          }
+
+          float battery = id(battery_level).state;
+          bool battery_valid = std::isfinite(battery);
+
+          const int battery_x = 756;
+          const int battery_y = 9;
+          const int battery_w = 28;
+          const int battery_h = 14;
+
+          it.rectangle(battery_x, battery_y, battery_w, battery_h, INK);
+          it.filled_rectangle(
+            battery_x + battery_w,
+            battery_y + 4,
+            3,
+            6,
+            INK
+          );
+
+          int battery_level_visual = battery_valid
+            ? (battery >= 75 ? 4 :
+               battery >= 50 ? 3 :
+               battery >= 25 ? 2 :
+               battery > 0 ? 1 : 0)
+            : 0;
+
+          const int batt_inner_x = battery_x + 3;
+          const int batt_inner_y = battery_y + 3;
+          const int batt_inner_w = battery_w - 6;
+          const int batt_inner_h = battery_h - 6;
+
+          if (battery_level_visual > 0) {
+            const int fill_w =
+              (batt_inner_w * battery_level_visual) / 4;
+            if (fill_w > 0) {
+              it.filled_rectangle(
+                batt_inner_x,
+                batt_inner_y,
+                fill_w,
+                batt_inner_h,
+                INK
+              );
+            }
+          }
+
+          ESP_LOGD(
+            "start_timing",
+            "Statusbereich nach %u ms (+%u ms)",
+            static_cast<unsigned>(millis() - start_page_t0),
+            static_cast<unsigned>(millis() - start_page_step)
+          );
+          start_page_step = millis();
+
+          // ----------------------------------------------------------------
+          // Large clock
+          // ----------------------------------------------------------------
+          char clock_text[8];
+          snprintf(
+            clock_text,
+            sizeof(clock_text),
+            "%02d:%02d",
+            now.hour,
+            now.minute
+          );
+
+          // Noto Sans Mono ExtraBold 121 px: fixed-width HH:MM block.
+          // Clock block moved 20 px upward; width remains aligned to the left block.
+          it.printf(
+            17,
+            -27,
+            id(font_start_clock),
+            INK,
+            "%s",
+            clock_text
+          );
+
+          // ----------------------------------------------------------------
+          // Date block: full weekday on first line, numeric date on second line
+          // ----------------------------------------------------------------
+          static const char *weekday_de[] = {
+            "", "Sonntag", "Montag", "Dienstag", "Mittwoch",
+            "Donnerstag", "Freitag", "Samstag"
+          };
+
+          const char *weekday_text =
+            (now.day_of_week >= 1 && now.day_of_week <= 7)
+              ? weekday_de[now.day_of_week]
+              : "";
+
+          char date_text[24];
+          snprintf(
+            date_text,
+            sizeof(date_text),
+            "%02d.%02d.%04d",
+            now.day_of_month,
+            now.month,
+            now.year
+          );
+
+          it.printf(
+            17,
+            113,
+            id(font_start_date),
+            INK,
+            "%s",
+            weekday_text
+          );
+
+          it.printf(
+            17,
+            141,
+            id(font_start_date),
+            INK,
+            "%s",
+            date_text
+          );
+
+          // ----------------------------------------------------------------
+          // Sunrise / sunset conversion
+          // ----------------------------------------------------------------
+          auto local_hhmm_from_iso = [](const std::string &value,
+                                        char *out,
+                                        size_t out_size) {
+            if (out_size < 6) return false;
+
+            if (value.empty() ||
+                value == "unknown" ||
+                value == "unavailable") {
+              snprintf(out, out_size, "--:--");
+              return false;
+            }
+
+            int year = 0, month = 0, day = 0;
+            int hour = 0, minute = 0, second = 0;
+            char tz_sign = '+';
+            int tz_hour = 0, tz_minute = 0;
+
+            int matched = sscanf(
+              value.c_str(),
+              "%d-%d-%dT%d:%d:%d%c%d:%d",
+              &year, &month, &day,
+              &hour, &minute, &second,
+              &tz_sign, &tz_hour, &tz_minute
+            );
+
+            bool utc_z = false;
+            if (matched < 9) {
+              matched = sscanf(
+                value.c_str(),
+                "%d-%d-%dT%d:%d:%dZ",
+                &year, &month, &day,
+                &hour, &minute, &second
+              );
+              utc_z = (matched == 6);
+            }
+
+            if (matched < 9 && !utc_z) {
+              snprintf(out, out_size, "--:--");
+              return false;
+            }
+
+            auto days_from_civil = [](int y, unsigned m, unsigned d) -> int64_t {
+              y -= m <= 2;
+              const int era = (y >= 0 ? y : y - 399) / 400;
+              const unsigned yoe =
+                static_cast<unsigned>(y - era * 400);
+              const unsigned doy =
+                (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + d - 1;
+              const unsigned doe =
+                yoe * 365 + yoe / 4 - yoe / 100 + doy;
+              return static_cast<int64_t>(era) * 146097 +
+                     static_cast<int64_t>(doe) - 719468;
+            };
+
+            int64_t epoch64 =
+              days_from_civil(year, month, day) * 86400LL +
+              static_cast<int64_t>(hour) * 3600LL +
+              static_cast<int64_t>(minute) * 60LL +
+              second;
+
+            if (!utc_z) {
+              const int offset_seconds =
+                (tz_hour * 60 + tz_minute) * 60;
+              if (tz_sign == '+')
+                epoch64 -= offset_seconds;
+              else if (tz_sign == '-')
+                epoch64 += offset_seconds;
+            }
+
+            const time_t epoch = static_cast<time_t>(epoch64);
+            auto local_time =
+              esphome::ESPTime::from_epoch_local(epoch);
+
+            const int local_hour =
+              std::max(0, std::min(23, static_cast<int>(local_time.hour)));
+            const int local_minute =
+              std::max(0, std::min(59, static_cast<int>(local_time.minute)));
+
+            snprintf(
+              out,
+              out_size,
+              "%02d:%02d",
+              local_hour,
+              local_minute
+            );
+            return true;
+          };
+
+          char sunrise_text[8];
+          char sunset_text[8];
+
+          local_hhmm_from_iso(
+            id(sunrise_time).state,
+            sunrise_text,
+            sizeof(sunrise_text)
+          );
+          local_hhmm_from_iso(
+            id(sunset_time).state,
+            sunset_text,
+            sizeof(sunset_text)
+          );
+
+          // ----------------------------------------------------------------
+          // Sunrise / sunset block using the same MDI icons as weather page
+          // ----------------------------------------------------------------
+          const int info_icon_x = 275;
+          const int info_time_right_x = 377;
+          const int rise_y = 113;
+          const int set_y = 141;
+
+          it.printf(
+            info_icon_x,
+            rise_y + 1,
+            id(mdi_sun_info),
+            INK,
+            "\U000F059C"
+          );
+          it.printf(
+            info_time_right_x,
+            rise_y - 1,
+            id(font_start_info),
+            INK,
+            TextAlign::TOP_RIGHT,
+            "%s",
+            sunrise_text
+          );
+
+          it.printf(
+            info_icon_x,
+            set_y + 1,
+            id(mdi_sun_info),
+            INK,
+            "\U000F059B"
+          );
+          it.printf(
+            info_time_right_x,
+            set_y - 1,
+            id(font_start_info),
+            INK,
+            TextAlign::TOP_RIGHT,
+            "%s",
+            sunset_text
+          );
+
+          // Subtle separator under the whole info block, moved 15 px up.
+          it.line(17, 172, 377, 172, INK);
+
+          // ----------------------------------------------------------------
+          // Right section: current weather
+          // Left section ends around x=382; weather starts ~60 px later.
+          // ----------------------------------------------------------------
+          const int start_weather_x = 417;
+          const int start_weather_w = W - start_weather_x;
+
+          const char *start_condition =
+            id(epaper_weather_condition).state.c_str();
+
+          float start_out_temp =
+            start_weather_number(id(weather_outdoor_temperature).state);
+
+          float start_today_high = NAN;
+          float start_today_low = NAN;
+
+          auto start_daily_doc = esphome::json::parse_json(
+            id(epaper_weather_daily).state.empty()
+              ? "[]"
+              : id(epaper_weather_daily).state
+          );
+
+          if (!start_daily_doc.isNull() &&
+              !start_daily_doc.overflowed() &&
+              start_daily_doc.is<JsonArray>()) {
+            JsonArray start_daily = start_daily_doc.as<JsonArray>();
+            if (start_daily.size() > 0) {
+              JsonObject today_item = start_daily[0].as<JsonObject>();
+              if (today_item["high"].is<float>())
+                start_today_high = today_item["high"].as<float>();
+              if (today_item["low"].is<float>())
+                start_today_low = today_item["low"].as<float>();
+            }
+          }
+
+          // Large weather icon, aligned with the clock height.
+          it.printf(
+            start_weather_x + 58,
+            2,
+            id(mdi_weather_xlarge),
+            INK,
+            TextAlign::TOP_CENTER,
+            "%s",
+            start_weather_glyph(start_condition)
+          );
+
+          // Large current temperature.
+          const int start_temp_center_x = start_weather_x + 206;
+          if (std::isfinite(start_out_temp)) {
+            it.printf(
+              start_temp_center_x,
+              12,
+              id(font_weather_current_temp),
+              INK,
+              TextAlign::TOP_CENTER,
+              "%.0f°",
+              start_out_temp
+            );
+          } else {
+            it.printf(
+              start_temp_center_x,
+              12,
+              id(font_weather_current_temp),
+              INK,
+              TextAlign::TOP_CENTER,
+              "--°"
+            );
+          }
+
+          // Weather condition below the temperature, right-aligned to the
+          // right edge of the weather area.
+          it.printf(
+            W - 20,
+            118,
+            id(font_weather_condition),
+            INK,
+            TextAlign::TOP_RIGHT,
+            "%s",
+            start_condition_de(start_condition)
+          );
+
+          // Separator below the weather condition.
+          it.line(start_weather_x, 151, W - 20, 151, INK);
+
+          // High / low values stacked at the far right.
+          // Labels and values use separate fixed x positions so ":" and
+          // temperature values align exactly in both rows.
+          const int hl_label_x = 712;
+          const int hl_temp_right_x = W - 20;
+          const int hl_high_y = 54;
+          const int hl_low_y = 84;
+
+          it.printf(
+            hl_label_x,
+            hl_high_y,
+            id(font_start_info),
+            INK,
+            "H:"
+          );
+
+          it.printf(
+            hl_label_x,
+            hl_low_y,
+            id(font_start_info),
+            INK,
+            "L:"
+          );
+
+          if (std::isfinite(start_today_high)) {
+            it.printf(
+              hl_temp_right_x,
+              hl_high_y,
+              id(font_start_info),
+              INK,
+              TextAlign::TOP_RIGHT,
+              "%.0f°",
+              start_today_high
+            );
+          } else {
+            it.printf(
+              hl_temp_right_x,
+              hl_high_y,
+              id(font_start_info),
+              INK,
+              TextAlign::TOP_RIGHT,
+              "--°"
+            );
+          }
+
+          if (std::isfinite(start_today_low)) {
+            it.printf(
+              hl_temp_right_x,
+              hl_low_y,
+              id(font_start_info),
+              INK,
+              TextAlign::TOP_RIGHT,
+              "%.0f°",
+              start_today_low
+            );
+          } else {
+            it.printf(
+              hl_temp_right_x,
+              hl_low_y,
+              id(font_start_info),
+              INK,
+              TextAlign::TOP_RIGHT,
+              "--°"
+            );
+          }
+
+          // Separator under the complete right-side weather block.
+          it.line(start_weather_x, 187, W - 20, 187, INK);
+
+          // ----------------------------------------------------------------
+          // Compact daily timetable below the weather block.
+          //
+          // Selection logic follows kfg-stundenplan-tag-card:
+          // - show today while lessons are still running
+          // - after the final lesson, on weekends, or on an empty day:
+          //   select the next teaching day
+          // - respect A/B week badges
+          // - if the remaining height permits it, append the following
+          //   teaching day as a second compact block
+          // ----------------------------------------------------------------
+          struct StartScheduleRow {
+            std::string start;
+            std::string end;
+            std::string subject;
+            std::string teacher;
+            std::string room;
+          };
+
+          auto start_time_to_minutes = [](const std::string &value) -> int {
+            if (value.size() < 4) return -1;
+            int hour = 0;
+            int minute = 0;
+            if (sscanf(value.c_str(), "%d:%d", &hour, &minute) != 2)
+              return -1;
+            if (hour < 0 || hour > 23 || minute < 0 || minute > 59)
+              return -1;
+            return hour * 60 + minute;
+          };
+
+          // Parse the complete sph-ha timetable JSON once for this page build.
+          // Only eigener_plan is used for rendering.
+          auto start_timetable_doc = esphome::json::parse_json(
+            id(epaper_timetable_json).state.empty()
+              ? "{}"
+              : id(epaper_timetable_json).state
+          );
+
+          JsonArray start_own_plan;
+          std::string start_base_week;
+
+          if (!start_timetable_doc.isNull() &&
+              !start_timetable_doc.overflowed() &&
+              start_timetable_doc.is<JsonObject>()) {
+            JsonObject timetable_root =
+              start_timetable_doc.as<JsonObject>();
+
+            if (timetable_root["eigener_plan"].is<JsonArray>()) {
+              start_own_plan =
+                timetable_root["eigener_plan"].as<JsonArray>();
+            }
+
+            const char *week_value =
+              timetable_root["wochenkennung"] | "";
+            start_base_week = week_value;
+          }
+
+          auto start_toggle_week = [](const std::string &base, int week_delta) {
+            if (base.empty()) return std::string("");
+            char w = static_cast<char>(
+              toupper(static_cast<unsigned char>(base[0]))
+            );
+            if ((w != 'A' && w != 'B') || (week_delta % 2) == 0)
+              return std::string(1, w);
+            return std::string(1, w == 'A' ? 'B' : 'A');
+          };
+
+          auto start_week_for_offset = [&](int offset, int day_index) {
+            // day_index: Monday=0 ... Sunday=6.
+            const int current_day_index =
+              (now.day_of_week == 1) ? 6 : now.day_of_week - 2;
+
+            // This expression is always a multiple of seven and tells us
+            // how many Monday boundaries were crossed.
+            const int week_delta =
+              (offset + current_day_index - day_index) / 7;
+
+            return start_toggle_week(
+              start_base_week,
+              week_delta
+            );
+          };
+
+          auto build_start_day = [&](int day_index, const std::string &week) {
+            std::vector<StartScheduleRow> rows;
+
+            if (day_index < 0 ||
+                day_index >= static_cast<int>(start_own_plan.size()) ||
+                !start_own_plan[day_index].is<JsonArray>()) {
+              return rows;
+            }
+
+            JsonArray lessons =
+              start_own_plan[day_index].as<JsonArray>();
+
+            auto lesson_active = [&](JsonObject candidate) {
+              const char *badge = candidate["badge"] | "";
+
+              if (badge[0] == 'A' || badge[0] == 'B') {
+                if (week.empty()) return true;
+                return badge[0] ==
+                  static_cast<char>(
+                    toupper(static_cast<unsigned char>(week[0]))
+                  );
+              }
+
+              // Same fallback rule as the weekly timetable: an unbadged
+              // entry is hidden when a matching explicit A/B entry exists
+              // for the same lesson index in the displayed week.
+              const int candidate_index = candidate["index"] | 0;
+
+              for (JsonObject other : lessons) {
+                const int other_index = other["index"] | 0;
+                if (other_index != candidate_index) continue;
+
+                const char *other_badge = other["badge"] | "";
+                if ((other_badge[0] == 'A' || other_badge[0] == 'B') &&
+                    !week.empty() &&
+                    other_badge[0] ==
+                      static_cast<char>(
+                        toupper(static_cast<unsigned char>(week[0]))
+                      )) {
+                  return false;
+                }
+              }
+
+              return true;
+            };
+
+            for (JsonObject lesson : lessons) {
+              if (!lesson_active(lesson))
+                continue;
+
+              const char *start = lesson["start"] | "";
+              const char *end = lesson["end"] | "";
+              const char *fach = lesson["fach"] | "";
+              const char *subject = lesson["subject"] | "";
+              const char *teacher = lesson["teacher"] | "";
+              const char *room = lesson["room"] | "";
+
+              std::string display_subject =
+                fach[0] ? std::string(fach) : std::string(subject);
+
+              // kfg-stundenplan-tag groups parallel alternatives that have
+              // identical start/end times. Do the same in compact form.
+              bool merged = false;
+              for (auto &row : rows) {
+                if (row.start == start && row.end == end) {
+                  if (!display_subject.empty() &&
+                      row.subject.find(display_subject) == std::string::npos) {
+                    row.subject += " / " + display_subject;
+                  }
+                  merged = true;
+                  break;
+                }
+              }
+
+              if (!merged) {
+                StartScheduleRow row;
+                row.start = start;
+                row.end = end;
+                row.subject = display_subject;
+                row.teacher = teacher;
+                row.room = room;
+                rows.push_back(row);
+              }
+            }
+
+            return rows;
+          };
+
+          struct StartDaySelection {
+            bool valid = false;
+            int day_index = 0;
+            int offset = 0;
+            esphome::ESPTime date;
+            std::string week;
+            std::vector<StartScheduleRow> rows;
+          };
+
+          auto select_start_day = [&](int minimum_offset) {
+            StartDaySelection selection;
+            const int current_day_index =
+              (now.day_of_week == 1) ? 6 : now.day_of_week - 2;
+
+            for (int offset = minimum_offset; offset <= minimum_offset + 7; offset++) {
+              const int day_index = (current_day_index + offset) % 7;
+
+              // School timetable contains Monday-Friday only.
+              if (day_index > 4)
+                continue;
+
+              const std::string week =
+                start_week_for_offset(offset, day_index);
+
+              auto rows = build_start_day(day_index, week);
+              if (rows.empty())
+                continue;
+
+              // For today, follow the tag-card behavior: keep showing today
+              // until the end of the final lesson, then advance.
+              if (offset == 0) {
+                int last_end = -1;
+                for (const auto &row : rows) {
+                  const int end_min = start_time_to_minutes(row.end);
+                  if (end_min > last_end)
+                    last_end = end_min;
+                }
+
+                const int now_min = now.hour * 60 + now.minute;
+                if (last_end >= 0 && now_min >= last_end)
+                  continue;
+              }
+
+              selection.valid = true;
+              selection.day_index = day_index;
+              selection.offset = offset;
+              selection.date = esphome::ESPTime::from_epoch_local(
+                now.timestamp + offset * 86400
+              );
+              selection.week = week;
+              selection.rows = rows;
+              return selection;
+            }
+
+            return selection;
+          };
+
+          StartDaySelection start_day = select_start_day(0);
+
+          const char *start_day_names[] = {
+            "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag"
+          };
+
+          auto start_fit_text = [&](const std::string &raw, auto font, int max_w) {
+            if (raw.empty()) return raw;
+
+            auto text_width = [&](const std::string &value) {
+              int x1 = 0;
+              int y1 = 0;
+              int tw = 0;
+              int th = 0;
+              it.get_text_bounds(
+                0,
+                0,
+                value.c_str(),
+                font,
+                TextAlign::TOP_LEFT,
+                &x1,
+                &y1,
+                &tw,
+                &th
+              );
+              return tw;
+            };
+
+            if (text_width(raw) <= max_w)
+              return raw;
+
+            std::string out = raw;
+            const std::string ellipsis = "...";
+            while (!out.empty() &&
+                   text_width(out + ellipsis) > max_w) {
+              out.pop_back();
+            }
+            return out + ellipsis;
+          };
+
+          const int start_schedule_x = start_weather_x;
+          const int start_schedule_right = W - 20;
+          const int start_schedule_w =
+            start_schedule_right - start_schedule_x;
+
+          // Daily-plan header starts ~5 px below the rendered weather-condition block.
+          const int start_schedule_top = 158;
+
+          // Gewünschter fester Abstand zum unteren Displayrand.
+          const int start_schedule_bottom = H - 10;
+
+          // Header block ends at start_schedule_top + 28.
+          // Start lesson rows 5 px below it.
+          const int start_schedule_header_h = 33;
+
+          // Ein Unterrichtstag. Die gesamte verfügbare Höhe wird auf die
+          // tatsächlich vorhandenen Unterrichtsblöcke verteilt.
+          if (start_day.valid) {
+            char header_date[48];
+            char header_week[20];
+
+            snprintf(
+              header_date,
+              sizeof(header_date),
+              "%s, %02d.%02d.",
+              start_day_names[start_day.day_index],
+              start_day.date.day_of_month,
+              start_day.date.month
+            );
+            snprintf(
+              header_week,
+              sizeof(header_week),
+              "Woche %s",
+              start_day.week.empty() ? "-" : start_day.week.c_str()
+            );
+
+            // Solid black title bar with white text.
+            it.filled_rectangle(
+              start_schedule_x,
+              start_schedule_top - 2,
+              start_schedule_w,
+              31,
+              INK
+            );
+
+            // Date on the left, week marker aligned to the right edge.
+            it.printf(
+              start_schedule_x + 6,
+              start_schedule_top,
+              id(font_start_header_bold),
+              PAPER,
+              "%s",
+              header_date
+            );
+            it.printf(
+              start_schedule_right - 6,
+              start_schedule_top,
+              id(font_start_header_bold),
+              PAPER,
+              TextAlign::TOP_RIGHT,
+              "%s",
+              header_week
+            );
+
+      
+
+
+            const int row_count =
+              static_cast<int>(start_day.rows.size());
+
+            if (row_count > 0) {
+              // Kleine Abstände zwischen den einzelnen Unterrichtsblöcken.
+              // Bei wenigen Fächern werden die Blöcke automatisch deutlich
+              // höher, bei vielen entsprechend kompakter.
+              const int block_gap = 4;
+
+              const int lesson_area_top =
+                start_schedule_top + start_schedule_header_h;
+
+              const int lesson_area_h =
+                start_schedule_bottom - lesson_area_top;
+
+              const int total_gap_h =
+                (row_count - 1) * block_gap;
+
+              const int usable_block_h =
+                lesson_area_h - total_gap_h;
+
+              // Restpixel werden auf die ersten Blöcke verteilt, damit der
+              // Bereich exakt bis 15 px vor den unteren Rand reicht.
+              const int base_block_h =
+                usable_block_h / row_count;
+
+              const int extra_pixels =
+                usable_block_h % row_count;
+
+              const int time_col_w = 88;
+              const int content_x =
+                start_schedule_x + time_col_w;
+              const int content_w =
+                start_schedule_right - content_x;
+
+              int block_y = lesson_area_top;
+
+              for (int i = 0; i < row_count; i++) {
+                const auto &row = start_day.rows[i];
+
+                const int block_h =
+                  base_block_h + (i < extra_pixels ? 1 : 0);
+
+                // ----------------------------------------------------------
+                // Rahmen wie auf der Wochenplanseite
+                // ----------------------------------------------------------
+                it.rectangle(
+                  start_schedule_x,
+                  block_y,
+                  start_schedule_w,
+                  block_h,
+                  INK
+                );
+
+                // Eigene Zeitspalte.
+                it.line(
+                  content_x,
+                  block_y,
+                  content_x,
+                  block_y + block_h - 1,
+                  INK
+                );
+
+                // ----------------------------------------------------------
+                // Zeit: Beginn und Ende untereinander, mittig im Block.
+                // ----------------------------------------------------------
+                const int time_center_y =
+                  block_y + block_h / 2;
+
+                it.printf(
+                  start_schedule_x + time_col_w / 2,
+                  time_center_y - 14,
+                  id(font_start_schedule_time),
+                  INK,
+                  TextAlign::TOP_CENTER,
+                  "%s",
+                  row.start.c_str()
+                );
+
+                it.printf(
+                  start_schedule_x + time_col_w / 2,
+                  time_center_y + 1,
+                  id(font_start_schedule_time),
+                  INK,
+                  TextAlign::TOP_CENTER,
+                  "%s",
+                  row.end.c_str()
+                );
+
+                // ----------------------------------------------------------
+                // Fachbezeichnung
+                // ----------------------------------------------------------
+                std::string subject =
+                  start_fit_text(
+                    row.subject,
+                    id(font_start_schedule_subject),
+                    content_w - 12
+                  );
+
+                // Bei hohen Blöcken Fach optisch etwas weiter oben,
+                // bei schmalen Blöcken vertikal kompakter.
+                int subject_y;
+                if (block_h >= 55) {
+                  subject_y = block_y + 8;
+                } else if (block_h >= 42) {
+                  subject_y = block_y + 5;
+                } else {
+                  subject_y = block_y + 3;
+                }
+
+                it.printf(
+                  content_x + content_w / 2,
+                  subject_y,
+                  id(font_start_schedule_subject),
+                  INK,
+                  TextAlign::TOP_CENTER,
+                  "%s",
+                  subject.c_str()
+                );
+
+                // ----------------------------------------------------------
+                // Lehrer + Raum am unteren Rand des Blocks, analog zum
+                // Wochenplan. Bei sehr kleinen Blöcken bleibt genügend
+                // Abstand zur Fachbezeichnung.
+                // ----------------------------------------------------------
+                std::string meta;
+                if (!row.teacher.empty())
+                  meta = row.teacher;
+
+                if (!row.room.empty()) {
+                  if (!meta.empty())
+                    meta += " · ";
+                  meta += row.room;
+                }
+
+                if (!meta.empty()) {
+                  meta = start_fit_text(
+                    meta,
+                    id(font_start_schedule_meta),
+                    content_w - 12
+                  );
+
+                  int meta_y =
+                    block_y + block_h - 17;
+
+                  // Bei besonders schmalen Blöcken Meta etwas höher setzen.
+                  if (block_h < 38)
+                    meta_y = block_y + block_h - 15;
+
+                  it.printf(
+                    content_x + content_w / 2,
+                    meta_y,
+                    id(font_start_schedule_meta),
+                    INK,
+                    TextAlign::TOP_CENTER,
+                    "%s",
+                    meta.c_str()
+                  );
+                }
+
+                block_y += block_h + block_gap;
+              }
+            }
+          } else {
+            it.printf(
+              start_schedule_x,
+              start_schedule_top,
+              id(font_start_header_bold),
+              INK,
+              "Kein Unterricht geplant."
+            );
+          }
+
+          ESP_LOGD(
+            "start_timing",
+            "Uhr/Datum/Sonne nach %u ms (+%u ms)",
+            static_cast<unsigned>(millis() - start_page_t0),
+            static_cast<unsigned>(millis() - start_page_step)
+          );
+          start_page_step = millis();
+
+          // ----------------------------------------------------------------
+          // Left lower area: homework + next two Arbeiten/Klausuren
+          // ----------------------------------------------------------------
+          const int left_x = 17;
+          const int left_right = 377;
+          const int left_w = left_right - left_x;
+
+          auto start_text_width = [&](const char *value, auto font) {
+            int x1 = 0;
+            int y1 = 0;
+            int tw = 0;
+            int th = 0;
+            it.get_text_bounds(
+              0,
+              0,
+              value,
+              font,
+              TextAlign::TOP_LEFT,
+              &x1,
+              &y1,
+              &tw,
+              &th
+            );
+            return tw;
+          };
+
+          auto fit_line_with_font = [&](const char *raw, auto font, int max_w) {
+            std::string out = raw ? raw : "";
+            if (out.empty()) return out;
+
+            if (start_text_width(out.c_str(), font) <= max_w)
+              return out;
+
+            const std::string ellipsis = "...";
+            while (!out.empty() &&
+                   start_text_width((out + ellipsis).c_str(), font) > max_w) {
+              out.pop_back();
+            }
+            return out + ellipsis;
+          };
+
+          // ================================================================
+          // Meine Hausaufgaben
+          //
+          // Area starts below the upper info separator and extends down to
+          // the separator above "Die nächsten Arbeiten".
+          // ================================================================
+          // Upper separator is y=172; dithered header starts at y=177:
+          // exactly 5 px spacing to the block above.
+          const int homework_title_y = 180;
+          const int works_line_y = 392;
+
+          int homework_done = 0;
+          int homework_total = 0;
+
+          auto homework_doc = esphome::json::parse_json(
+            id(epaper_homework_json).state.empty()
+              ? "{}"
+              : id(epaper_homework_json).state
+          );
+
+          JsonArray homework_items;
+          bool homework_valid =
+            !homework_doc.isNull() &&
+            !homework_doc.overflowed() &&
+            homework_doc.is<JsonObject>();
+
+          if (homework_valid) {
+            JsonObject homework_root = homework_doc.as<JsonObject>();
+
+            if (homework_root["aufgaben"].is<JsonArray>()) {
+              homework_items = homework_root["aufgaben"].as<JsonArray>();
+            } else {
+              homework_valid = false;
+            }
+
+            homework_done = homework_root["erledigt"] | 0;
+            homework_total = homework_root["anzahl"] | 0;
+          }
+
+          char homework_count[24];
+          snprintf(
+            homework_count,
+            sizeof(homework_count),
+            "(%d/%d)",
+            homework_done,
+            homework_total
+          );
+
+          // Solid black header with white text.
+          const int homework_header_y = homework_title_y - 3;
+          const int homework_header_h = 29;
+          const int homework_header_center_y =
+            homework_header_y + homework_header_h / 2;
+
+          it.filled_rectangle(
+            left_x,
+            homework_header_y,
+            left_w,
+            homework_header_h,
+            INK
+          );
+
+          // Title left, done/total counter right. Both vertically centered.
+          it.printf(
+            left_x + 6,
+            homework_header_center_y,
+            id(font_start_header_bold),
+            PAPER,
+            TextAlign::CENTER_LEFT,
+            "Meine Hausaufgaben"
+          );
+
+          it.printf(
+            left_right - 6,
+            homework_header_center_y,
+            id(font_start_header_bold),
+            PAPER,
+            TextAlign::CENTER_RIGHT,
+            "%s",
+            homework_count
+          );
+
+          // Up to three unfinished homework cards are displayed.
+          // The header counter uses the integrated JSON fields erledigt/anzahl.
+          const int homework_first_y = homework_title_y + 31;
+          const int homework_bottom = works_line_y - 5;
+          const int homework_max_items = 3;
+          const int homework_card_gap = 4;
+          const int homework_available_h =
+            homework_bottom - homework_first_y;
+          const int homework_card_h =
+            (homework_available_h - (homework_max_items - 1) * homework_card_gap)
+            / homework_max_items;
+
+          // ESPHome fonts do not render control characters such as LF (0x0A).
+          // Mein-Unterricht homework text may contain real line breaks, so
+          // normalize them to spaces before measuring/wrapping/rendering.
+          auto homework_clean_text = [](const char *raw) {
+            std::string out;
+            const char *p = raw ? raw : "";
+            bool last_was_space = false;
+
+            while (*p) {
+              char c = *p++;
+
+              if (c == '\r' || c == '\n' || c == '\t')
+                c = ' ';
+
+              if (c == ' ') {
+                if (last_was_space)
+                  continue;
+                last_was_space = true;
+              } else {
+                last_was_space = false;
+              }
+
+              out.push_back(c);
+            }
+
+            while (!out.empty() && out.front() == ' ')
+              out.erase(out.begin());
+            while (!out.empty() && out.back() == ' ')
+              out.pop_back();
+
+            return out;
+          };
+
+          // Split a task over two lines without reducing the font size.
+          auto homework_two_lines = [&](const char *raw,
+                                        auto font,
+                                        int max_w,
+                                        std::string &line1,
+                                        std::string &line2) {
+            std::string value = homework_clean_text(raw);
+            line1.clear();
+            line2.clear();
+
+            if (value.empty())
+              return;
+
+            if (start_text_width(value.c_str(), font) <= max_w) {
+              line1 = value;
+              return;
+            }
+
+            size_t cut = value.size();
+            while (cut > 0 &&
+                   start_text_width(value.substr(0, cut).c_str(), font) > max_w) {
+              cut--;
+            }
+
+            if (cut == 0) {
+              line1 = fit_line_with_font(value.c_str(), font, max_w);
+              return;
+            }
+
+            size_t word_cut = value.rfind(' ', cut);
+            if (word_cut != std::string::npos && word_cut > 0)
+              cut = word_cut;
+
+            line1 = value.substr(0, cut);
+
+            size_t rest = cut;
+            while (rest < value.size() && value[rest] == ' ')
+              rest++;
+
+            if (rest < value.size()) {
+              line2 = fit_line_with_font(
+                value.substr(rest).c_str(),
+                font,
+                max_w
+              );
+            }
+          };
+
+          int homework_drawn = 0;
+
+          if (homework_valid) {
+            for (JsonObject item : homework_items) {
+              const bool done = item["erledigt"] | false;
+              if (done)
+                continue;
+
+              if (homework_drawn >= homework_max_items)
+                break;
+
+              const int item_y =
+                homework_first_y +
+                homework_drawn * (homework_card_h + homework_card_gap);
+
+              const char *subject_raw = item["fach"] | "";
+              const char *topic_raw = item["thema"] | "";
+              const char *task = item["aufgabe"] | "";
+
+              const std::string subject =
+                homework_clean_text(subject_raw);
+              const std::string topic =
+                homework_clean_text(topic_raw);
+
+              // Fine frame around every homework item.
+              it.rectangle(
+                left_x,
+                item_y,
+                left_w,
+                homework_card_h,
+                INK
+              );
+
+              const int card_pad_x = 6;
+              const int text_left = left_x + card_pad_x;
+              const int text_right = left_right - card_pad_x;
+              const int text_w = text_right - text_left;
+
+              // First row: bold subject followed by the topic.
+              char subject_label[64];
+              snprintf(
+                subject_label,
+                sizeof(subject_label),
+                "%s:",
+                subject.c_str()
+              );
+
+              const int first_line_y = item_y + 5;
+
+              // NotoSans-Bold sits optically about 3 px lower than the
+              // following Inter topic text. Move only the subject upward.
+              it.printf(
+                text_left,
+                first_line_y - 3,
+                id(font_subject_homework),
+                INK,
+                "%s",
+                subject_label
+              );
+
+              const int subject_w =
+                start_text_width(
+                  subject_label,
+                  id(font_subject_homework)
+                );
+
+              const int topic_gap = 8;
+              const int topic_x =
+                text_left + subject_w + topic_gap;
+              const int topic_w =
+                std::max(0, text_right - topic_x);
+
+              std::string topic_line = fit_line_with_font(
+                topic.c_str(),
+                id(font_lesson),
+                topic_w
+              );
+
+              it.printf(
+                topic_x,
+                first_line_y,
+                id(font_lesson),
+                INK,
+                "%s",
+                topic_line.c_str()
+              );
+
+              // Task gets the full card width and may use two lines.
+              std::string task_line_1;
+              std::string task_line_2;
+              homework_two_lines(
+                task,
+                id(font_meta),
+                text_w,
+                task_line_1,
+                task_line_2
+              );
+
+              if (!task_line_1.empty()) {
+                it.printf(
+                  text_left,
+                  item_y + 27,
+                  id(font_meta),
+                  INK,
+                  "%s",
+                  task_line_1.c_str()
+                );
+              }
+
+              if (!task_line_2.empty()) {
+                it.printf(
+                  text_left,
+                  item_y + 40,
+                  id(font_meta),
+                  INK,
+                  "%s",
+                  task_line_2.c_str()
+                );
+              }
+
+              homework_drawn++;
+            }
+          }
+
+          if (homework_drawn == 0) {
+            it.printf(
+              left_x + 6,
+              homework_first_y + 5,
+              id(font_meta),
+              INK,
+              "Keine unerledigten Hausaufgaben"
+            );
+          }
+
+          // ================================================================
+          // Next Arbeiten / Klausuren
+          // Only two entries are reserved/displayed.
+          // ================================================================
+          it.line(
+            left_x,
+            works_line_y,
+            left_right,
+            works_line_y,
+            INK
+          );
+
+          const int cal_x = left_x;
+          const int cal_y = works_line_y + 8;
+          // Description starts exactly 10 px after the rendered date text.
+          const int cal_gap = 10;
+
+          // Solid black header with white text, vertically centered.
+          const int works_header_y = cal_y - 3;
+          const int works_header_h = 29;
+          const int works_header_center_y =
+            works_header_y + works_header_h / 2;
+
+          it.filled_rectangle(
+            left_x,
+            works_header_y,
+            left_w,
+            works_header_h,
+            INK
+          );
+
+          it.printf(
+            cal_x + 6,
+            works_header_center_y,
+            id(font_start_header_bold),
+            PAPER,
+            TextAlign::CENTER_LEFT,
+            "Die nächsten Arbeiten"
+          );
+
+          // sph-ha Lerngruppen JSON:
+          // {
+          //   "leistungskontrollen": [
+          //     {"datum":"2026-09-14","summary":"Arbeit: Englisch 7n"}, ...
+          //   ]
+          // }
+          // The integration already sorts the list by date and lesson period.
+          auto cal_doc = esphome::json::parse_json(
+            id(epaper_learning_groups_json).state.empty()
+              ? "{}"
+              : id(epaper_learning_groups_json).state
+          );
+
+          JsonArray cal_items;
+          bool cal_valid =
+            !cal_doc.isNull() &&
+            !cal_doc.overflowed() &&
+            cal_doc.is<JsonObject>();
+
+          if (cal_valid) {
+            JsonObject root = cal_doc.as<JsonObject>();
+            if (root["leistungskontrollen"].is<JsonArray>()) {
+              cal_items =
+                root["leistungskontrollen"].as<JsonArray>();
+            } else {
+              cal_valid = false;
+            }
+          }
+
+          const int first_row_y = cal_y + 30;
+          // Keep the existing compact two-row layout.
+          const int cal_row_h = 21;
+
+          for (int i = 0; i < 2; i++) {
+            if (!cal_valid || i >= static_cast<int>(cal_items.size()))
+              break;
+
+            const int row_y = first_row_y + i * cal_row_h;
+            JsonObject item = cal_items[i].as<JsonObject>();
+
+            const char *datum_iso = item["datum"] | "";
+            const char *summary = item["summary"] | "";
+
+            // Compact ISO date YYYY-MM-DD -> DD.MM.
+            char datum_display[8] = "--.--.";
+            int yy = 0;
+            int mm = 0;
+            int dd = 0;
+            if (sscanf(datum_iso, "%d-%d-%d", &yy, &mm, &dd) == 3) {
+              snprintf(
+                datum_display,
+                sizeof(datum_display),
+                "%02d.%02d.",
+                dd,
+                mm
+              );
+            }
+
+            const int date_text_w =
+              start_text_width(
+                datum_display,
+                id(font_lesson)
+              );
+            const int cal_text_x =
+              cal_x + date_text_w + cal_gap;
+            const int cal_text_w =
+              std::max(0, left_right - cal_text_x);
+
+            std::string summary_fit = fit_line_with_font(
+              summary,
+              id(font_lesson),
+              cal_text_w
+            );
+
+            it.printf(
+              cal_x,
+              row_y,
+              id(font_lesson),
+              INK,
+              "%s",
+              datum_display
+            );
+
+            it.printf(
+              cal_text_x,
+              row_y,
+              id(font_lesson),
+              INK,
+              "%s",
+              summary_fit.c_str()
+            );
+          }
+
+          // Fine dashed separator between left and right blocks.
+          // Centered in the 40 px gap: (377 + 417) / 2 = 397.
+          // It deliberately leaves margins at the top and bottom.
+          for (int dash_y = 24; dash_y <= 452; dash_y += 8) {
+            it.line(397, dash_y, 397, dash_y + 3, INK);
+          }
+
+          ESP_LOGD(
+            "start_timing",
+            "Kalenderblock nach %u ms (+%u ms)",
+            static_cast<unsigned>(millis() - start_page_t0),
+            static_cast<unsigned>(millis() - start_page_step)
+          );
+          ESP_LOGD(
+            "start_timing",
+            "Startseiten-Lambda beendet nach %u ms",
+            static_cast<unsigned>(millis() - start_page_t0)
+          );
+
+      - id: page_week
+        lambda: |-
+          const uint32_t render_started_ms = millis();
+          ESP_LOGD("grid_timing", "Grid-Lambda gestartet");
+          // -------------------------------------------------------------------
+          // Layout
+          // -------------------------------------------------------------------
+          const int W = 800;
+          const int H = 480;
+
+          const int margin = 8;
+          // Header text starts at y=11. With the 18 px header font this leaves
+          // about 10 px clear space before the timetable grid begins at y=41.
+          const int header_h = 33;
+          const int left_w = 84;
+          const int grid_x = margin;
+          const int grid_y = margin + header_h;
+          const int grid_w = W - 2 * margin;
+          // Bottom margin remains 8 px; moving grid_y up by 15 px therefore
+          // increases the complete weekday/hour grid height by exactly 15 px.
+          const int grid_h = H - grid_y - margin;
+
+          const int day_w = (grid_w - left_w) / 5;
+          const int row_h = grid_h / 8;
+
+          // -------------------------------------------------------------------
+          // Physical display colors
+          //
+          // The current 7.50inv2 controller maps the ESPHome framebuffer
+          // inverted on this hardware. Therefore logical BLACK is physically
+          // WHITE and logical WHITE is physically BLACK.
+          // Keeping the mapping here avoids changing the working display driver.
+          // -------------------------------------------------------------------
+          const auto PAPER_BLACK = Color::WHITE;
+          const auto PAPER_WHITE = Color::BLACK;
+
+          // -------------------------------------------------------------------
+          // Clear display: black-on-white.
+          // -------------------------------------------------------------------
+          it.fill(PAPER_WHITE);
+
+          // -------------------------------------------------------------------
+          // Header
+          // -------------------------------------------------------------------
+          const auto now = id(ha_time).now();
+
+          // Parse the complete sph-ha timetable JSON once for the weekly page.
+          // Both the A/B week marker and the five displayed days come from it.
+          auto weekly_timetable_doc = esphome::json::parse_json(
+            id(epaper_timetable_json).state.empty()
+              ? "{}"
+              : id(epaper_timetable_json).state
+          );
+
+          JsonArray weekly_own_plan;
+          std::string weekly_base_week;
+
+          if (!weekly_timetable_doc.isNull() &&
+              !weekly_timetable_doc.overflowed() &&
+              weekly_timetable_doc.is<JsonObject>()) {
+            JsonObject timetable_root =
+              weekly_timetable_doc.as<JsonObject>();
+
+            if (timetable_root["eigener_plan"].is<JsonArray>()) {
+              weekly_own_plan =
+                timetable_root["eigener_plan"].as<JsonArray>();
+            }
+
+            const char *week_value =
+              timetable_root["wochenkennung"] | "";
+            weekly_base_week = week_value;
+          }
+
+          // The upper-left area is intentionally left free for a static label.
+          const char *sensor_week = weekly_base_week.c_str();
+
+          // ESPHome: Sunday=1, Monday=2, ... Saturday=7.
+          // Saturday shows the next school week. In that case the A/B week
+          // switches as well, because the displayed timetable belongs to the
+          // following Monday-Friday.
+          int weekday = now.day_of_week;
+
+          // Weekend always displays the next school week.
+          // Friday after the last lesson also switches to next week.
+          bool show_next_week = (weekday == 1 || weekday == 7);
+
+          // Friday handling:
+          // Determine the final lesson directly from eigener_plan[4].
+          if (weekday == 6) { // Friday in ESPHome: Sunday=1 ... Friday=6
+            int last_lesson_end = 0;
+
+            if (weekly_own_plan.size() > 4 &&
+                weekly_own_plan[4].is<JsonArray>()) {
+              JsonArray friday_lessons =
+                weekly_own_plan[4].as<JsonArray>();
+
+              for (JsonObject lesson : friday_lessons) {
+                const char *end_time = lesson["end"] | "";
+                if (strlen(end_time) >= 5) {
+                  int hh = atoi(std::string(end_time).substr(0,2).c_str());
+                  int mm = atoi(std::string(end_time).substr(3,2).c_str());
+                  int minutes = hh * 60 + mm;
+                  if (minutes > last_lesson_end)
+                    last_lesson_end = minutes;
+                }
+              }
+            }
+
+            int now_minutes = now.hour * 60 + now.minute;
+
+            if (last_lesson_end > 0 && now_minutes >= last_lesson_end) {
+              show_next_week = true;
+            }
+          }
+
+          int week_shift_days = show_next_week ? 7 : 0;
+          int monday_offset = (weekday == 1) ? -6 : 2 - weekday;
+
+          auto week_monday = esphome::ESPTime::from_epoch_local(
+            now.timestamp + (monday_offset + week_shift_days) * 86400
+          );
+          auto week_friday = esphome::ESPTime::from_epoch_local(
+            now.timestamp + (monday_offset + week_shift_days + 4) * 86400
+          );
+
+          // Determine the displayed A/B week from the displayed Monday.
+          // This uses the same principle as the start page: the displayed
+          // timetable week is based on the selected school week, not the
+          // current calendar week.
+          char display_week[2] = "-";
+          if (sensor_week[0] == 'A' || sensor_week[0] == 'B') {
+            display_week[0] = sensor_week[0];
+            display_week[1] = '\0';
+
+            if (show_next_week) {
+              display_week[0] =
+                (display_week[0] == 'A') ? 'B' : 'A';
+            }
+          }
+
+          char week_dates[64];
+          snprintf(
+            week_dates,
+            sizeof(week_dates),
+            "Woche %s (%02d.%02d. - %02d.%02d.)",
+            display_week,
+            week_monday.day_of_month,
+            week_monday.month,
+            week_friday.day_of_month,
+            week_friday.month
+          );
+
+          // Left: current ISO calendar week.
+          // Fallback: A/B week if strftime should ever not return a value.
+          // ESPTime::strftime() is not const in ESPHome 2026.8.x.
+          // Work on a mutable copy because `now` is const in this lambda.
+          auto now_for_week = now;
+          // KW belongs to the displayed timetable week.
+          auto week_monday_for_kw = week_monday;
+          std::string iso_week = week_monday_for_kw.strftime("%V");
+          char left_header[24];
+
+          if (!iso_week.empty() && iso_week != "00") {
+            snprintf(
+              left_header,
+              sizeof(left_header),
+              "KW %s",
+              iso_week.c_str()
+            );
+          } else {
+            snprintf(
+              left_header,
+              sizeof(left_header),
+              "Woche %s",
+              display_week
+            );
+          }
+
+          it.printf(
+            margin + 4,
+            margin + 3,
+            id(font_day),
+            PAPER_BLACK,
+            "%s",
+            left_header
+          );
+
+          // Center: only the dates of the displayed school week.
+          it.printf(
+            W / 2,
+            margin + 3,
+            id(font_day),
+            PAPER_BLACK,
+            TextAlign::TOP_CENTER,
+            "%s",
+            week_dates
+          );
+
+          // WiFi signal indicator, immediately left of battery.
+          // RSSI updates do not trigger a display refresh; the latest value is
+          // shown on the next normal page refresh.
+          float rssi = id(wifi_rssi).state;
+          int wifi_level = 0;
+          if (std::isfinite(rssi)) {
+            wifi_level =
+              rssi >= -55 ? 4 :
+              rssi >= -65 ? 3 :
+              rssi >= -75 ? 2 : 1;
+          }
+
+          const int wifi_x = W - margin - 60;
+          const int wifi_y = margin + 7;
+          const int wifi_bar_w = 3;
+          const int wifi_bar_gap = 2;
+
+          for (int i = 0; i < 4; i++) {
+            const int bar_h = 3 + i * 3;
+            const int bx = wifi_x + i * (wifi_bar_w + wifi_bar_gap);
+            const int by = wifi_y + 12 - bar_h;
+
+            it.rectangle(
+              bx, by, wifi_bar_w, bar_h, PAPER_BLACK
+            );
+
+            if (i < wifi_level) {
+              it.filled_rectangle(
+                bx, by, wifi_bar_w, bar_h, PAPER_BLACK
+              );
+            }
+          }
+
+          // Battery indicator, upper right.
+          float battery = id(battery_level).state;
+          bool battery_valid = std::isfinite(battery);
+
+          const int battery_w = 28;
+          const int battery_h = 14;
+          // Only the four-level battery bar is displayed; no numeric percentage.
+          const int battery_x = W - margin - battery_w - 3;
+          const int battery_y = margin + 7;
+
+          it.rectangle(
+            battery_x,
+            battery_y,
+            battery_w,
+            battery_h,
+            PAPER_BLACK
+          );
+
+          it.filled_rectangle(
+            battery_x + battery_w,
+            battery_y + 4,
+            3,
+            6,
+            PAPER_BLACK
+          );
+
+          int level = battery_valid
+            ? (battery >= 75 ? 4 :
+               battery >= 50 ? 3 :
+               battery >= 25 ? 2 :
+               battery > 0 ? 1 : 0)
+            : 0;
+
+          const int inner_x = battery_x + 3;
+          const int inner_y = battery_y + 3;
+          const int inner_w = battery_w - 6;
+          const int inner_h = battery_h - 6;
+
+          if (level > 0) {
+            int fill_w = (inner_w * level) / 4;
+            if (fill_w > 0) {
+              it.filled_rectangle(
+                inner_x,
+                inner_y,
+                fill_w,
+                inner_h,
+                PAPER_BLACK
+              );
+            }
+          }
+
+
+
+          // -------------------------------------------------------------------
+          // Use the five day arrays from eigener_plan.
+          // The complete sph-ha JSON was parsed once above.
+          // -------------------------------------------------------------------
+          const uint32_t parse_started_ms = millis();
+
+          JsonArray monday;
+          JsonArray tuesday;
+          JsonArray wednesday;
+          JsonArray thursday;
+          JsonArray friday;
+
+          if (weekly_own_plan.size() > 0 &&
+              weekly_own_plan[0].is<JsonArray>())
+            monday = weekly_own_plan[0].as<JsonArray>();
+          if (weekly_own_plan.size() > 1 &&
+              weekly_own_plan[1].is<JsonArray>())
+            tuesday = weekly_own_plan[1].as<JsonArray>();
+          if (weekly_own_plan.size() > 2 &&
+              weekly_own_plan[2].is<JsonArray>())
+            wednesday = weekly_own_plan[2].as<JsonArray>();
+          if (weekly_own_plan.size() > 3 &&
+              weekly_own_plan[3].is<JsonArray>())
+            thursday = weekly_own_plan[3].as<JsonArray>();
+          if (weekly_own_plan.size() > 4 &&
+              weekly_own_plan[4].is<JsonArray>())
+            friday = weekly_own_plan[4].as<JsonArray>();
+
+          ESP_LOGD(
+            "grid_timing",
+            "Stundenplan JSON/eigener_plan bereit nach %u ms",
+            static_cast<unsigned>(millis() - parse_started_ms)
+          );
+
+          const bool json_ok =
+            !monday.isNull() ||
+            !tuesday.isNull() ||
+            !wednesday.isNull() ||
+            !thursday.isNull() ||
+            !friday.isNull();
+
+          // -------------------------------------------------------------------
+          // Helper: draw centered text
+          // -------------------------------------------------------------------
+          auto centered = [&](const char *text, int x, int y, int width,
+                              auto font) {
+            // Let ESPHome handle centering directly. This avoids an additional
+            // get_text_bounds() call for every rendered label.
+            it.printf(
+              x + width / 2,
+              y,
+              font,
+              PAPER_BLACK,
+              TextAlign::TOP_CENTER,
+              "%s",
+              text
+            );
+          };
+
+          const uint32_t grid_base_started_ms = millis();
+          uint32_t phase_started_ms = 0;
+
+          // -------------------------------------------------------------------
+          // Grid header
+          // -------------------------------------------------------------------
+          const char *days[] = {
+            "Montag",
+            "Dienstag",
+            "Mittwoch",
+            "Donnerstag",
+            "Freitag"
+          };
+
+          // No additional white grid fill here.
+          // The page framebuffer is already initialized with PAPER_WHITE,
+          // so redrawing the complete 800x480 grid area is redundant.
+
+          // Solid black weekday header.
+          phase_started_ms = millis();
+          it.filled_rectangle(
+            grid_x + left_w + 1,
+            grid_y + 1,
+            grid_w - left_w - 2,
+            42,
+            PAPER_BLACK
+          );
+          ESP_LOGD(
+            "grid_timing",
+            "Schwarze Kopfzeile gefuellt nach %u ms",
+            static_cast<unsigned>(millis() - phase_started_ms)
+          );
+
+          // Outer border + vertical separators
+          phase_started_ms = millis();
+
+          // Weekday area has its own outer frame. The period/time column starts
+          // below the weekday header, so there is no empty framed cell at A:A.
+          it.rectangle(
+            grid_x + left_w,
+            grid_y,
+            grid_w - left_w,
+            grid_h,
+            PAPER_BLACK
+          );
+
+          it.rectangle(
+            grid_x,
+            grid_y + 43,
+            left_w,
+            grid_h - 43,
+            PAPER_BLACK
+          );
+
+          it.line(
+            grid_x + left_w,
+            grid_y,
+            grid_x + left_w,
+            grid_y + grid_h,
+            PAPER_BLACK
+          );
+
+          for (int d = 1; d < 5; d++) {
+            const int x = grid_x + left_w + d * day_w;
+            it.line(
+              x,
+              grid_y,
+              x,
+              grid_y + grid_h,
+              PAPER_BLACK
+            );
+          }
+
+          ESP_LOGD(
+            "grid_timing",
+            "Rahmen und vertikale Linien nach %u ms",
+            static_cast<unsigned>(millis() - phase_started_ms)
+          );
+
+          // Weekday labels + visible separators in the black header.
+          phase_started_ms = millis();
+
+          for (int d = 0; d < 5; d++) {
+            const int x = grid_x + left_w + d * day_w;
+
+            // Visible separators between weekday header cells.
+            if (d > 0) {
+              it.line(
+                x,
+                grid_y + 1,
+                x,
+                grid_y + 43,
+                PAPER_WHITE
+              );
+            }
+
+            it.printf(
+              x + day_w / 2,
+              grid_y + 13,
+              id(font_day),
+              PAPER_WHITE,
+              TextAlign::TOP_CENTER,
+              "%s",
+              days[d]
+            );
+          }
+
+          ESP_LOGD(
+            "grid_timing",
+            "Wochentagsnamen gezeichnet nach %u ms",
+            static_cast<unsigned>(millis() - phase_started_ms)
+          );
+
+          // Header separator
+          phase_started_ms = millis();
+
+          it.line(
+            grid_x + left_w,
+            grid_y + 43,
+            grid_x + grid_w,
+            grid_y + 43,
+            PAPER_BLACK
+          );
+
+          ESP_LOGD(
+            "grid_timing",
+            "Kopf-Trennlinie gezeichnet nach %u ms",
+            static_cast<unsigned>(millis() - phase_started_ms)
+          );
+
+          // -------------------------------------------------------------------
+          // Lesson rows: horizontal lines
+          // -------------------------------------------------------------------
+          const int lesson_area_y = grid_y + 44;
+          const int lesson_area_h = grid_h - 44;
+          const int lesson_row_h = lesson_area_h / 8;
+
+          phase_started_ms = millis();
+
+          for (int period = 2; period <= 8; period++) {
+            const int y = lesson_area_y + (period - 1) * lesson_row_h;
+
+            // Draw horizontal hour separators only in the left period/time
+            // column. The weekday area remains visually open; lesson blocks
+            // define their own boundaries.
+            it.line(
+              grid_x,
+              y,
+              grid_x + left_w,
+              y,
+              PAPER_BLACK
+            );
+          }
+
+          ESP_LOGD(
+            "grid_timing",
+            "Horizontale Stundenlinien nach %u ms",
+            static_cast<unsigned>(millis() - phase_started_ms)
+          );
+
+          // Lesson number and time labels
+          phase_started_ms = millis();
+
+          static const char *period_start[] = {
+            "07:55", "08:40",
+            "09:45", "10:30",
+            "11:40", "12:25",
+            "13:50", "14:35"
+          };
+
+          static const char *period_end[] = {
+            "08:40", "09:25",
+            "10:30", "11:15",
+            "12:25", "13:10",
+            "14:35", "15:20"
+          };
+
+          for (int period = 1; period <= 8; period++) {
+            const int y = lesson_area_y + (period - 1) * lesson_row_h;
+
+            char period_text[8];
+            snprintf(period_text, sizeof(period_text), "%d.", period);
+
+            centered(
+              period_text,
+              grid_x,
+              y + 3,
+              left_w,
+              id(font_day)
+            );
+
+            char period_time[32];
+            snprintf(
+              period_time,
+              sizeof(period_time),
+              "%s-%s",
+              period_start[period - 1],
+              period_end[period - 1]
+            );
+
+            centered(
+              period_time,
+              grid_x,
+              y + 27,
+              left_w,
+              id(font_small)
+            );
+          }
+
+          ESP_LOGD(
+            "grid_timing",
+            "Zeit-/Stundenbeschriftung nach %u ms",
+            static_cast<unsigned>(millis() - phase_started_ms)
+          );
+
+          ESP_LOGD(
+            "grid_timing",
+            "Grid-Grundgeruest beendet nach %u ms",
+            static_cast<unsigned>(millis() - grid_base_started_ms)
+          );
+
+          // -------------------------------------------------------------------
+          // Text measurement helpers
+          // -------------------------------------------------------------------
+          auto text_width = [&](const char *text, auto font) {
+            int x1 = 0;
+            int y1 = 0;
+            int tw = 0;
+            int th = 0;
+
+            it.get_text_bounds(
+              0,
+              0,
+              text,
+              font,
+              TextAlign::TOP_LEFT,
+              &x1,
+              &y1,
+              &tw,
+              &th
+            );
+
+            return tw;
+          };
+
+          auto text_height = [&](const char *text, auto font) {
+            int x1 = 0;
+            int y1 = 0;
+            int tw = 0;
+            int th = 0;
+
+            it.get_text_bounds(
+              0,
+              0,
+              text,
+              font,
+              TextAlign::TOP_LEFT,
+              &x1,
+              &y1,
+              &tw,
+              &th
+            );
+
+            return th;
+          };
+
+          // Font heights are constant for the whole render. Measure them once.
+          const int font_lesson_h = text_height("Ag", id(font_subject));
+          const int font_small_h = text_height("Ag", id(font_subject_small));
+          const int font_meta_h = text_height("Ag", id(font_meta));
+
+          // Fine-grained timing counters for lesson rendering.
+          // Use microseconds internally because many individual operations are
+          // shorter than one millisecond. Only aggregate timings are logged.
+          uint32_t dbg_filter_us = 0;
+          uint32_t dbg_slot_us = 0;
+          uint32_t dbg_layout_us = 0;
+          uint32_t dbg_style_bg_us = 0;
+          uint32_t dbg_subject_measure_us = 0;
+          uint32_t dbg_subject_draw_us = 0;
+          uint32_t dbg_meta_us = 0;
+          uint32_t dbg_summary_us = 0;
+
+          // -------------------------------------------------------------------
+          // Timetable entries
+          //
+          // KFG-style behaviour:
+          //   - A/B filtering via badge
+          //   - parallel lessons share a cell side-by-side
+          //   - double lessons are rendered as one connected block
+          //   - teacher and room use separate lines
+          //   - status/change types can use gray highlighting
+          //   - summary/status text can be shown as a small badge
+          // -------------------------------------------------------------------
+
+          auto draw_subject = [&](const char *subject,
+                                  const char *abbreviation,
+                                  int x, int y, int w, int h,
+                                  int preferred_font_size) {
+            const int pad_x = 4;
+            const int pad_y = 3;
+            const int available_w = w - 2 * pad_x;
+            const int available_h = h - 2 * pad_y;
+
+            // The ESPHome font is fixed-size. The preferred size is used to
+            // select the normal or compact font according to available width.
+            auto font = id(font_subject);
+            if (preferred_font_size <= 13)
+              font = id(font_subject_small);
+
+            const int line_h =
+              (preferred_font_size <= 13) ? font_small_h : font_lesson_h;
+
+            uint32_t subject_phase_us = micros();
+            const bool subject_fits =
+              text_width(subject, font) <= available_w &&
+              line_h <= available_h;
+            dbg_subject_measure_us += micros() - subject_phase_us;
+
+            if (subject_fits) {
+              subject_phase_us = micros();
+              const int subject_y =
+                y + pad_y + (available_h - line_h) / 2;
+              centered(subject, x + pad_x, subject_y,
+                       available_w, font);
+              dbg_subject_draw_us += micros() - subject_phase_us;
+              return;
+            }
+
+            subject_phase_us = micros();
+            std::string value(subject);
+            int best_split = -1;
+            int best_first_width = -1;
+
+            for (size_t pos = 0; pos < value.length(); pos++) {
+              if (value[pos] != ' ')
+                continue;
+
+              std::string first = value.substr(0, pos);
+              size_t second_start = pos + 1;
+
+              while (second_start < value.length() &&
+                     value[second_start] == ' ')
+                second_start++;
+
+              if (second_start >= value.length())
+                continue;
+
+              std::string second = value.substr(second_start);
+
+              if (text_width(first.c_str(), font) <= available_w &&
+                  text_width(second.c_str(), font) <= available_w &&
+                  line_h * 2 + 2 <= available_h) {
+                int first_width = text_width(first.c_str(), font);
+                if (first_width > best_first_width) {
+                  best_first_width = first_width;
+                  best_split = static_cast<int>(pos);
+                }
+              }
+            }
+
+            dbg_subject_measure_us += micros() - subject_phase_us;
+
+            if (best_split >= 0) {
+              std::string first =
+                value.substr(0, static_cast<size_t>(best_split));
+
+              size_t second_start =
+                static_cast<size_t>(best_split + 1);
+
+              while (second_start < value.length() &&
+                     value[second_start] == ' ')
+                second_start++;
+
+              std::string second = value.substr(second_start);
+
+              subject_phase_us = micros();
+              const int total_h = line_h * 2 + 1;
+              const int subject_y =
+                y + pad_y + (available_h - total_h) / 2;
+              centered(first.c_str(), x + pad_x, subject_y,
+                       available_w, font);
+              centered(second.c_str(), x + pad_x,
+                       subject_y + line_h + 1,
+                       available_w, font);
+              dbg_subject_draw_us += micros() - subject_phase_us;
+              return;
+            }
+
+            const char *fallback =
+              (abbreviation && abbreviation[0])
+                ? abbreviation
+                : subject;
+
+            subject_phase_us = micros();
+            const int fallback_h = font_small_h;
+            const int subject_y =
+              y + pad_y + (available_h - fallback_h) / 2;
+            centered(fallback, x + pad_x, subject_y,
+                     available_w, id(font_small));
+            dbg_subject_draw_us += micros() - subject_phase_us;
+          };
+
+          auto draw_lesson = [&](JsonObject lesson,
+                                 int d,
+                                 int index,
+                                 int duration,
+                                 int slot,
+                                 int slot_count) {
+            uint32_t lesson_phase_us = micros();
+
+            const char *subject = lesson["fach"] | "";
+            if (!subject[0])
+              subject = lesson["subject"] | "";
+
+            const char *abbreviation = lesson["subject"] | "";
+            const char *teacher = lesson["teacher"] | "";
+            const char *room = lesson["room"] | "";
+
+            int base_x =
+              grid_x + left_w + d * day_w;
+
+            int y =
+              lesson_area_y +
+              (index - 1) * lesson_row_h + 1;
+
+            // Parallel lessons share the available width.
+            int inner_w = day_w - 2;
+            int cell_w = inner_w / slot_count;
+
+            int x = base_x + slot * cell_w + 1;
+
+            if (slot == slot_count - 1)
+              cell_w = inner_w - cell_w * slot + 0;
+
+            // Double lesson block spans both periods.
+            int h = duration * lesson_row_h - 2;
+
+            dbg_layout_us += micros() - lesson_phase_us;
+            lesson_phase_us = micros();
+
+            // Physical black frame.
+            it.rectangle(
+              x, y, cell_w, h, PAPER_BLACK
+            );
+
+            dbg_style_bg_us += micros() - lesson_phase_us;
+
+            // Subject area. Since the child always has double lessons, the
+            // subject gets the upper part of the block and the metadata is
+            // anchored at the bottom.
+            int subject_h = h >= 80 ? h - 26 : h - 20;
+
+            draw_subject(
+              subject,
+              abbreviation,
+              x,
+              y + 1,
+              cell_w,
+              subject_h,
+              cell_w < 105 ? 13 : 15
+            );
+
+            // Teacher + room are deliberately combined into ONE line and
+            // anchored to the bottom of the lesson block. This matches the
+            // compact KFG-style presentation and leaves the subject area clean.
+            lesson_phase_us = micros();
+            char meta_text[64];
+            if (teacher[0] && room[0]) {
+              snprintf(
+                meta_text,
+                sizeof(meta_text),
+                "%s · %s",
+                teacher,
+                room
+              );
+            } else if (teacher[0]) {
+              snprintf(meta_text, sizeof(meta_text), "%s", teacher);
+            } else if (room[0]) {
+              snprintf(
+                meta_text,
+                sizeof(meta_text),
+                "%s",
+                room
+              );
+            } else {
+              meta_text[0] = '\0';
+            }
+
+            if (meta_text[0]) {
+              auto meta_font = id(font_meta);
+              const int meta_y = y + h - font_meta_h - 5;
+
+              centered(
+                meta_text,
+                x + 3,
+                meta_y,
+                cell_w - 6,
+                meta_font
+              );
+            }
+
+            dbg_meta_us += micros() - lesson_phase_us;
+
+            // Optional summary / change information supplied by the HA sensor.
+            // Keep it above the teacher/room line so the metadata remains at the
+            // bottom edge of the lesson block.
+            lesson_phase_us = micros();
+            const char *summary = lesson["summary"] | "";
+            if (!summary[0])
+              summary = lesson["aenderung"] | "";
+            if (!summary[0])
+              summary = lesson["status"] | "";
+
+            if (summary[0] && h >= 90) {
+              int summary_y = y + h - 27;
+              centered(
+                summary,
+                x + 2,
+                summary_y,
+                cell_w - 4,
+                id(font_meta)
+              );
+            }
+            dbg_summary_us += micros() - lesson_phase_us;
+          };
+
+          auto lesson_is_active = [&](JsonObject candidate,
+                                      JsonArray all_lessons) {
+            const char *badge = candidate["badge"] | "";
+
+            // Explicit A/B entries are active only in their matching week.
+            if (badge[0] == 'A' || badge[0] == 'B') {
+              return badge[0] == display_week[0];
+            }
+
+            // An unbadged entry is the default/fallback. If the same start slot
+            // contains an explicit entry for the displayed week, that explicit
+            // entry replaces the fallback instead of being shown in parallel.
+            const int candidate_index = candidate["index"] | 0;
+
+            for (JsonObject other : all_lessons) {
+              const int other_index = other["index"] | 0;
+              if (other_index != candidate_index)
+                continue;
+
+              const char *other_badge = other["badge"] | "";
+              if ((other_badge[0] == 'A' || other_badge[0] == 'B') &&
+                  other_badge[0] == display_week[0]) {
+                return false;
+              }
+            }
+
+            return true;
+          };
+
+          auto draw_day = [&](JsonArray lessons, int d) {
+            if (lessons.isNull())
+              return;
+
+            // Feiertage are handled per displayed date. Do not hide the complete week here.
+            for (JsonObject lesson : lessons) {
+              uint32_t day_phase_us = micros();
+
+              int index = lesson["index"] | 0;
+              int duration = lesson["duration"] | 2;
+
+              if (index < 1 || index > 8)
+                continue;
+
+              if (duration < 1)
+                duration = 2;
+
+              if (index + duration - 1 > 8)
+                duration = 9 - index;
+
+              // KFG A/B logic: explicit week entries override the unbadged
+              // fallback at the same start slot.
+              if (!lesson_is_active(lesson, lessons))
+                continue;
+
+              dbg_filter_us += micros() - day_phase_us;
+              day_phase_us = micros();
+
+              // Determine how many active lessons share this exact start slot.
+              // This prevents parallel subjects from overwriting one another.
+              int slot_count = 0;
+              int slot = 0;
+
+              for (JsonObject other : lessons) {
+                int other_index = other["index"] | 0;
+                if (other_index != index)
+                  continue;
+
+                if (!lesson_is_active(other, lessons))
+                  continue;
+
+                slot_count++;
+              }
+
+              // JsonObject handles do not provide stable address identity across
+              // iterations, so determine the slot by matching the unique
+              // combination of index, subject, teacher and room.
+              slot = 0;
+              const char *this_subject = lesson["subject"] | "";
+              const char *this_teacher = lesson["teacher"] | "";
+              const char *this_room = lesson["room"] | "";
+
+              for (JsonObject other : lessons) {
+                int other_index = other["index"] | 0;
+                if (other_index != index)
+                  continue;
+
+                if (!lesson_is_active(other, lessons))
+                  continue;
+
+                const char *os = other["subject"] | "";
+                const char *ot = other["teacher"] | "";
+                const char *oroom = other["room"] | "";
+
+                if (strcmp(os, this_subject) == 0 &&
+                    strcmp(ot, this_teacher) == 0 &&
+                    strcmp(oroom, this_room) == 0) {
+                  break;
+                }
+
+                slot++;
+              }
+
+              dbg_slot_us += micros() - day_phase_us;
+
+              if (slot_count < 1)
+                slot_count = 1;
+
+              draw_lesson(
+                lesson,
+                d,
+                index,
+                duration,
+                slot,
+                slot_count
+              );
+            }
+          };
+
+          const uint32_t lessons_started_ms = millis();
+          if (json_ok) {
+            uint32_t day_started_ms = millis();
+            draw_day(monday, 0);
+            ESP_LOGD("grid_timing", "Montag gezeichnet nach %u ms",
+                     static_cast<unsigned>(millis() - day_started_ms));
+
+            day_started_ms = millis();
+            draw_day(tuesday, 1);
+            ESP_LOGD("grid_timing", "Dienstag gezeichnet nach %u ms",
+                     static_cast<unsigned>(millis() - day_started_ms));
+
+            day_started_ms = millis();
+            draw_day(wednesday, 2);
+            ESP_LOGD("grid_timing", "Mittwoch gezeichnet nach %u ms",
+                     static_cast<unsigned>(millis() - day_started_ms));
+
+            day_started_ms = millis();
+            draw_day(thursday, 3);
+            ESP_LOGD("grid_timing", "Donnerstag gezeichnet nach %u ms",
+                     static_cast<unsigned>(millis() - day_started_ms));
+
+            day_started_ms = millis();
+            draw_day(friday, 4);
+            ESP_LOGD("grid_timing", "Freitag gezeichnet nach %u ms",
+                     static_cast<unsigned>(millis() - day_started_ms));
+          }
+          ESP_LOGD(
+            "grid_timing",
+            "Unterrichtsbloecke gesamt nach %u ms",
+            static_cast<unsigned>(millis() - lessons_started_ms)
+          );
+
+          ESP_LOGD(
+            "grid_timing",
+            "Lessons: Filtern/A-B %u ms | Parallel-Slots %u ms",
+            static_cast<unsigned>(dbg_filter_us / 1000),
+            static_cast<unsigned>(dbg_slot_us / 1000)
+          );
+          ESP_LOGD(
+            "grid_timing",
+            "Lessons: Layout %u ms | Stil/Hintergrund/Rahmen %u ms",
+            static_cast<unsigned>(dbg_layout_us / 1000),
+            static_cast<unsigned>(dbg_style_bg_us / 1000)
+          );
+          ESP_LOGD(
+            "grid_timing",
+            "Lessons: Fach-Messung/Umbruch %u ms | Fach zeichnen %u ms",
+            static_cast<unsigned>(dbg_subject_measure_us / 1000),
+            static_cast<unsigned>(dbg_subject_draw_us / 1000)
+          );
+          ESP_LOGD(
+            "grid_timing",
+            "Lessons: Lehrer/Raum %u ms | Status/Info %u ms",
+            static_cast<unsigned>(dbg_meta_us / 1000),
+            static_cast<unsigned>(dbg_summary_us / 1000)
+          );
+
+          // Draw today's frame last so lesson backgrounds cannot overwrite it.
+          // Saturday shows the following week and has no timetable column of its
+          // own, therefore no selected-day frame is drawn on Saturday.
+          int selected_day = -1;
+          if (!show_next_week && weekday >= 2 && weekday <= 6) {
+            selected_day = weekday - 2;
+          }
+
+          if (selected_day >= 0) {
+            int selected_x = grid_x + left_w + selected_day * day_w;
+
+            // Extra-bold 4 px frame around today's complete column.
+            // It is drawn last so it remains visible above lesson backgrounds.
+            it.rectangle(
+              selected_x,
+              grid_y,
+              day_w,
+              grid_h,
+              PAPER_BLACK
+            );
+            it.rectangle(
+              selected_x + 1,
+              grid_y + 1,
+              day_w - 2,
+              grid_h - 2,
+              PAPER_BLACK
+            );
+            it.rectangle(
+              selected_x + 2,
+              grid_y + 2,
+              day_w - 4,
+              grid_h - 4,
+              PAPER_BLACK
+            );
+            it.rectangle(
+              selected_x + 3,
+              grid_y + 3,
+              day_w - 6,
+              grid_h - 6,
+              PAPER_BLACK
+            );
+          }
+
+          if (!json_ok) {
+            centered(
+              "Stundenplan wird geladen ...",
+              grid_x + left_w,
+              grid_y + 190,
+              grid_w - left_w,
+              id(font_day)
+            );
+          }
+
+          ESP_LOGD(
+            "grid_timing",
+            "Grid-Lambda beendet nach %u ms",
+            static_cast<unsigned>(millis() - render_started_ms)
+          );
+
+      - id: page_3
+        lambda: |-
+          const uint32_t weather_t0 = millis();
+          uint32_t weather_step = weather_t0;
+          ESP_LOGD("weather_timing", "Wetter-Lambda gestartet");
+
+          // ================================================================
+          // WEATHER PAGE
+          // ================================================================
+          const auto INK = Color::WHITE;   // physical black
+          const auto PAPER = Color::BLACK; // physical white
+          it.fill(PAPER);
+
+          auto now = id(ha_time).now();
+
+          // ---------------------------------------------------------------
+          // Status icons - keep WiFi/Battery at top right
+          // ---------------------------------------------------------------
+          float rssi = id(wifi_rssi).state;
+          int wifi_level = 0;
+          if (std::isfinite(rssi)) {
+            wifi_level =
+              rssi >= -55 ? 4 :
+              rssi >= -65 ? 3 :
+              rssi >= -75 ? 2 : 1;
+          }
+
+          const int wifi_x = 724;
+          const int wifi_y = 10;
+          const int bar_w = 3;
+          const int bar_gap = 2;
+          for (int i = 0; i < 4; i++) {
+            const int bar_h = 3 + i * 3;
+            const int bx = wifi_x + i * (bar_w + bar_gap);
+            const int by = wifi_y + 12 - bar_h;
+            it.rectangle(bx, by, bar_w, bar_h, INK);
+            if (i < wifi_level)
+              it.filled_rectangle(bx, by, bar_w, bar_h, INK);
+          }
+
+          float battery = id(battery_level).state;
+          bool battery_valid = std::isfinite(battery);
+
+          const int battery_x = 756;
+          const int battery_y = 9;
+          const int battery_w = 28;
+          const int battery_h = 14;
+
+          it.rectangle(battery_x, battery_y, battery_w, battery_h, INK);
+          it.filled_rectangle(
+            battery_x + battery_w,
+            battery_y + 4,
+            3,
+            6,
+            INK
+          );
+
+          int battery_level_visual = battery_valid
+            ? (battery >= 75 ? 4 :
+               battery >= 50 ? 3 :
+               battery >= 25 ? 2 :
+               battery > 0 ? 1 : 0)
+            : 0;
+
+          if (battery_level_visual > 0) {
+            const int inner_w = battery_w - 6;
+            const int fill_w = (inner_w * battery_level_visual) / 4;
+            it.filled_rectangle(
+              battery_x + 3,
+              battery_y + 3,
+              fill_w,
+              battery_h - 6,
+              INK
+            );
+          }
+
+          ESP_LOGD(
+            "weather_timing",
+            "Statusbereich nach %u ms (+%u ms)",
+            static_cast<unsigned>(millis() - weather_t0),
+            static_cast<unsigned>(millis() - weather_step)
+          );
+          weather_step = millis();
+
+          // ---------------------------------------------------------------
+          // Helpers
+          // ---------------------------------------------------------------
+          auto valid_num = [](float value) {
+            return std::isfinite(value);
+          };
+
+          auto weather_number = [](const std::string &raw) -> float {
+            if (raw.empty() ||
+                raw == "None" ||
+                raw == "none" ||
+                raw == "unknown" ||
+                raw == "unavailable") {
+              return NAN;
+            }
+
+            char *end = nullptr;
+            float value = strtof(raw.c_str(), &end);
+            if (end == raw.c_str() || !std::isfinite(value))
+              return NAN;
+
+            return value;
+          };
+
+          auto lower = [](const char *raw) {
+            std::string s = raw ? raw : "";
+            for (char &c : s)
+              c = static_cast<char>(
+                tolower(static_cast<unsigned char>(c))
+              );
+            return s;
+          };
+
+          auto condition_de = [&](const char *raw) -> const char * {
+            std::string c = lower(raw);
+            if (c == "sunny") return "Sonnig";
+            if (c == "clear-night") return "Klare Nacht";
+            if (c == "partlycloudy") return "Teilweise bewölkt";
+            if (c == "cloudy") return "Bewölkt";
+            if (c == "fog") return "Nebel";
+            if (c == "rainy") return "Regen";
+            if (c == "pouring") return "Starker Regen";
+            if (c == "lightning") return "Gewitter";
+            if (c == "lightning-rainy") return "Gewitter / Regen";
+            if (c == "snowy") return "Schnee";
+            if (c == "snowy-rainy") return "Schneeregen";
+            if (c == "hail") return "Hagel";
+            if (c == "windy") return "Windig";
+            if (c == "windy-variant") return "Windig / bewölkt";
+            return "Wetter";
+          };
+
+          auto weather_glyph = [&](const char *raw) -> const char * {
+            std::string c = lower(raw);
+
+            if (c == "sunny") return "\U000F0599";
+            if (c == "clear-night") return "\U000F0594";
+            if (c == "partlycloudy") return "\U000F0595";
+            if (c == "cloudy") return "\U000F0590";
+            if (c == "fog") return "\U000F0591";
+            if (c == "hail") return "\U000F0592";
+            if (c == "lightning") return "\U000F0593";
+            if (c == "lightning-rainy") return "\U000F067E";
+            if (c == "pouring") return "\U000F0596";
+            if (c == "rainy") return "\U000F0597";
+            if (c == "snowy") return "\U000F0598";
+            if (c == "snowy-rainy") return "\U000F067F";
+            if (c == "windy") return "\U000F059D";
+            if (c == "windy-variant") return "\U000F059E";
+            if (c == "exceptional") return "\U000F0F38";
+            return "\U000F0590";
+          };
+
+          auto iso_date = [](const char *raw, char *out, size_t out_size) {
+            int yy = 0, mm = 0, dd = 0;
+            if (raw && sscanf(raw, "%d-%d-%d", &yy, &mm, &dd) == 3) {
+              snprintf(out, out_size, "%02d.%02d.", dd, mm);
+              return true;
+            }
+            snprintf(out, out_size, "--.--.");
+            return false;
+          };
+
+          auto iso_time = [](const char *raw, char *out, size_t out_size) {
+            if (raw && strlen(raw) >= 16) {
+              snprintf(out, out_size, "%.5s", raw + 11);
+              return true;
+            }
+            snprintf(out, out_size, "--:--");
+            return false;
+          };
+
+
+          auto days_from_civil_weather = [](int y, unsigned m, unsigned d) -> int64_t {
+            y -= m <= 2;
+            const int era = (y >= 0 ? y : y - 399) / 400;
+            const unsigned yoe = static_cast<unsigned>(y - era * 400);
+            const unsigned doy =
+              (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + d - 1;
+            const unsigned doe =
+              yoe * 365 + yoe / 4 - yoe / 100 + doy;
+            return static_cast<int64_t>(era) * 146097 +
+                   static_cast<int64_t>(doe) - 719468;
+          };
+
+          auto weekday_short = [&](const char *raw) -> const char * {
+            static const char *wd[] = {"SO", "MO", "DI", "MI", "DO", "FR", "SA"};
+            int y = 0, m = 0, d = 0;
+            if (!raw || sscanf(raw, "%d-%d-%d", &y, &m, &d) != 3)
+              return "--";
+            const int64_t days = days_from_civil_weather(y, m, d);
+            int idx = static_cast<int>((days + 4) % 7);
+            if (idx < 0) idx += 7;
+            return wd[idx];
+          };
+
+          // ---------------------------------------------------------------
+          // Header: current date left, status right
+          // ---------------------------------------------------------------
+          static const char *weekday_de[] = {
+            "", "Sonntag", "Montag", "Dienstag", "Mittwoch",
+            "Donnerstag", "Freitag", "Samstag"
+          };
+
+          const char *weekday =
+            (now.day_of_week >= 1 && now.day_of_week <= 7)
+              ? weekday_de[now.day_of_week]
+              : "";
+
+          char header_date[48];
+          snprintf(
+            header_date,
+            sizeof(header_date),
+            "%s, %02d.%02d.%04d",
+            weekday,
+            now.day_of_month,
+            now.month,
+            now.year
+          );
+
+          it.printf(
+            18,
+            8,
+            id(font_day),
+            INK,
+            "%s",
+            header_date
+          );
+
+          it.line(18, 37, 782, 37, INK);
+
+          // ---------------------------------------------------------------
+          // Forecast data
+          // daily_json contains TODAY + five following days.
+          // ---------------------------------------------------------------
+          auto daily_doc = esphome::json::parse_json(
+            id(epaper_weather_daily).state.empty()
+              ? "[]"
+              : id(epaper_weather_daily).state
+          );
+
+          bool daily_valid =
+            !daily_doc.isNull() &&
+            !daily_doc.overflowed() &&
+            daily_doc.is<JsonArray>();
+
+          JsonArray daily_items;
+          if (daily_valid)
+            daily_items = daily_doc.as<JsonArray>();
+
+          // ---------------------------------------------------------------
+          // Sunrise / sunset for the weather page
+          // ---------------------------------------------------------------
+          auto weather_hhmm_from_iso = [](const std::string &value,
+                                          char *out,
+                                          size_t out_size) {
+            if (out_size < 6) return false;
+
+            if (value.empty() ||
+                value == "unknown" ||
+                value == "unavailable") {
+              snprintf(out, out_size, "--:--");
+              return false;
+            }
+
+            int year = 0, month = 0, day = 0;
+            int hour = 0, minute = 0, second = 0;
+            char tz_sign = '+';
+            int tz_hour = 0, tz_minute = 0;
+
+            int matched = sscanf(
+              value.c_str(),
+              "%d-%d-%dT%d:%d:%d%c%d:%d",
+              &year, &month, &day,
+              &hour, &minute, &second,
+              &tz_sign, &tz_hour, &tz_minute
+            );
+
+            bool utc_z = false;
+            if (matched < 9) {
+              matched = sscanf(
+                value.c_str(),
+                "%d-%d-%dT%d:%d:%dZ",
+                &year, &month, &day,
+                &hour, &minute, &second
+              );
+              utc_z = (matched == 6);
+            }
+
+            if (matched < 9 && !utc_z) {
+              snprintf(out, out_size, "--:--");
+              return false;
+            }
+
+            auto days_from_civil = [](int y, unsigned m, unsigned d) -> int64_t {
+              y -= m <= 2;
+              const int era = (y >= 0 ? y : y - 399) / 400;
+              const unsigned yoe = static_cast<unsigned>(y - era * 400);
+              const unsigned doy =
+                (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + d - 1;
+              const unsigned doe =
+                yoe * 365 + yoe / 4 - yoe / 100 + doy;
+              return static_cast<int64_t>(era) * 146097 +
+                     static_cast<int64_t>(doe) - 719468;
+            };
+
+            int64_t epoch64 =
+              days_from_civil(year, month, day) * 86400LL +
+              static_cast<int64_t>(hour) * 3600LL +
+              static_cast<int64_t>(minute) * 60LL +
+              second;
+
+            if (!utc_z) {
+              const int offset_seconds =
+                (tz_hour * 60 + tz_minute) * 60;
+              if (tz_sign == '+')
+                epoch64 -= offset_seconds;
+              else if (tz_sign == '-')
+                epoch64 += offset_seconds;
+            }
+
+            auto local_time =
+              esphome::ESPTime::from_epoch_local(
+                static_cast<time_t>(epoch64)
+              );
+
+            snprintf(
+              out,
+              out_size,
+              "%02d:%02d",
+              std::max(0, std::min(23, static_cast<int>(local_time.hour))),
+              std::max(0, std::min(59, static_cast<int>(local_time.minute)))
+            );
+            return true;
+          };
+
+          char weather_sunrise[8];
+          char weather_sunset[8];
+
+          weather_hhmm_from_iso(
+            id(sunrise_time).state,
+            weather_sunrise,
+            sizeof(weather_sunrise)
+          );
+          weather_hhmm_from_iso(
+            id(sunset_time).state,
+            weather_sunset,
+            sizeof(weather_sunset)
+          );
+
+          ESP_LOGD(
+            "weather_timing",
+            "Header/JSON/Sonnenzeiten nach %u ms (+%u ms)",
+            static_cast<unsigned>(millis() - weather_t0),
+            static_cast<unsigned>(millis() - weather_step)
+          );
+          weather_step = millis();
+
+          // ---------------------------------------------------------------
+          // Current weather - reference-style top row, no outer frame
+          // The third (indoor) block remains unchanged.
+          // ---------------------------------------------------------------
+          const int current_top = 52;
+          const int current_bottom = 205;
+          const int current_x = 18;
+          const int current_w = 764;
+          const int current_col_w = current_w / 3;
+          const int current_col2_x = current_x + current_col_w;
+          const int current_col3_x = current_x + 2 * current_col_w;
+
+          // Vertical separator between current weather icon and temperature.
+          // 15 px clearance to the horizontal lines above/below.
+          const int weather_icon_temp_separator_x = current_x + 242;
+          it.line(
+            weather_icon_temp_separator_x,
+            52,
+            weather_icon_temp_separator_x,
+            current_top + 106,
+            INK
+          );
+
+          // Keep only the separator before the indoor block.
+          const int indoor_separator_x = current_col3_x + 15;
+          it.line(
+            indoor_separator_x,
+            52,
+            indoor_separator_x,
+            current_top + 106,
+            INK
+          );
+
+          const char *current_condition =
+            id(epaper_weather_condition).state.c_str();
+
+          // Today's min/max.
+          float today_high = NAN;
+          float today_low = NAN;
+          if (daily_valid && daily_items.size() > 0) {
+            JsonObject today_item = daily_items[0].as<JsonObject>();
+            if (today_item["high"].is<float>())
+              today_high = today_item["high"].as<float>();
+            if (today_item["low"].is<float>())
+              today_low = today_item["low"].as<float>();
+          }
+
+          // LEFT AREA: very large current weather icon.
+          it.printf(
+            122,
+            current_top - 15,
+            id(mdi_weather_xlarge),
+            INK,
+            TextAlign::TOP_CENTER,
+            "%s",
+            weather_glyph(current_condition)
+          );
+
+          // Beside it: equally prominent current temperature.
+          float out_temp =
+            weather_number(id(weather_outdoor_temperature).state);
+
+          if (valid_num(out_temp)) {
+            it.printf(
+              (weather_icon_temp_separator_x + indoor_separator_x) / 2,
+              current_top - 14,
+              id(font_weather_current_temp),
+              INK,
+              TextAlign::TOP_CENTER,
+              "%.0f°",
+              out_temp
+            );
+          } else {
+            it.printf(
+              (weather_icon_temp_separator_x + indoor_separator_x) / 2,
+              current_top - 14,
+              id(font_weather_current_temp),
+              INK,
+              TextAlign::TOP_CENTER,
+              "--°"
+            );
+          }
+
+          // Weather condition below current temperature.
+          it.printf(
+            (weather_icon_temp_separator_x + indoor_separator_x) / 2,
+            current_top + 84,
+            id(font_weather_condition),
+            INK,
+            TextAlign::TOP_CENTER,
+            "%s",
+            condition_de(current_condition)
+          );
+
+          // Separator above the lower information strip.
+          it.line(
+            18,
+            current_top + 121,
+            indoor_separator_x,
+            current_top + 121,
+            INK
+          );
+
+          // Bottom left: today's min/max.
+          if (valid_num(today_low) && valid_num(today_high)) {
+            it.printf(
+              22,
+              current_top + 128,
+              id(font_lesson),
+              INK,
+              "Min %.0f°   Max %.0f°",
+              today_low,
+              today_high
+            );
+          } else {
+            it.printf(
+              22,
+              current_top + 128,
+              id(font_lesson),
+              INK,
+              "Min --°   Max --°"
+            );
+          }
+
+          // Bottom right: sunrise -> sunset.
+          // Icons remain 5 px lower, but the time text is restored to its
+          // previous vertical position.
+          const int rise_icon_x = indoor_separator_x - 188;
+          const int rise_time_x = rise_icon_x + 30;
+          const int arrow_x1 = rise_time_x + 50;
+          const int arrow_x2 = arrow_x1 + 20;
+          const int set_icon_x = arrow_x2 + 10;
+          const int set_time_x = set_icon_x + 30;
+
+          const int sun_icon_y = current_top + 127;
+          const int sun_time_y = current_top + 128;
+          const int arrow_y = current_top + 138;
+
+          // Sunrise pictogram
+          it.printf(
+            rise_icon_x,
+            sun_icon_y,
+            id(mdi_sun_info),
+            INK,
+            "\U000F059C"
+          );
+
+          it.printf(
+            rise_time_x,
+            sun_time_y,
+            id(font_lesson),
+            INK,
+            "%s",
+            weather_sunrise
+          );
+
+          // Shorter, visually stronger arrow.
+          it.line(arrow_x1, arrow_y, arrow_x2, arrow_y, INK);
+          it.line(arrow_x1, arrow_y + 1, arrow_x2, arrow_y + 1, INK);
+          it.line(arrow_x2, arrow_y, arrow_x2 - 4, arrow_y - 3, INK);
+          it.line(arrow_x2, arrow_y + 1, arrow_x2 - 4, arrow_y + 4, INK);
+
+          // Sunset pictogram
+          it.printf(
+            set_icon_x,
+            sun_icon_y,
+            id(mdi_sun_info),
+            INK,
+            "\U000F059B"
+          );
+
+          it.printf(
+            set_time_x,
+            sun_time_y,
+            id(font_lesson),
+            INK,
+            "%s",
+            weather_sunset
+          );
+
+          // THIRD BLOCK: indoor temperature and humidity, unchanged.
+          float in_temp =
+            weather_number(id(weather_indoor_temperature).state);
+          float in_hum =
+            weather_number(id(weather_indoor_humidity).state);
+
+          it.printf(
+            current_col3_x + current_col_w / 2 + 20,
+            current_top + 12,
+            id(font_day),
+            INK,
+            TextAlign::TOP_CENTER,
+            "Innenraum"
+          );
+
+          if (valid_num(in_temp)) {
+            it.printf(
+              current_col3_x + current_col_w / 2 + 20,
+              current_top + 44,
+              id(font_start_weather),
+              INK,
+              TextAlign::TOP_CENTER,
+              "%.1f °C",
+              in_temp
+            );
+          } else {
+            it.printf(
+              current_col3_x + current_col_w / 2 + 20,
+              current_top + 44,
+              id(font_start_weather),
+              INK,
+              TextAlign::TOP_CENTER,
+              "--.- °C"
+            );
+          }
+
+          if (valid_num(in_hum)) {
+            it.printf(
+              current_col3_x + current_col_w / 2 + 20,
+              current_top + 105,
+              id(font_start_info),
+              INK,
+              TextAlign::TOP_CENTER,
+              "%.0f %% Luftfeuchte",
+              in_hum
+            );
+          } else {
+            it.printf(
+              current_col3_x + current_col_w / 2 + 20,
+              current_top + 105,
+              id(font_start_info),
+              INK,
+              TextAlign::TOP_CENTER,
+              "-- %% Luftfeuchte"
+            );
+          }
+
+          it.line(18, current_bottom, 782, current_bottom, INK);
+
+          ESP_LOGD(
+            "weather_timing",
+            "Aktuelles Wetter/Innenraum nach %u ms (+%u ms)",
+            static_cast<unsigned>(millis() - weather_t0),
+            static_cast<unsigned>(millis() - weather_step)
+          );
+          weather_step = millis();
+
+          // ---------------------------------------------------------------
+          // Middle block - next 24 hours in 3-hour steps
+          // 8 points total, aligned to 00/03/06/.../21.
+          // Example at 21:xx -> 00:00, 03:00, ... 21:00.
+          // ---------------------------------------------------------------
+          const int hourly_box_x = 8;
+          const int hourly_box_y = 214;
+          const int hourly_box_w = 784;
+          const int hourly_box_h = 112;
+
+          it.rectangle(
+            hourly_box_x,
+            hourly_box_y,
+            hourly_box_w,
+            hourly_box_h,
+            INK
+          );
+
+          it.printf(
+            hourly_box_x + 10,
+            hourly_box_y + 7,
+            id(font_small),
+            INK,
+            "24-STUNDEN-VORHERSAGE"
+          );
+
+          auto hourly_doc = esphome::json::parse_json(
+            id(epaper_weather_hourly).state.empty()
+              ? "[]"
+              : id(epaper_weather_hourly).state
+          );
+
+          bool hourly_valid =
+            !hourly_doc.isNull() &&
+            !hourly_doc.overflowed() &&
+            hourly_doc.is<JsonArray>();
+
+          JsonArray hourly_items;
+          if (hourly_valid)
+            hourly_items = hourly_doc.as<JsonArray>();
+
+          // First displayed point is the next full 3-hour boundary.
+          int now_minutes = now.hour * 60 + now.minute;
+          int next_slot_minutes = ((now_minutes / 180) + 1) * 180;
+          int first_slot_hour = (next_slot_minutes / 60) % 24;
+
+          const int hourly_cols = 8;
+          const int hourly_inner_x = hourly_box_x + 10;
+          const int hourly_inner_w = hourly_box_w - 20;
+          const int hourly_col_w = hourly_inner_w / hourly_cols;
+          const int hourly_content_y = hourly_box_y + 31;
+
+          // Find forecast entries whose local-looking ISO hour matches
+          // the desired 3-hour sequence. The HA weather provider normally
+          // supplies one entry per hour.
+          for (int slot = 0; slot < hourly_cols; slot++) {
+            const int target_hour = (first_slot_hour + slot * 3) % 24;
+            JsonObject selected;
+            bool found = false;
+
+            if (hourly_valid) {
+              for (JsonObject item : hourly_items) {
+                const char *dt = item["datetime"] | "";
+                if (!dt || strlen(dt) < 13)
+                  continue;
+
+                int iso_hour = -1;
+                if (sscanf(dt + 11, "%2d", &iso_hour) != 1)
+                  continue;
+
+                if (iso_hour == target_hour) {
+                  // Avoid selecting an occurrence before the requested
+                  // boundary when the sequence crosses midnight.
+                  selected = item;
+                  found = true;
+                  break;
+                }
+              }
+            }
+
+            const int cx =
+              hourly_inner_x + slot * hourly_col_w + hourly_col_w / 2;
+
+            if (found) {
+              const char *cond = selected["condition"] | "";
+
+              // Larger weather icon.
+              it.printf(
+                cx,
+                hourly_content_y - 5,
+                id(mdi_weather_hourly),
+                INK,
+                TextAlign::TOP_CENTER,
+                "%s",
+                weather_glyph(cond)
+              );
+
+              // Time sits directly below the larger icon.
+              it.printf(
+                cx,
+                hourly_content_y + 34,
+                id(font_meta),
+                INK,
+                TextAlign::TOP_CENTER,
+                "%02d:00",
+                target_hour
+              );
+
+              // Forecast temperature below the time.
+              // Shift temperature 3 px to the right for optical alignment.
+              float temp =
+                selected["temperature"].is<float>()
+                  ? selected["temperature"].as<float>() : NAN;
+
+              if (valid_num(temp)) {
+                it.printf(
+                  cx + 3,
+                  hourly_content_y + 47,
+                  id(font_start_date),
+                  INK,
+                  TextAlign::TOP_CENTER,
+                  "%.0f°",
+                  temp
+                );
+              }
+            }
+          }
+
+          ESP_LOGD(
+            "weather_timing",
+            "24-Stunden-Block nach %u ms (+%u ms)",
+            static_cast<unsigned>(millis() - weather_t0),
+            static_cast<unsigned>(millis() - weather_step)
+          );
+          weather_step = millis();
+
+          // ---------------------------------------------------------------
+          // Bottom block - five days, starts TOMORROW
+          // ---------------------------------------------------------------
+          const int daily_box_x = 8;
+          const int daily_box_y = 338;
+          const int daily_box_w = 784;
+          const int daily_box_h = 134;
+
+          it.rectangle(
+            daily_box_x,
+            daily_box_y,
+            daily_box_w,
+            daily_box_h,
+            INK
+          );
+
+          it.printf(
+            daily_box_x + 10,
+            daily_box_y + 7,
+            id(font_small),
+            INK,
+            "5-TAGE-VORHERSAGE"
+          );
+
+          const int daily_cols = 5;
+          const int daily_inner_x = daily_box_x + 10;
+          const int daily_inner_w = daily_box_w - 20;
+          const int daily_col_w = daily_inner_w / daily_cols;
+          const int daily_content_y = daily_box_y + 31;
+
+          for (int i = 0; i < daily_cols; i++) {
+            const int json_index = i + 1; // today is excluded
+            const int cx =
+              daily_inner_x + i * daily_col_w + daily_col_w / 2;
+
+            if (daily_valid &&
+                json_index < static_cast<int>(daily_items.size())) {
+              JsonObject item =
+                daily_items[json_index].as<JsonObject>();
+
+              const char *dt = item["datetime"] | "";
+              const char *cond = item["condition"] | "";
+
+              float high =
+                item["high"].is<float>()
+                  ? item["high"].as<float>() : NAN;
+
+              float low =
+                item["low"].is<float>()
+                  ? item["low"].as<float>() : NAN;
+
+              float pop =
+                item["precipitation_probability"].is<float>()
+                  ? item["precipitation_probability"].as<float>()
+                  : NAN;
+
+              // Weekday
+              it.printf(
+                cx,
+                daily_content_y,
+                id(font_lesson),
+                INK,
+                TextAlign::TOP_CENTER,
+                "%s",
+                weekday_short(dt)
+              );
+
+              // Weather icon
+              it.printf(
+                cx,
+                daily_content_y + 20,
+                id(mdi_weather_medium),
+                INK,
+                TextAlign::TOP_CENTER,
+                "%s",
+                weather_glyph(cond)
+              );
+
+              // High / low
+              if (valid_num(high) && valid_num(low)) {
+                it.printf(
+                  cx,
+                  daily_content_y + 69,
+                  id(font_lesson),
+                  INK,
+                  TextAlign::TOP_CENTER,
+                  "%.0f°/%.0f°",
+                  high,
+                  low
+                );
+              }
+
+              // Rain probability, analogous to the reference image
+              if (valid_num(pop)) {
+                it.printf(
+                  cx,
+                  daily_content_y + 91,
+                  id(font_meta),
+                  INK,
+                  TextAlign::TOP_CENTER,
+                  "%.0f%%",
+                  pop
+                );
+              }
+            }
+          }
+          ESP_LOGD(
+            "weather_timing",
+            "5-Tage-Block nach %u ms (+%u ms)",
+            static_cast<unsigned>(millis() - weather_t0),
+            static_cast<unsigned>(millis() - weather_step)
+          );
+          ESP_LOGD(
+            "weather_timing",
+            "Wetter-Lambda beendet nach %u ms",
+            static_cast<unsigned>(millis() - weather_t0)
+          );
+
+
+
+# V25.5 refresh policy:
+# - Boot: full refresh
+# - Page change: full refresh
+# - Same page updates: keep partial refresh behaviour
