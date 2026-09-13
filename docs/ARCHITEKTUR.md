@@ -1,6 +1,6 @@
 # Schulportal Hessen – Architektur
 
-Diese Datei beschreibt die technische Struktur von SPH-HA ab **Version 0.5.0**.
+Diese Datei beschreibt die aktuelle technische Struktur von SPH-HA.
 
 ## Grundprinzipien
 
@@ -8,9 +8,10 @@ Diese Datei beschreibt die technische Struktur von SPH-HA ab **Version 0.5.0**.
 - Alle SPH-Module teilen sich Authentifizierung und Session.
 - Fachlogik bleibt im jeweiligen Modul.
 - Modulübergreifende Normalisierung liegt unter `api/`.
-- Lovelace-Karten sind allgemeine `sph-*` Karten; schulspezifische Abweichungen werden über **School Hacks** injiziert.
-- School Hacks ändern keine Backend-Sensordaten.
-- Native Kalender verwenden ausschließlich Backend-Daten der SPH-Integration und keine Frontend-School-Hacks.
+- Schulspezifische Datenanpassungen werden über serverseitige **Schul-Profile** gekapselt.
+- Schulspezifische Darstellungsregeln liegen in optionalen Frontend-Profilen.
+- Sensoren, JSON-Sensoren und native Kalender verwenden dieselben serverseitig profilierten Datenregeln.
+- Datumsbezogene Vertretungen werden nur in datumsbewussten Kontexten auf einen Stundenplaneintrag angewandt.
 
 ## Quelltextstruktur
 
@@ -28,51 +29,28 @@ custom_components/sph/
 │   ├── auth_client.py
 │   ├── client.py
 │   └── subjects.py
+├── school_profiles/
+│   ├── __init__.py
+│   ├── base.py
+│   └── kfg.py
 ├── module/
 │   ├── stundenplan/
-│   │   ├── client.py
-│   │   ├── coordinator.py
-│   │   ├── calendar.py
-│   │   ├── movable_holidays.py
-│   │   └── sensor.py
 │   ├── kalender/
-│   │   ├── client.py
-│   │   ├── coordinator.py
-│   │   ├── sensor.py
-│   │   └── storage.py
 │   ├── meinunterricht/
-│   │   ├── client.py
-│   │   ├── coordinator.py
-│   │   ├── helpers.py
-│   │   ├── sensor.py
-│   │   ├── services.py
-│   │   └── storage.py
 │   ├── lerngruppen/
-│   │   ├── client.py
-│   │   ├── coordinator.py
-│   │   ├── calendar.py
-│   │   ├── sensor.py
-│   │   ├── services.py
-│   │   └── storage.py
 │   └── vertretung/
-│       ├── apply.py
-│       ├── binary_sensor.py
-│       ├── client.py
-│       ├── coordinator.py
-│       ├── helpers.py
-│       └── sensor.py
 ├── static/
+│   ├── school-profile.js
+│   ├── school-profiles/
+│   │   └── kfg.js
+│   ├── substitution-adapter.js
 │   ├── sph-stundenplan-card.js
 │   ├── sph-stundenplan-tag-card.js
 │   ├── sph-stundenplan-grid-card.js
 │   ├── sph-meinunterricht-card.js
 │   ├── sph-lerngruppen-card.js
 │   ├── sph-kalender-card.js
-│   ├── sph-vertretungsplan-card.js
-│   ├── school-hacks.js
-│   ├── substitution-adapter.js
-│   └── school-hacks/
-│       └── kfg.js
+│   └── sph-vertretungsplan-card.js
 └── translations/
 ```
 
@@ -85,9 +63,14 @@ Verantwortlich für:
 - Aufbau der gemeinsamen `SphAuthClient`-Instanz,
 - Initialisierung der Modul-Coordinatoren,
 - Modulaktivierung,
-- Entity-ID-Migrationen,
+- Entity-ID-Verwaltung,
 - automatische Lovelace-Ressourcenregistrierung,
-- Start/Stop zusätzlicher Hintergrundlogik.
+- Beobachtung profil-eigener Home-Assistant-Entities,
+- Start und Stop integrationsweiter Hilfslogik.
+
+Das pro Kind konfigurierte Schul-Profil wird über `get_school_profile(entry)` geladen und im Laufzeitkontext des Integrationseintrags gespeichert.
+
+Wenn ein Profil `state_entities` definiert, beobachtet die Integration diese Entities. Änderungen lösen eine erneute Veröffentlichung der betroffenen SPH-Daten aus.
 
 ### `sensor.py`
 
@@ -99,7 +82,7 @@ Dispatcher für die Vertretungsplan-Binärsensoren.
 
 ### `calendar.py`
 
-Erzeugt bzw. kombiniert native Home-Assistant-Kalender:
+Erzeugt beziehungsweise kombiniert native Home-Assistant-Kalender:
 
 - Stundenplan,
 - Schulkalender,
@@ -117,7 +100,65 @@ Die gemeinsame Client-Schicht verwaltet Login, Session und erneute Anmeldung bei
 
 ### Fachnormalisierung
 
-`api/subjects.py` enthält gemeinsame Fach-/Kursnormalisierung für mehrere Module. Ziel ist, bekannte Kürzel und Schreibvarianten zentral aufzulösen, statt Mappinglogik mehrfach zu implementieren.
+`api/subjects.py` enthält schulübergreifende Fach-/Kursnormalisierung. Bekannte Kürzel und Schreibvarianten werden zentral aufgelöst.
+
+Schulspezifische Ausnahmen gehören dagegen in das jeweilige Schul-Profil.
+
+## Schul-Profile
+
+### Registry
+
+`school_profiles/__init__.py` verwaltet die verfügbaren Profile.
+
+Der Standardwert ist:
+
+```text
+none
+```
+
+Aktuell registriert ist zusätzlich:
+
+```text
+kfg
+```
+
+`school_profile_options()` liefert die Auswahl für Config-Flow und Options-Flow.
+
+### Serverprofil
+
+`school_profiles/base.py` definiert `SchoolProfile` und die gemeinsamen Hooks für:
+
+- Lehrerauflösung,
+- Fachauflösung,
+- Vertretungsbezeichnungen,
+- rekursive Daten-Transformation,
+- Stundenplan-Payloads,
+- Schulkalender-Payloads,
+- Mein-Unterricht-Payloads,
+- Lerngruppen-Payloads,
+- Vertretungsplan-Payloads,
+- native Kalenderdatensätze,
+- datumsbezogene Stundenplananzeigen.
+
+Die Basisklasse erhält bereits vom Core ausgewählte und normalisierte Daten. Ein Profil entscheidet nicht selbst zwischen persönlichem und vollständigem Stundenplan.
+
+Bei vollständiger Stundenplan-Ausgabe werden `eigener_plan` und `tage` jeweils profiliert. `eigener_grundplan` wird nicht als Profilquelle verwendet und nicht durch die Profiltransformation umgeschrieben.
+
+### Frontendprofil
+
+`static/school-profile.js` enthält die gemeinsame Darstellungsschicht. Profil-spezifische Einstellungen liegen unter:
+
+```text
+static/school-profiles/<profil>.js
+```
+
+Das Frontend erkennt das aktive Profil über das Sensorattribut:
+
+```yaml
+school_profile: <profil>
+```
+
+Ein Karten-Override kann über `school-profile` gesetzt werden.
 
 ## Modulaktivierung
 
@@ -129,7 +170,7 @@ Aktuell existieren fünf Module:
 - Lerngruppen
 - Vertretungsplan
 
-Ein deaktiviertes Modul soll keine unnötigen SPH-Abrufe durchführen. Nicht mehr benötigte Entities werden abhängig vom Modul aus der Entity Registry entfernt oder inaktiv gehalten.
+Ein deaktiviertes Modul soll keine unnötigen SPH-Abrufe durchführen. Nicht benötigte Entities werden abhängig vom Modul entfernt oder nicht angelegt.
 
 ## Stundenplan
 
@@ -144,14 +185,13 @@ Wichtige Attribute:
 - `wochenbeginn`
 - `klasse`
 - `freie_tage`
+- `school_profile`
 
 Der JSON-Sensor enthält denselben logischen Payload im Attribut `json`.
 
 ### A/B-Wochen
 
-`wochenbeginn` verankert die aktuell gemeldete A/B-Woche. Vorschauansichten und Kalender schreiben daraus die Wochenkennung fort.
-
-`eigener_grundplan` bleibt von der aktuellen Freie-Tage-Maskierung unberührt und dient deshalb als Basis für zukünftige Wochenansichten.
+`wochenbeginn` verankert die gemeldete A/B-Woche. Datumsbezogene Ansichten schreiben daraus die Wochenkennung fort.
 
 ### Freie Tage
 
@@ -164,9 +204,9 @@ Freie Tage wirken auf Stundenplan-Sensoren, Lovelace-Auswahl und den nativen Stu
 
 ### Stundenplan-Kalender
 
-`module/stundenplan/calendar.py` erzeugt dynamisch Unterrichtstermine in einem rollierenden Fenster von zwei Wochen Vergangenheit bis acht Wochen Zukunft.
+`module/stundenplan/calendar.py` erzeugt dynamisch Unterrichtstermine in einem rollierenden Zeitfenster. Der Kalender erhält den Vertretungs-Coordinator und wendet passende SPH-Vertretungen auf konkrete Unterrichtstermine an.
 
-Seit 0.5.0 erhält der Kalender zusätzlich den Vertretungs-Coordinator und wendet interne SPH-Vertretungsdaten auf die regulären Unterrichtstermine an.
+Vor der Ausgabe können serverseitige Profil-Hooks Fach-, Lehrer- und Vertretungsbezeichnungen aufbereiten.
 
 ## Vertretungsplan
 
@@ -201,7 +241,7 @@ Normalisierte Felder umfassen unter anderem:
 - `sensor.vertretungsplan_<kind>_<kürzel>`
 - `sensor.vertretungsplan_<kind>_<kürzel>_json`
 
-Der JSON-Sensor enthält denselben vollständigen logischen Payload im Attribut `json`.
+Das aktive Schul-Profil wird vor Veröffentlichung auf den Payload angewandt. Dadurch können beispielsweise schulspezifische `art_lang`-Bezeichnungen oder Lehrernamen serverseitig aufbereitet werden.
 
 ### Binärsensoren
 
@@ -209,14 +249,14 @@ Der JSON-Sensor enthält denselben vollständigen logischen Payload im Attribut 
 
 ### Anwendung auf Stunden
 
-`module/vertretung/apply.py` ordnet einen internen Vertretungseintrag einer regulären Stundenplanstunde zu.
+`module/vertretung/apply.py` ordnet einen Vertretungseintrag einer regulären Stundenplanstunde zu.
 
-Matching-Kriterien:
+Matching-Kriterien umfassen:
 
 - Datum
 - Klasse
 - Fach/Originalfach
-- Schulstunde bzw. Stundenbereich
+- Schulstunde beziehungsweise Stundenbereich
 
 Angewendet werden unter anderem:
 
@@ -226,49 +266,17 @@ Angewendet werden unter anderem:
 - Vertretungslehrkraft,
 - Raumänderung.
 
-Diese Logik wird serverseitig bei der Kalendergenerierung verwendet.
-
 ## Frontend-Vertretungsadapter
 
 `static/substitution-adapter.js` verbindet Stundenplankarten mit Vertretungsdaten.
 
-### Ohne School Hack
-
-Die Karte sucht den zum Kind passenden internen `sensor.vertretungsplan_*` und wendet dessen Einträge auf die dargestellten Stunden an.
-
-### Mit School Hack
-
 Reihenfolge pro Stunde:
 
 1. explizit in der Karte gesetzte Quelle (`vertretungsplan_sensor`, `vertretungsplan`, `substitution_sensor`),
-2. bevorzugte Quelle des aktiven Schulprofils,
-3. interner SPH-Vertretungsplan als Fallback, wenn die bevorzugte Quelle keinen Treffer liefert.
+2. bevorzugte Quelle des aktiven Schul-Profils,
+3. interner SPH-Vertretungsplan als Fallback, wenn die Profilquelle keinen Treffer liefert.
 
-Eine explizit gesetzte Quelle bleibt autoritativ; auch ein absichtlich fehlender expliziter Sensor führt nicht zu einem stillen Quellenwechsel.
-
-## School Hacks
-
-`static/school-hacks.js` enthält die gemeinsame Profil-Logik. Schuldateien unter `static/school-hacks/<name>.js` enthalten nur schulbezogene Einstellungen.
-
-Aktuell vorhanden:
-
-- `kfg.js` – Kaiserin-Friedrich-Gymnasium Bad Homburg
-
-Ein Profil kann unter anderem definieren:
-
-- A/B-Wochenregeln,
-- Badge-Verhalten,
-- automatische Wochenumschaltung,
-- Lehrerquelle,
-- bevorzugte Vertretungssensoren,
-- Bezeichnungen von Vertretungsarten,
-- Nachricht-des-Tages-Verarbeitung.
-
-Neue Schulen erhalten keine Kartenkopien, sondern eine neue Profildatei und eine eigene README unter `docs/schools/<name>/README.md`.
-
-Allgemeine Anleitung: [`lovelace/school-hacks.md`](lovelace/school-hacks.md).
-
-Schulspezifische Dokumentation: [`schools/README.md`](schools/README.md).
+Eine explizit gesetzte Quelle bleibt autoritativ.
 
 ## Mein Unterricht
 
@@ -282,17 +290,21 @@ Normaler Sensor und JSON-Sensor liefern zusätzlich:
 - `faecher_gesamt`
 - `faecher_offen`
 
-Lokale Hausaufgaben werden persistent gespeichert, mit SPH-Daten zusammengeführt und nach sieben Tagen relativ zum Aufgabendatum bereinigt.
+Das aktive Schul-Profil wird auf den veröffentlichten Payload angewandt.
 
 ## Lerngruppen
 
 Quelle: `lerngruppen.php`.
 
-Leistungskontrollen werden mit Lerngruppen und persönlichem Stundenplan verknüpft. Schulstunden werden nach Möglichkeit in konkrete Uhrzeiten umgerechnet. Lokale Termine werden persistent gespeichert und konservativ mit SPH-Terminen dedupliziert.
+Leistungskontrollen werden mit Lerngruppen und persönlichem Stundenplan verknüpft. Schulstunden werden nach Möglichkeit in konkrete Uhrzeiten umgerechnet. Lokale Termine werden persistent gespeichert und mit SPH-Terminen zusammengeführt.
+
+Das aktive Schul-Profil wird auf Sensor-, JSON- und Kalenderdaten angewandt.
 
 ## Schulkalender
 
 Der Schulkalender bevorzugt CSV und verwendet iCal als Fallback. Daten werden auf das relevante hessische Schuljahr begrenzt. Optional können Kalenderarten gefiltert werden. Lokale eigene Kalendertermine werden separat gespeichert.
+
+Profil-Hooks können einzelne Kalenderdatensätze sowie strukturierte Sensor-/JSON-Payloads aufbereiten.
 
 ## Lovelace-Ressourcen
 
@@ -310,17 +322,18 @@ Aktuelle Karten:
 
 ## Robustheit
 
-- Erfolgreiche Daten sollen bei temporären Abruffehlern erhalten bleiben.
+- Erfolgreiche Daten bleiben bei temporären Abruffehlern soweit möglich erhalten.
 - Lokale Einträge werden unabhängig von SPH gespeichert.
-- Frontend-Karten vermeiden unnötigen vollständigen Shadow-DOM-Neuaufbau, damit Scrollposition und Dialogzustand stabil bleiben.
-- School Hacks dürfen Home-Assistant-State-Objekte nicht verändern.
+- Profile sollen unbekannte Werte unverändert lassen, wenn eine optionale schulspezifische Datenquelle fehlt.
+- Frontend-Karten verändern keine Home-Assistant-State-Objekte.
 
 ## Tests
 
 Die Tests decken unter anderem ab:
 
 - A/B-Wochenlogik,
-- School-Hack-Profilladen,
+- Schul-Profilladen,
+- serverseitige Profiltransformationen,
 - Vertretungsquellen-Priorität,
 - internen SPH-Vertretungsadapter,
 - Vertretungsplan-Normalisierung und JSON-Payload,
