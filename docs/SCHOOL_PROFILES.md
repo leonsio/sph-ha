@@ -12,11 +12,23 @@ SPH-HA bildet allgemeine Funktionen möglichst schulübergreifend im Core ab. Sc
 - Beschreibungen in Sensoren und Kalendern aufbereiten
 - A/B-Wochen oder andere Darstellungsregeln in den SPH-Lovelace-Karten anpassen
 
-Ein Profil kann sowohl serverseitige Daten als auch optionale Darstellungsregeln beeinflussen. Dadurch stehen schulspezifisch aufbereitete Werte – soweit fachlich sinnvoll – in Sensoren, JSON-Ausgaben, Kalendern und Lovelace zur Verfügung.
+Ein Profil kann sowohl serverseitige Daten als auch Darstellungsregeln beeinflussen. Dadurch stehen schulspezifisch aufbereitete Werte – soweit fachlich sinnvoll – in Sensoren, JSON-Ausgaben, Kalendern und Lovelace zur Verfügung.
+
+## Dynamische Profile
+
+Jede Schule besitzt einen eigenen Profilordner unter:
+
+```text
+custom_components/sph/school_profiles/<profil>/
+```
+
+Die Integration erkennt vorhandene Profilordner automatisch. Die jeweilige `profile.py` liefert Profil-ID, Anzeigename, Beschreibung, Frontend-Einstiegspunkt und die serverseitige Schul-Logik. Die Lovelace-spezifischen Dateien liegen ebenfalls im Profilordner unter `frontend/`.
+
+Dadurch müssen neue Schulen nicht zusätzlich in einer zentralen Profilliste oder im Config-Flow eingetragen werden.
 
 ## Auswahl
 
-Bei der Einrichtung eines Kindes gibt es den Parameter **Schul-Profil**. Die Auswahl kann später in den Optionen des jeweiligen Integrationseintrags geändert werden.
+Bei der Einrichtung eines Kindes gibt es den Parameter **Schul-Profil**. Die Auswahl kann später in den Optionen des jeweiligen Integrationseintrags geändert werden. Die Einträge der Auswahl werden aus den dynamisch gefundenen Profilen erzeugt.
 
 Standard:
 
@@ -59,7 +71,7 @@ Profilierte Payloads enthalten zusätzlich:
 school_profile: kfg
 ```
 
-Die SPH-Lovelace-Karten können das Profil dadurch automatisch erkennen.
+Die SPH-Lovelace-Karten erkennen das Profil dadurch automatisch.
 
 ## Kalender
 
@@ -92,6 +104,12 @@ school-profile: false
 
 kann die Profil-Darstellung einer einzelnen Karte deaktiviert werden, auch wenn der Sensor ein Profil meldet.
 
+Das Frontend eines Profils wird dynamisch aus dessen eigenem Ordner geladen:
+
+```text
+custom_components/sph/school_profiles/<profil>/frontend/lovelace.js
+```
+
 ## KFG
 
 Das Profil `kfg` enthält die Besonderheiten des Kaiserin-Friedrich-Gymnasiums Bad Homburg. Dazu gehören insbesondere:
@@ -108,6 +126,6 @@ Weitere Details: [KFG-Profil](schools/kfg/README.md)
 
 ## Eigene Profile entwickeln
 
-Die vollständige Entwickler-API ist separat dokumentiert:
+Die vollständige Entwickler-API einschließlich Ordnerstruktur, Discovery, Metadaten und Frontend-Anbindung ist separat dokumentiert:
 
 [Schul-Profile entwickeln](SCHOOL_PROFILES_DEVELOPMENT.md)
