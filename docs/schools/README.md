@@ -12,16 +12,23 @@ Die allgemeine Benutzer-Dokumentation befindet sich unter [`../SCHOOL_PROFILES.m
 
 ## Struktur
 
-Ein Profil kann aus zwei Teilen bestehen:
+Jede Schule besitzt einen eigenen Profilordner:
 
 ```text
-custom_components/sph/school_profiles/<name>.py
-custom_components/sph/static/school-profiles/<name>.js
+custom_components/sph/school_profiles/<name>/
+├── __init__.py
+├── profile.py
+├── ... optionale Python-Helfer ...
+└── frontend/
+    ├── lovelace.js
+    └── ... optionale Frontend-Dateien ...
 ```
 
-Der Python-Teil verarbeitet schulspezifische Daten für Sensoren, JSON und Kalender. Der JavaScript-Teil ist optional und enthält nur Darstellungsregeln für die mitgelieferten Lovelace-Karten.
+`profile.py` enthält Metadaten und serverseitige Datenlogik. Die Dateien unter `frontend/` enthalten die schulspezifischen Darstellungsregeln für die mitgelieferten Lovelace-Karten.
 
-Für jedes neue Profil wird zusätzlich eine Schuldokumentation angelegt:
+Die Integration entdeckt Profilordner automatisch. Neue Profile werden deshalb nicht in einer zentralen Registry oder im Config-Flow eingetragen.
+
+Für jedes Profil wird zusätzlich eine Schuldokumentation angelegt:
 
 ```text
 docs/schools/<name>/README.md
@@ -29,6 +36,6 @@ docs/schools/<name>/README.md
 
 ## Grundregel
 
-Profile sollen langfristig möglichst klein bleiben. Sobald eine Regel schulübergreifend sinnvoll ist, sollte sie in die allgemeine Integration verschoben werden.
+Profile sollen möglichst klein bleiben. Sobald eine Regel schulübergreifend sinnvoll ist, gehört sie in die allgemeine Integration.
 
 Schulspezifische externe Entities gehören ausschließlich in das jeweilige Profil. Beispielsweise ist `sensor.kfg_kollegium` nur Bestandteil des KFG-Profils und keine allgemeine Abhängigkeit von SPH-HA.
