@@ -8,13 +8,13 @@ from .base import SchoolProfile
 
 
 class KFGProfile(SchoolProfile):
-    """School-specific data and behaviour currently required by the KFG."""
+    """School-specific data and behaviour required by the KFG."""
 
     id = "kfg"
     name = "Kaiserin-Friedrich-Gymnasium Bad Homburg"
 
-    # Existing KFG school-hacks settings. Presentation-only flags are mirrored
-    # in static/school-profiles/kfg.js; data transformations live here.
+    # Presentation-only flags are mirrored in static/school-profiles/kfg.js;
+    # data transformations live in this server-side profile.
     week_badges = ("A", "B")
     unbadged_fallback = True
     hide_week_badges = True
