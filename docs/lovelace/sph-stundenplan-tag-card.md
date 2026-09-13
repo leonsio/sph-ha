@@ -1,53 +1,77 @@
 # SPH Tagesstundenplan
 
-> Schulprofile: Normale SPH-Karten unterstützen `school-hacks: kfg`.
-> [Konfiguration und Umstieg](school-hacks.md).
-
-
 Kartentyp: `custom:sph-stundenplan-tag-card`
 
-## Funktionsweise
+## Funktion
 
-Die Karte zeigt genau einen Unterrichtstag. Während eines Schultags bleibt der aktuelle Tag sichtbar, solange die letzte Unterrichtsstunde noch nicht beendet ist. Nach Unterrichtsende sowie an Wochenenden oder unterrichtsfreien Tagen springt die Karte automatisch zum nächsten Tag mit Unterricht. Die Berechnung wird zusätzlich alle 30 Sekunden aktualisiert.
+Die Karte zeigt genau einen relevanten Unterrichtstag. Während eines Schultags bleibt der aktuelle Tag sichtbar, solange die letzte aktive Unterrichtsstunde noch nicht beendet ist. Danach sowie an Wochenenden oder unterrichtsfreien Tagen wird automatisch der nächste Unterrichtstag gewählt.
 
-Angezeigt werden Uhrzeit, Fach, Lehrkraft, Raum und A/B-Badges. Passende Termine aus `sensor.schulkalender_*` der Arten `Arbeiten` und `Klausuren` werden direkt an der betreffenden Unterrichtsstunde markiert.
+Die zeitabhängige Auswahl wird regelmäßig aktualisiert.
+
+Angezeigt werden:
+
+- Datum
+- Uhrzeit
+- Fach
+- Lehrkraft
+- Raum
+- Badges
+- Arbeiten/Klausuren aus dem Schulkalender
+- Vertretungsinformationen
+
+## Vertretungen
+
+Ohne School Hack verwendet die Karte automatisch den internen SPH-Vertretungsplan des Kindes.
+
+Damit können Entfall, Vertretung, Fachwechsel, Raumänderung, Vertretungslehrkraft und Hinweise des tatsächlich ausgewählten Tages dargestellt werden.
+
+Mit `school-hacks: <profil>` wird zuerst die schulische Profilquelle verwendet. Der interne SPH-Vertretungsplan dient als Fallback, sofern die Profilquelle für die konkrete Stunde keinen Treffer liefert.
+
+Eine explizit gesetzte Vertretungsquelle bleibt autoritativ.
+
+## School Hacks
+
+```yaml
+type: custom:sph-stundenplan-tag-card
+entity: sensor.stundenplan_maxim_mk
+school-hacks: kfg
+```
+
+Allgemein: [School Hacks](school-hacks.md).
+
+KFG: [Kaiserin-Friedrich-Gymnasium Bad Homburg](../schools/kfg/README.md).
 
 ## Entity-Auswahl
 
-Reihenfolge:
+1. `entity` oder `sensor`.
+2. `child` über `kind_kürzel`.
+3. automatische Stundenplan-Suche.
 
-1. `entity` oder `sensor`, falls konfiguriert und vorhanden.
-2. Bei gesetztem `child`: ein Sensor mit passendem Attribut `kind_kürzel`.
-3. Ohne `child`: `sensor.schulportal_hessen_stundenplan`.
-
-## Konfigurationsparameter
+## Konfiguration
 
 | Parameter | Typ | Standard | Beschreibung |
 |---|---|---|---|
 | `type` | String | erforderlich | `custom:sph-stundenplan-tag-card` |
-| `title` | String | leer | Optionaler Kartentitel |
-| `entity` | Entity-ID | automatisch | Expliziter Stundenplan-Sensor |
-| `sensor` | Entity-ID | automatisch | Alias für `entity` |
-| `child` | String | leer | Auswahl über `kind_kürzel`, z. B. `mk` |
+| `title` | String | leer | Kartentitel |
+| `entity` | Entity-ID | automatisch | Stundenplan-Sensor |
+| `sensor` | Entity-ID | automatisch | Alias |
+| `child` | String | leer | Kind/Kürzel |
+| `school-hacks` | String/false | false | Optionales Schulprofil |
+| `vertretungsplan_sensor` | Entity-ID | automatisch | Explizite Vertretungsquelle |
+| `vertretungsplan` | Entity-ID | automatisch | Alias |
+| `substitution_sensor` | Entity-ID | automatisch | Alias |
 
 ## Beispiel
 
 ```yaml
 type: custom:sph-stundenplan-tag-card
-title: Nächster Unterrichtstag
-child: mk
-```
-
-Explizite Entity:
-
-```yaml
-type: custom:sph-stundenplan-tag-card
 entity: sensor.stundenplan_maxim_mk
+title: Nächster Unterrichtstag
 ```
 
 ## Hinweise
 
-- Die Karte wählt selbstständig den aktuellen bzw. nächsten Unterrichtstag aus; ein fester Wochentag ist nicht konfigurierbar.
-- Die Datumsanzeige verwendet derzeit das deutsche Format.
-- Kalender-Markierungen werden nur für `Arbeiten` und `Klausuren` berücksichtigt.
+- Ein fester Wochentag ist nicht konfigurierbar; die Karte wählt den relevanten Tag selbst.
+- Unterrichtsfreie Tage aus dem Stundenplan werden übersprungen.
+- Die Nachricht des Tages wird für das tatsächlich dargestellte Datum ausgewählt.
 - Stundenplaneinträge sind schreibgeschützt.
