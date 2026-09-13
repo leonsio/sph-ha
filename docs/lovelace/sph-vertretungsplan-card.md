@@ -20,6 +20,10 @@ Angezeigt werden je nach Datenlage:
 
 Entfälle werden hervorgehoben und als Ausfall gekennzeichnet. Raumänderungen können den bisherigen Raum zusätzlich darstellen.
 
+## Screenshot
+
+![SPH Vertretungsplan](images/vertretungsplan.webp)
+
 ## Beispiel
 
 ```yaml
