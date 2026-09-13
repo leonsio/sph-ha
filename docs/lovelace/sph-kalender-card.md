@@ -16,6 +16,20 @@ Unterstützt werden:
 - lokale eigene Termine
 - Filter und Quellfarben
 
+## Screenshots
+
+### Tagesansicht
+
+![SPH Kalender – Tagesansicht](images/kalender-tag.webp)
+
+### Wochenansicht
+
+![SPH Kalender – Wochenansicht](images/kalender-woche.webp)
+
+### Monatsansicht
+
+![SPH Kalender – Monatsansicht](images/kalender-monat.webp)
+
 ## Vertretungen im Stundenplan-Kalender
 
 Seit 0.5.0 werden Unterrichtstermine des nativen `calendar.stundenplan_*` serverseitig mit dem internen SPH-Vertretungsplan abgeglichen.
