@@ -58,20 +58,6 @@ async def _register_lovelace_resources(hass: HomeAssistant) -> None:
         resources.loaded = True
 
     items = resources.async_items() or []
-    obsolete = {
-        f"/api/{DOMAIN}/static/{name}.js"
-        for name in (
-            "kfg-stundenplan-card",
-            "kfg-stundenplan-tag-card",
-            "kfg-stundenplan-grid-card",
-            "kfg-stundenplan-compat",
-        )
-    }
-    if hasattr(resources, "async_delete_item"):
-        for item in list(items):
-            if item.get("url", "").split("?", 1)[0] in obsolete:
-                await resources.async_delete_item(item["id"])
-        items = resources.async_items() or []
     for url in CARD_URLS:
         base_url = url.split("?", 1)[0]
         existing = next(
