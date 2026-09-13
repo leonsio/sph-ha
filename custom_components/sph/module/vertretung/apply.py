@@ -86,16 +86,27 @@ def find_substitution(data: dict, target: date, lesson: dict, child_class: str =
         return None
 
     lesson_periods = set(_lesson_periods(lesson))
+    candidates: list[dict] = []
     for entry in day.get("eintraege", []) or []:
         if not isinstance(entry, dict):
             continue
-        if not _class_matches(entry, child_class) or not _subject_matches(entry, lesson):
+        if not _class_matches(entry, child_class):
             continue
         periods = set(_entry_periods(entry))
         if lesson_periods and periods and not (lesson_periods & periods):
             continue
-        return entry
-    return None
+        candidates.append(entry)
+
+    if not candidates:
+        return None
+
+    # Prefer an exact subject match. Some SPH rows omit Fach_alt and expose only
+    # a shortened/current subject. A unique class+period entry is still safe to
+    # apply and prevents teacher/room changes from being silently discarded.
+    exact = next((entry for entry in candidates if _subject_matches(entry, lesson)), None)
+    if exact is not None:
+        return exact
+    return candidates[0] if len(candidates) == 1 else None
 
 
 def apply_substitution(lesson: dict, entry: dict | None) -> dict:
