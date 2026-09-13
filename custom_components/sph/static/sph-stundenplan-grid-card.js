@@ -1,5 +1,5 @@
-import { schoolCard, visibleSchoolBadges, schoolNow, selectSchoolWeek, schoolHeading, schoolBadges, schoolClasses, schoolStyles } from "./school-hacks.js?v=0.5.1";
-import { substitutionLesson } from "./substitution-adapter.js?v=0.5.1";
+import { schoolCard, visibleSchoolBadges, schoolNow, selectSchoolWeek, schoolHeading, schoolBadges, schoolClasses, schoolStyles } from "./school-profile.js?v=0.6.0";
+import { substitutionLesson } from "./substitution-adapter.js?v=0.6.0";
 class SphStundenplanGridCard extends HTMLElement {
   static schoolWeekView = true;
   setConfig(config) {
@@ -37,9 +37,6 @@ class SphStundenplanGridCard extends HTMLElement {
     const table = this._renderTable(days, names, slots, calendarEvents, view);
     const weekText = this._school?.profile.gridWeekHeading && view.week ? `Schulwoche ${view.week}` : "";
 
-    // Keep the scroll container itself. Replacing it on every Home Assistant
-    // state update resets scrollLeft and makes horizontal scrolling jump back
-    // to the left on narrow screens.
     const existingWrap = this.shadowRoot.querySelector(".table-wrap");
     if (existingWrap) {
       const weekLine = this.shadowRoot.querySelector(".school-week");
@@ -113,7 +110,10 @@ class SphStundenplanGridCard extends HTMLElement {
   }
 
   _calendarEvents(hass) {
-    const entity = hass.states["sensor.schulkalender_maxim_mk"] || Object.values(hass.states).find(state => state.entity_id.startsWith("sensor.schulkalender_") && Array.isArray(state.attributes?.termine));
+    const attrs = this._findEntity(hass)?.attributes || {};
+    const wanted = this._norm(attrs.kind_kürzel || attrs.kind || this.config.child || "");
+    const states = Object.values(hass.states).filter(state => state.entity_id.startsWith("sensor.schulkalender_") && Array.isArray(state.attributes?.termine));
+    const entity = states.find(state => this._norm(state.attributes?.kind_kürzel || state.attributes?.kind) === wanted) || states[0];
     const events = entity?.attributes?.termine;
     if (!Array.isArray(events)) return [];
     return events.filter(event => ["arbeiten", "klausuren"].includes(this._norm(event.art)));
