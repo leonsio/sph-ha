@@ -30,8 +30,31 @@ A/B-Regeln: Eine passende markierte Stunde ersetzt das unmarkierte Gegenstück i
 selben Zeitslot. Gibt es keine passende markierte Stunde, bleibt das unmarkierte
 Gegenstück erhalten. Eine anders markierte A/B-Stunde wird ausgeblendet. Andere
 Badges gelten nicht als Wochenkennzeichen. Fehlt die Wochenkennung, erfolgt keine
-Wochenfilterung. Die Wochenkennung stammt weiterhin vom Stundenplansensor; das
-Profil berechnet keinen eigenen zukünftigen A/B-Kalender.
+Wochenfilterung. Die Wochenkennung wird relativ zu `wochenbeginn` fortgeschrieben: A → B → A.
+Die Kennung bleibt im Kopf sichtbar. A/B-Badges an einzelnen Stunden werden bei
+KFG ausgeblendet; andere Badges bleiben erhalten.
+
+### Wechsel auf die nächste Woche
+
+Mit dem KFG-Profil wechseln Wochenliste und Raster am Freitag nach Ende der letzten
+laut A/B-Plan aktiven Stunde zur nächsten Woche. Am Samstag und Sonntag wird immer
+die kommende Woche gezeigt. Geöffnete Karten prüfen den Wechsel jede Sekunde und
+rendern beim Wochenwechsel neu. Datum, Stundenfilter, Vertretungszuordnung,
+Kalenderhervorhebungen und Wochenkennung beziehen sich auf dieselbe Zielwoche.
+Die Zeitzone aus Home Assistant bestimmt die Umschaltzeit.
+
+Ein unterrichtsfreier Freitag schaltet bereits am Freitag um 00:00 um. Fehlt für
+eine aktive Freitagsstunde eine gültige Endzeit, erfolgt der Wechsel sicherheitshalber
+am Samstag. Maßgeblich ist der reguläre Stundenplan, nicht ein kurzfristiger Entfall.
+Die Tageskarte verwendet für ihren nächsten Unterrichtstag ebenfalls dessen A/B-Woche.
+Ohne KFG-Profil bleibt das bisherige Verhalten der Karten erhalten.
+
+Der Sensor liefert zusätzlich `eigener_grundplan` ohne die Maskierung aktueller
+freier Tage und `wochenbeginn` als Bezugsdatum des erfolgreich abgerufenen A/B-Werts.
+`eigener_plan` bleibt kompatibel. Freie Tage werden anhand des Zieldatums angewendet.
+Während eines fehlgeschlagenen Abrufs bleibt das Bezugsdatum erhalten. Bei älteren
+Sensoren ohne die neuen Attribute dient die aktuelle Kalenderwoche als Bezug;
+für zuverlässige Vorschauen Frontend und Integration gemeinsam aktualisieren.
 
 Lehrerkürzel werden ohne Beachtung der Groß-/Kleinschreibung aufgelöst. Unbekannte
 Kürzel bleiben erhalten. Vertretungen werden vor der Namensauflösung anhand der
@@ -81,6 +104,8 @@ Beispiel `school-hacks/beispiel.js`:
 export default {
   weekBadges: ["A", "B"],
   unbadgedFallback: true,
+  hideWeekBadges: true,
+  advanceWeekAfterFriday: true,
   teachers: {
     entity: "sensor.beispiel_kollegium",
     attribute: "lehrer",
@@ -109,7 +134,7 @@ zusammen aktualisieren.
 - `sph-*-card.js`: ein Renderer pro Kartenart mit optionalen gemeinsamen Hilfsfunktionen.
 
 ```bash
-node --test tests/school-hacks.test.mjs
+node --test tests/*.test.mjs
 ```
 
 Die Tests prüfen A/B-Gegenstücke, Namensauflösung, Vertretungsquellen, Datumsabgleich,

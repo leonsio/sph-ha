@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { filterDay, SchoolContext, schoolCard, schoolDescription, schoolBadges } from '../custom_components/sph/static/school-hacks.js';
 import kfg from '../custom_components/sph/static/school-hacks/kfg.js';
 const lesson = {subject:'M',fach:'Mathematik',teacher:'Her',index:1,duration:2,start:'07:55',end:'09:25'};
-const timetable = {entity_id:'sensor.stundenplan_maxim_mk',attributes:{klasse:'7n',kind_kürzel:'Mk',wochenkennung:'A',eigener_plan:[[lesson]]}};
+const timetable = {entity_id:'sensor.stundenplan_maxim_mk',attributes:{klasse:'7n',kind_kürzel:'Mk',wochenkennung:'A',wochenbeginn:'2026-09-07',eigener_plan:[[lesson]]}};
 const card = {config:{entity:timetable.entity_id,type:'custom:sph-stundenplan-card'}};
 const hass = {states:{[timetable.entity_id]:timetable,'sensor.kfg_kollegium':{attributes:{lehrer:{HER:'Herr Beispiel',Drg:'Frau Test'}}},'sensor.vertretungsplan_7n':{attributes:{entries:[{klasse:'7n',datum:'Montag',stunde:'1-2',fach:'M',art:'Entf'}]}},'sensor.vertretungsplan':{attributes:{entries:[]}}}};
 for (const [id, state] of Object.entries(hass.states)) state.entity_id = id;
@@ -59,8 +59,9 @@ globalThis.window = {customCards:[]};
 globalThis.document = {createElement:()=>({set textContent(value){this.innerHTML=String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');}})};
 globalThis.HTMLElement = class {attachShadow(){this.shadowRoot={innerHTML:'',querySelector:()=>null};}};
 for (const name of ['stundenplan-card','stundenplan-tag-card','stundenplan-grid-card']) {
- test(`normal renderer with optional school profile: ${name}`,async()=>{
-  await import(`../custom_components/sph/static/sph-${name}.js?v=0.4.22`);
+ test(`normal renderer with optional school profile: ${name}`,async(t)=>{
+  t.mock.timers.enable({apis:['Date'],now:new Date(2026,8,7,8).getTime()});
+  await import(`../custom_components/sph/static/sph-${name}.js?v=0.4.23`);
   const h=structuredClone(hass);
   h.states[timetable.entity_id].attributes.eigener_plan=Array.from({length:5},()=>[{...lesson,fach:'Aktives Fach',badge:'A'},{...lesson,subject:'F',fach:'Fallback Fach',badge:null}]);
   for(const prefix of ['sph']){

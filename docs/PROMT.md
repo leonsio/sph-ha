@@ -5,6 +5,9 @@
 > `static/school-hacks.js` die gemeinsame Logik. Die alten KFG-Karten und ihre
 > Kompatibilitätsschicht wurden vollständig entfernt.
 > Neue Schulanpassungen in Profilen pflegen, keine eigenen Kartenkopien anlegen.
+> KFG blendet A/B-Stundenbadges aus und schaltet Wochenliste/Raster nach der
+> letzten aktiven Freitagsstunde auf nächste Woche (A ↔ B). `wochenbeginn` verankert
+> die Kennung; `eigener_grundplan` ermöglicht die Vorschau trotz aktueller freier Tage.
 > Details: [Schulprofile](lovelace/school-hacks.md).
 
 

@@ -257,6 +257,10 @@ class SphTimetableCoordinator(DataUpdateCoordinator):
                 raise ValueError("Stundenplan-Antwort enthält keine gültigen Daten.")
 
             data = dict(data)
+            # Anchor the portal week badge to the successful timetable fetch,
+            # not to later free-day updates or sensor publication timestamps.
+            today = dt_util.now().date()
+            data["week_reference_date"] = (today - timedelta(days=today.weekday())).isoformat()
             free_days, calendars = await self._async_free_days()
             data["free_days"] = free_days
             data["free_day_calendar"] = (
