@@ -2,70 +2,75 @@
 
 Home-Assistant-Custom-Integration für Daten aus dem **Schulportal Hessen (SPH)**.
 
-Die Integration wird einmalig installiert und konfiguriert und umfasst aktuell:
+Aktueller Stand: **0.5.0**.
 
-- persönlichen Stundenplan
-- persönlichen Schulkalender
-- Lovelace-Karten für den Stundenplan
+## Module
+
+Für jedes Kind können folgende Module einzeln aktiviert werden:
+
+- Stundenplan
+- Schulkalender
+- Mein Unterricht
+- Lerngruppen
+- Vertretungsplan
+
+Zu den Modulen gehören normale Sensoren, JSON-Sensoren und – je nach Funktion – native Home-Assistant-Kalender, Binärsensoren und Lovelace-Karten.
 
 ## Installation
 
-Die Installation erfolgt über HACS als Integration:
+Über HACS als **Integration** installieren:
 
 ```text
 https://github.com/leonsio/sph-ha
 ```
 
-Anschließend in Home Assistant unter **Einstellungen → Geräte & Dienste → Integration hinzufügen** nach **Schulportal Hessen** suchen.
+Danach unter **Einstellungen → Geräte & Dienste → Integration hinzufügen** nach **Schulportal Hessen** suchen.
 
-## Konfiguration
+## Wichtige Funktionen
 
-Für jedes Kind wird ein eigener Eintrag angelegt. Benötigt werden:
+- persönlicher Stundenplan mit A/B-Wochen
+- freie Tage und bewegliche Ferientage
+- SPH-Schulkalender
+- Hausaufgaben aus „Mein Unterricht“ inklusive Kurs-/Fachnormalisierung
+- Leistungskontrollen aus Lerngruppen
+- Vertretungsplan mit Entfall-, Raum-, Lehrer- und Fachänderungen
+- JSON-Sensoren für externe Clients
+- automatische Lovelace-Ressourcenregistrierung
+- zusammengefasster oder getrennter SPH-Kalender
+- lokale Hausaufgaben, Leistungskontrollen und eigene Kalendertermine
 
-- Schulnummer
-- SPH-Benutzername
-- SPH-Passwort
-- Name des Kindes
-- Kürzel des Kindes
-- Aktualisierungsintervall
+Seit 0.5.0 werden interne SPH-Vertretungsdaten auch in den allgemeinen Stundenplankarten und bei der Generierung des nativen Stundenplan-Kalenders berücksichtigt.
 
-Das Standardintervall beträgt **60 Minuten**. Die Konfiguration kann später geändert werden, einschließlich Zugangsdaten, Schulnummer, Name, Kürzel und Aktualisierungsintervall.
+## School Hacks
 
-## Sensoren
+Schulspezifische Anpassungen werden über normale SPH-Karten aktiviert:
 
-Beispiel für Maxim (`Mk`):
+```yaml
+type: custom:sph-stundenplan-grid-card
+entity: sensor.stundenplan_maxim_mk
+school-hacks: kfg
+```
+
+Das derzeit vorhandene Profil `kfg` ist für das **Kaiserin-Friedrich-Gymnasium Bad Homburg** vorgesehen. Weitere Schulen können eigene Profile erhalten, ohne separate Kartenkopien anzulegen.
+
+Bei aktivem School Hack wird die schulische Vertretungsquelle bevorzugt; der interne SPH-Vertretungsplan kann als Fallback dienen. Ohne School Hack wird der interne SPH-Vertretungsplan direkt verwendet.
+
+## Beispiel-Entities
 
 ```text
 sensor.stundenplan_maxim_mk
+sensor.stundenplan_maxim_mk_json
 sensor.schulkalender_maxim_mk
+sensor.mein_unterricht_maxim_mk
+sensor.lerngruppen_maxim_mk
+sensor.vertretungsplan_maxim_mk
+sensor.vertretungsplan_maxim_mk_json
+calendar.stundenplan_maxim_mk
+calendar.schulkalender_maxim_mk
 ```
 
-Der Stundenplan enthält den persönlichen Plan einschließlich Fach, Lehrkraft, Raum, Uhrzeit und Badge. Der Kalender enthält Termine mit Feldern wie `start`, `end`, `summary`, `art` und `verantwortlich`.
+## Dokumentation
 
-Das aktuelle hessische Schuljahr wird automatisch ermittelt. Der Kalender verwendet bevorzugt den CSV-Export des Schulportals und kann auf iCal zurückfallen.
-
-Bei kurzfristigen Verbindungsproblemen bleiben die zuletzt erfolgreich abgerufenen Daten erhalten.
-
-## Lovelace
-
-```yaml
-type: custom:sph-stundenplan-card
-entity: sensor.stundenplan_maxim_mk
-title: Stundenplan Maxim
-```
-
-Für die Tagesansicht:
-
-```yaml
-type: custom:sph-stundenplan-tag-card
-entity: sensor.stundenplan_maxim_mk
-title: Heute – Maxim
-```
-
-Die benötigten JavaScript-Ressourcen werden von der Integration automatisch registriert.
-
-## Hinweis
+Die vollständige Dokumentation befindet sich in der Repository-README und unter `docs/`.
 
 Dieses Projekt ist ein unabhängiges Community-Projekt und steht nicht in offizieller Verbindung mit dem Schulportal Hessen.
-
-Die technische Quelltextstruktur ist separat unter [`docs/ARCHITEKTUR.md`](docs/ARCHITEKTUR.md) dokumentiert.
