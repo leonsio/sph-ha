@@ -56,6 +56,7 @@ JSON-Sensoren werden nicht als Kartenquelle verwendet.
 
 Der strukturierte Sensor enthält unter anderem:
 
+- `school_profile`
 - `tage`
 - `heute`
 - `morgen`
@@ -85,7 +86,7 @@ Ein Eintrag kann unter anderem enthalten:
 - `hinweis`
 - `entfall`
 
-`art` enthält den Rohwert des Portals, `art_lang` die normalisierte Langform.
+`art` enthält den Rohwert des Portals, `art_lang` die lesbare Bezeichnung. Das aktive Schul-Profil kann `art_lang`, Lehrer- und Fachwerte schulspezifisch aufbereiten.
 
 ## JSON-Sensor
 
@@ -95,7 +96,7 @@ Zusätzlich wird erzeugt:
 sensor.vertretungsplan_maxim_mk_json
 ```
 
-Das Attribut `json` enthält denselben vollständigen logischen Payload in kompaktem JSON. Dieser Sensor ist besonders für ESPHome, Displays und andere Clients geeignet, die einfacher mit einem JSON-Block arbeiten können.
+Das Attribut `json` enthält denselben vollständigen logischen und profilierten Payload in kompaktem JSON. Dieser Sensor ist besonders für ESPHome, Displays und andere Clients geeignet, die einfacher mit einem JSON-Block arbeiten können.
 
 ## Entfall-Binärsensoren
 
@@ -104,16 +105,18 @@ binary_sensor.erste_stunde_entfaellt_heute_maxim_mk
 binary_sensor.erste_stunde_entfaellt_morgen_maxim_mk
 ```
 
-Die tatsächlich geprüfte Bezugsstunde wird in den Integrationsoptionen festgelegt. Die Entity-Namen bleiben aus Kompatibilitätsgründen erhalten.
+Die tatsächlich geprüfte Bezugsstunde wird in den Integrationsoptionen festgelegt und kann unabhängig vom Entity-Namen gewählt werden.
 
 Wenn für den jeweiligen Tag noch kein Vertretungsplan veröffentlicht wurde, ist der Sensor `unavailable` statt `off`.
 
 ## Verwendung durch andere SPH-Funktionen
 
-Der interne Vertretungsplan ist nicht nur für diese Karte bestimmt. Er wird seit 0.5.0 zusätzlich verwendet von:
+Der interne Vertretungsplan wird auch verwendet von:
 
-- den allgemeinen `sph-stundenplan-*` Karten,
+- den `sph-stundenplan-*` Karten,
 - dem nativen Stundenplan-Kalender,
 - dem zusammengefassten SPH-Kalender über dessen Stundenplanquelle.
 
-Bei aktiven School Hacks kann eine schulische externe Vertretungsquelle in den Stundenplankarten Vorrang haben. Die native Kalendergenerierung verwendet dagegen ausschließlich dieses interne SPH-Modul.
+In Stundenplankarten kann ein aktives Schul-Profil eine bevorzugte Vertretungsquelle definieren. Fehlt dort ein passender Eintrag, dient der interne SPH-Vertretungsplan als Fallback. Eine explizit in der Karte konfigurierte Vertretungsquelle bleibt autoritativ.
+
+Native Kalender verwenden die serverseitigen SPH-Daten und die serverseitigen Schul-Profil-Hooks.
