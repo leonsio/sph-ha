@@ -11,9 +11,30 @@ school-hacks: kfg
 Denselben Parameter unterstützen `sph-stundenplan-card`, `sph-stundenplan-tag-card`,
 `sph-lerngruppen-card`, `sph-meinunterricht-card` und `sph-kalender-card`.
 Der Parameter wird pro Karte gesetzt. Ohne Parameter oder mit `school-hacks: false`
-verwendet die Karte ihre normale Darstellung. Dies ist eine Frontend-Option;
-Sensorattribute, native Kalender, Automationen und fremde Lovelace-Karten werden
-nicht verändert.
+verwendet die Karte ihre normale Darstellung. Die allgemeine Stundenplan-Darstellung
+verwendet dabei automatisch den zum Kind gehörenden internen SPH-Vertretungsplan
+`sensor.vertretungsplan_<kind>_<kürzel>`.
+
+School-Hacks bleiben Frontend-Optionen. Sensorattribute, native Automationen und
+fremde Lovelace-Karten werden dadurch nicht verändert. Native SPH-Kalender beziehen
+Vertretungsinformationen ausschließlich aus dem internen SPH-Vertretungsplan-Modul.
+
+## Vertretungsquellen und Priorität
+
+Die drei SPH-Stundenplankarten verwenden eine feste Prioritätslogik:
+
+1. Ist ein School-Hack aktiv, bekommt dessen in der Profil-Datei konfigurierte
+   Vertretungsquelle zuerst die Möglichkeit, die Stunde zu verändern.
+2. Liefert die schulische Quelle für diese konkrete Stunde keinen Treffer, wird auf
+   den internen SPH-Vertretungsplan des Kindes zurückgefallen.
+3. Ohne School-Hack wird direkt der interne SPH-Vertretungsplan verwendet.
+4. Ein explizit in der Lovelace-Karte gesetzter `vertretungsplan_sensor`
+   (`vertretungsplan` / `substitution_sensor`) bleibt autoritativ. Ist dieser Sensor
+   nicht vorhanden, wird nicht still auf eine andere Quelle ausgewichen.
+
+Damit können weitere Schulen eigene Dateien unter `school-hacks/` erhalten und dort
+ihre jeweils bevorzugte Vertretungsquelle konfigurieren, ohne die allgemeine
+SPH-Logik zu verändern.
 
 ## KFG-Funktionen
 
@@ -52,27 +73,26 @@ Ein unterrichtsfreier Freitag schaltet bereits am Freitag um 00:00 um. Fehlt fü
 eine aktive Freitagsstunde eine gültige Endzeit, erfolgt der Wechsel sicherheitshalber
 am Samstag. Maßgeblich ist der reguläre Stundenplan, nicht ein kurzfristiger Entfall.
 Die Tageskarte verwendet für ihren nächsten Unterrichtstag ebenfalls dessen A/B-Woche.
-Ohne KFG-Profil bleibt das bisherige Verhalten der Karten erhalten.
+Ohne KFG-Profil bleibt das bisherige Verhalten der Wochenwahl erhalten.
 
 Der Sensor liefert zusätzlich `eigener_grundplan` ohne die Maskierung aktueller
 freier Tage und `wochenbeginn` als Bezugsdatum des erfolgreich abgerufenen A/B-Werts.
 `eigener_plan` bleibt kompatibel. Freie Tage werden anhand des Zieldatums angewendet.
 Während eines fehlgeschlagenen Abrufs bleibt das Bezugsdatum erhalten. Bei älteren
-Sensoren ohne die neuen Attribute dient die aktuelle Kalenderwoche als Bezug;
-für zuverlässige Vorschauen Frontend und Integration gemeinsam aktualisieren.
+Sensoren ohne die neuen Attribute dient die aktuelle Kalenderwoche als Bezug.
 
 Lehrerkürzel werden ohne Beachtung der Groß-/Kleinschreibung aufgelöst. Unbekannte
 Kürzel bleiben erhalten. Vertretungen werden vor der Namensauflösung anhand der
 Original-Fachkürzel, Klasse, Datum und Stunde zugeordnet.
 
-Die Vertretungssensor-Auswahl bleibt:
+### KFG-Vertretungsquelle
 
-1. Explizites `vertretungsplan_sensor` (auch `vertretungsplan` / `substitution_sensor`).
-2. `sensor.vertretungsplan_<klasse>`.
-3. `sensor.vertretungsplan`.
+Das KFG-Profil verwendet weiterhin bevorzugt:
 
-Ein explizit konfigurierter, fehlender Sensor führt nicht zum Ausweichen auf eine
-andere Klasse.
+1. `sensor.vertretungsplan_<klasse>`
+2. `sensor.vertretungsplan`
+3. interner `sensor.vertretungsplan_<kind>_<kürzel>` nur als Fallback, wenn die
+   KFG-Quelle für die konkrete Stunde keinen Treffer enthält.
 
 ```yaml
 type: custom:sph-stundenplan-tag-card
@@ -80,6 +100,25 @@ entity: sensor.stundenplan_maxim_mk
 school-hacks: kfg
 vertretungsplan_sensor: sensor.vertretungsplan_7n
 ```
+
+## Native Kalender
+
+Der native Stundenplan-Kalender und der kombinierte SPH-Kalender verwenden keine
+Frontend-School-Hacks. Sie gleichen die regulären Stunden serverseitig mit dem
+internen SPH-Vertretungsplan ab. Dadurch erscheinen Änderungen auch in
+Home-Assistant-Kalendern und nicht nur in Lovelace.
+
+Bei einer passenden Änderung werden unter anderem berücksichtigt:
+
+- Entfall (`Entfall: <Fach>`)
+- Vertretung und andere Änderungsarten im Summary
+- Fachwechsel mit ursprünglichem Fach in der Beschreibung
+- Vertretungslehrkraft
+- geänderter Raum
+
+Die UID des regulären Stundenplan-Eintrags bleibt stabil, damit eine nachträglich
+bekannt gewordene Vertretung denselben Kalendertermin aktualisiert statt einen
+zweiten unabhängigen Termin zu erzeugen.
 
 ## Umstieg
 
@@ -125,24 +164,30 @@ export default {
 };
 ```
 
-`teachers` und `substitution` sind optional. Ohne `weekBadges` wird nicht gefiltert.
-Die Vertretungsdaten müssen dem bisher unterstützten KFG-Sensorschema entsprechen;
-ein neues Datenformat erfordert eine Erweiterung des gemeinsamen Adapters.
-Die Profile sollten im Repository gepflegt werden, damit sie über HACS ausgeliefert
-werden. Bei Änderungen an Frontend-Modulen die Ressourcen- und Importversionen
-zusammen aktualisieren.
+`teachers` und `substitution` sind optional. Definiert eine Schule `substitution`,
+wird genau diese Quelle gegenüber dem internen SPH-Vertretungsplan bevorzugt.
+`classPrefix` ermöglicht klassenspezifische Sensoren; `fallback` ist der allgemeine
+Sensor dieser Schule. Wenn beide keinen passenden Eintrag für die Stunde liefern,
+kann der gemeinsame Adapter anschließend den internen SPH-Vertretungsplan nutzen.
+
+Die schulischen Vertretungsdaten müssen dem bisher unterstützten KFG-Sensorschema
+entsprechen. Ein neues Datenformat erfordert eine Erweiterung des gemeinsamen
+Adapters. Die Profile sollten im Repository gepflegt werden, damit sie über HACS
+ausgeliefert werden.
 
 ## Architektur und Tests
 
-- `school-hacks.js`: gemeinsames Laden, Filtern, Lehrerauflösung und Vertretungsabgleich.
+- `school-hacks.js`: gemeinsames Laden, Filtern, Lehrerauflösung und schulische Vertretungsquelle.
+- `substitution-adapter.js`: Quellenpriorität und Fallback auf den internen SPH-Vertretungsplan.
 - `school-hacks/kfg.js`: ausschließlich KFG-Einstellungen.
+- `module/vertretung/apply.py`: serverseitiger Abgleich für native Stundenplan-Kalender.
 - `sph-*-card.js`: ein Renderer pro Kartenart mit optionalen gemeinsamen Hilfsfunktionen.
 
 ```bash
 node --test tests/*.test.mjs
+python -m unittest discover -s tests -p 'test_*.py'
 ```
 
-Die Tests prüfen A/B-Gegenstücke, Namensauflösung, Vertretungsquellen, Datumsabgleich,
-Originalkürzel, Escaping, asynchronen Profilwechsel und die echten Stundenplan-Renderer
-mit einer minimalen DOM-Testumgebung. Ein Live-Test in Home Assistant bleibt zusätzlich
-sinnvoll, insbesondere für Scrollen und Kalender-WebSocket-Abonnements.
+Die Tests prüfen A/B-Gegenstücke, Namensauflösung, Vertretungsquellen und deren
+Priorität, Datums-/Stundenabgleich, Originalkürzel, Escaping, Profilwechsel sowie
+den serverseitigen Abgleich für Kalendertermine.
