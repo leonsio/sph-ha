@@ -179,10 +179,11 @@ class SphLerngruppenCard extends HTMLElement {
     const manual = String(item.quelle || "").toLowerCase() === "manuell";
     const duration = item.dauer_minuten == null ? "" : `${item.dauer_minuten} Min`;
     const periods = Array.isArray(item.stunden) ? item.stunden.join(", ") : (item.stunden_text || "");
+    const subject = item.fach || item.kurs || "";
     return `<tr>
       <td>${this._esc(this._formatDate(item.datum))}</td>
       <td>${this._esc(item.art || "")}</td>
-      <td>${this._esc(item.kurs || "")}</td>
+      <td>${this._esc(subject)}</td>
       <td>${this._esc(duration)}</td>
       <td>${this._esc(periods)}</td>
       <td>${this._esc(schoolTeacher(this, item.lehrkraft || item.lehrkraft_kürzel || ""))}</td>
