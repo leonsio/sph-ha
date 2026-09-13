@@ -1,6 +1,21 @@
 """Regression tests for shared SPH subject/course normalization."""
 
-from custom_components.sph.api.subjects import subject_from_course, subject_name
+from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
+
+MODULE_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "custom_components"
+    / "sph"
+    / "api"
+    / "subjects.py"
+)
+SPEC = spec_from_file_location("sph_subjects", MODULE_PATH)
+MODULE = module_from_spec(SPEC)
+assert SPEC and SPEC.loader
+SPEC.loader.exec_module(MODULE)
+subject_from_course = MODULE.subject_from_course
+subject_name = MODULE.subject_name
 
 
 def test_subject_abbreviations():
