@@ -200,13 +200,17 @@ class SphCombinedCalendar(CalendarEntity):
             # timezone handling and event conversion.
             source.hass = self.hass
 
+        def _source_updated() -> None:
+            self.async_write_ha_state()
+            self.async_update_event_listeners()
+
         seen: set[int] = set()
         for coordinator in self._coordinators:
             key = id(coordinator)
             if key in seen:
                 continue
             seen.add(key)
-            self.async_on_remove(coordinator.async_add_listener(self.async_write_ha_state))
+            self.async_on_remove(coordinator.async_add_listener(_source_updated))
 
     def _sort_key(self, value: date | datetime) -> datetime:
         tz = dt_util.get_time_zone(self.hass.config.time_zone)
