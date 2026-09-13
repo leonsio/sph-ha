@@ -1,4 +1,4 @@
-import { escapeHtml, schoolLesson, schoolNews, schoolTeacher } from "./school-hacks.js?v=0.4.24";
+import { escapeHtml, schoolLesson, schoolNews, schoolTeacher } from "./school-hacks.js?v=0.5.1";
 
 const norm = value => String(value ?? "")
   .trim()
@@ -93,11 +93,18 @@ function findInternalEntry(card, rawLesson, date) {
   if (!state || !date) return null;
   const childClass = timetableState(card, hass)?.attributes?.klasse || "";
   const periods = new Set(lessonPeriods(rawLesson));
-  return internalEntries(state, date).find(entry => {
-    if (!classMatches(entry, childClass) || !subjectMatches(entry, rawLesson)) return false;
+  const candidates = internalEntries(state, date).filter(entry => {
+    if (!classMatches(entry, childClass)) return false;
     const values = entryPeriods(entry);
     return !periods.size || !values.length || values.some(value => periods.has(value));
-  }) || null;
+  });
+  if (!candidates.length) return null;
+
+  // Prefer an exact subject match. SPH sometimes omits Fach_alt and only returns
+  // a shortened/current subject value. If class + period identify one unique
+  // entry, still apply it instead of silently dropping a teacher/room change.
+  return candidates.find(entry => subjectMatches(entry, rawLesson))
+    || (candidates.length === 1 ? candidates[0] : null);
 }
 
 function resolveSubject(card, code, fallback) {

@@ -37,12 +37,14 @@ test('unmasked plan restores next week lessons and free dates apply to target da
  assert.deepEqual(view.days[0],[b]);assert.deepEqual(view.days[1],[]);
  assert.deepEqual(source.eigener_plan,[[],[],[],[],[]]);
 });
-test('DST, year boundary, unknown badge, and no profile',()=>{
+test('DST, year boundary, unknown badge, and generic cards roll to the displayed next week',()=>{
  assert.equal(weekForDate({wochenkennung:'A',wochenbeginn:'2026-10-19'},new Date(2026,9,26)),'B');
  assert.equal(weekForDate({wochenkennung:'B',wochenbeginn:'2026-12-28'},new Date(2027,0,4)),'A');
  assert.equal(selectSchoolWeek({...attrs,wochenkennung:null},kfg,new Date(2026,8,13)).week,'');
  const view=selectSchoolWeek(attrs,undefined,new Date(2026,8,13));
- assert.equal(key(view.monday),'2026-9-7');assert.deepEqual(view.days,attrs.eigener_plan);
+ assert.equal(key(view.monday),'2026-9-14');assert.equal(view.week,'B');assert.deepEqual(view.days,attrs.eigener_plan);
+ const optedOut=selectSchoolWeek(attrs,{advanceWeekAfterFriday:false},new Date(2026,8,13));
+ assert.equal(key(optedOut.monday),'2026-9-7');
 });
 test('only A/B lesson badges are hidden; data and other badges remain',()=>{
  const card={_school:{profile:kfg}};
@@ -73,7 +75,7 @@ globalThis.window={customCards:[],setInterval:fn=>{tick=fn;return 1;},clearInter
 for(const name of ['sph-stundenplan-card','sph-stundenplan-grid-card']){
  test(`${name} updates dates, filtering and headings on the clock; grid keeps scroll container`,async(t)=>{
   t.mock.timers.enable({apis:['Date'],now:new Date(2026,8,11,13,9,59).getTime()});
-  await import(`../custom_components/sph/static/${name}.js?v=0.4.24`);
+  await import(`../custom_components/sph/static/${name}.js?v=0.5.1`);
   const c=new (registry.get(name))();c.isConnected=true;c.setConfig({entity:'sensor.plan','school-hacks':'kfg'});
   c.hass={states:{'sensor.plan':{entity_id:'sensor.plan',attributes:attrs}}};await c._schoolReady;
   assert.match(c.shadowRoot.innerHTML,/(?:Woche|Schulwoche) A/);assert.match(c.shadowRoot.innerHTML,/A-Unterricht/);assert.doesNotMatch(c.shadowRoot.innerHTML,/>\(?A\)?<\/span>/);

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { SchoolContext } from "../custom_components/sph/static/school-hacks.js";
+import { SchoolContext, selectSchoolWeek } from "../custom_components/sph/static/school-hacks.js";
 import kfg from "../custom_components/sph/static/school-hacks/kfg.js";
 import {
   sphSubstitutionState,
@@ -27,6 +27,7 @@ function makeHass() {
       kind: "Maxim",
       kind_kürzel: "Mk",
       klasse: "7n",
+      wochenkennung: "A",
       wochenbeginn: "2026-09-07",
       eigener_plan: [[lesson]],
     },
@@ -75,7 +76,7 @@ function makeHass() {
     },
     "sensor.kfg_kollegium": {
       entity_id: "sensor.kfg_kollegium",
-      attributes: { lehrer: { HER: "Herr Beispiel", DRG: "Frau Vertretung" } },
+      attributes: { lehrer: { HER: "Herr Beispiel", DRG: "Frau Vertretung", Fra: "Fra" } },
     },
   };
   return { states, config: { time_zone: "Europe/Berlin" } };
@@ -103,6 +104,79 @@ test("normal SPH cards use the internal child substitution sensor", () => {
   assert.equal(result.changeLabel, "Entfall");
   assert.equal(result.substitutionSource, "sph");
   assert.match(substitutionNews(card, date), /Interner Hinweis/);
+});
+
+test("generic week view applies Friday 18.09 teacher substitution from internal SPH plan", () => {
+  const hass = makeHass();
+  const timetable = hass.states["sensor.stundenplan_maxim_mk"].attributes;
+  const fridayLesson = {
+    subject: "M",
+    fach: "Mathematik",
+    teacher: "Bär",
+    room: "153",
+    index: 1,
+    duration: 2,
+    start: "07:55",
+    end: "09:25",
+  };
+  timetable.eigener_grundplan = [[], [], [], [], [fridayLesson]];
+  timetable.eigener_plan = [[], [], [], [], [fridayLesson]];
+  hass.states["sensor.vertretungsplan_maxim_mk"].attributes.tage = [{
+    datum: "2026-09-18",
+    eintraege: [{
+      stunde: "1 - 2",
+      klasse: "7n",
+      klasse_alt: "",
+      vertreter: "Fra",
+      lehrer: "",
+      art: "",
+      fach: "M",
+      fach_alt: "",
+      raum: "153",
+      raum_alt: "",
+      hinweis: "",
+      stunden: [1, 2],
+      von_stunde: 1,
+      bis_stunde: 2,
+      art_lang: "",
+      entfall: false,
+      fach_lang: "Mathematik",
+    }],
+    hinweise: [],
+  }];
+
+  const view = selectSchoolWeek(timetable, undefined, new Date(2026, 8, 13, 12, 0, 0));
+  assert.equal(view.monday.getFullYear(), 2026);
+  assert.equal(view.monday.getMonth(), 8);
+  assert.equal(view.monday.getDate(), 14);
+
+  const friday = new Date(view.monday);
+  friday.setDate(friday.getDate() + 4);
+  const result = substitutionLesson(makeCard(hass), view.days[4][0], friday);
+  assert.equal(result.displayTeacher, "Fra");
+  assert.equal(result.changeLabel, "Vertretung");
+  assert.equal(result.room, "153");
+  assert.equal(result.substitutionSource, "sph");
+});
+
+test("unique class and period entry is used when SPH subject labels differ", () => {
+  const hass = makeHass();
+  hass.states["sensor.vertretungsplan_maxim_mk"].attributes.tage = [{
+    datum: "2026-09-07",
+    eintraege: [{
+      klasse: "7n",
+      stunden: [1],
+      fach: "X",
+      vertreter: "Fra",
+      art: "",
+      art_lang: "",
+      entfall: false,
+    }],
+  }];
+  const result = substitutionLesson(makeCard(hass), lesson, date);
+  assert.equal(result.displayTeacher, "Fra");
+  assert.equal(result.changeLabel, "Fachwechsel");
+  assert.equal(result.substitutionSource, "sph");
 });
 
 test("KFG school hack keeps its external source as first priority", () => {
