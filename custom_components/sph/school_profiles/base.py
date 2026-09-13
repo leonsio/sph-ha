@@ -17,10 +17,6 @@ class SchoolProfile:
     id = "none"
     name = "Standard / kein Schulprofil"
 
-    # Optional Home Assistant entity that exposes a teacher abbreviation map.
-    teacher_entity: str | None = None
-    teacher_attribute: str = "lehrer"
-
     # Optional exact subject-name replacements. Keys are matched case-insensitively.
     subject_names: dict[str, str] = {}
 
@@ -36,7 +32,6 @@ class SchoolProfile:
             "teacher",
             "lehrer",
             "lehrkraft",
-            "lehrkraft_kürzel",
             "vertreter",
             "lehrer_nach",
             "verantwortlich",
@@ -46,29 +41,17 @@ class SchoolProfile:
 
     @property
     def state_entities(self) -> tuple[str, ...]:
-        """Return HA entities whose changes should republish profile outputs."""
-        return (self.teacher_entity,) if self.teacher_entity else ()
-
-    def _teacher_map(self, hass) -> dict:
-        if hass is None or not self.teacher_entity:
-            return {}
-        state = hass.states.get(self.teacher_entity)
-        value = state.attributes.get(self.teacher_attribute, {}) if state else {}
-        return value if isinstance(value, dict) else {}
+        """Return profile-owned HA entities whose changes republish outputs."""
+        return ()
 
     def resolve_teacher(self, value: Any, hass=None) -> Any:
-        """Resolve a teacher abbreviation while preserving non-string values."""
-        if not isinstance(value, str) or not value.strip():
-            return value
-        raw = value.strip()
-        wanted = raw.casefold()
-        mapping = self._teacher_map(hass)
-        key = next(
-            (candidate for candidate in mapping if str(candidate).strip().casefold() == wanted),
-            None,
-        )
-        resolved = mapping.get(key) if key is not None else raw
-        return resolved if isinstance(resolved, str) and resolved.strip() else raw
+        """Resolve one teacher value.
+
+        The base implementation is intentionally a no-op. A school profile can
+        override this hook and use its own source, static mapping or algorithm.
+        The core integration contains no school-specific teacher entity.
+        """
+        return value
 
     def resolve_subject(self, value: Any) -> Any:
         """Apply an exact school-specific subject-name replacement."""
@@ -140,10 +123,14 @@ class SchoolProfile:
     ) -> dict:
         """Transform the published timetable payload.
 
-        The core has already decided whether personal or complete timetable
-        output is exposed. Profiles must never use another timetable source to
-        override that choice. ``eigener_grundplan`` is intentionally left
-        untouched by the generic profile transformation.
+        The core has already decided which timetable output is exposed. Profiles
+        must never switch between personal and complete timetable data.
+        ``eigener_grundplan`` is intentionally neither used as a profile source
+        nor rewritten by the generic profile transformation.
+
+        Date-specific substitutions are not written into the recurring weekly
+        plan. They are applied by date-aware consumers such as timetable
+        calendars and cards.
         """
         source = deepcopy(payload)
         for key in ("eigener_plan", "tage"):
@@ -187,7 +174,7 @@ class SchoolProfile:
         *,
         substitution: dict | None = None,
     ) -> dict:
-        """Transform a generated timetable-calendar display record."""
+        """Transform a date-aware timetable/calendar display record."""
         result = dict(display)
         result["subject"] = self.resolve_subject(result.get("subject"))
         result["teacher"] = self.resolve_teacher(result.get("teacher"), hass)
