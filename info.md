@@ -2,7 +2,7 @@
 
 Home-Assistant-Custom-Integration für Daten aus dem **Schulportal Hessen (SPH)**.
 
-Aktueller Stand: **0.6.0**.
+Aktueller Stand: **0.6.1**.
 
 ## Module
 
