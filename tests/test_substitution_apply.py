@@ -73,6 +73,69 @@ class SubstitutionApplyTest(unittest.TestCase):
         self.assertEqual(result["original_subject"], "Mathematik")
         self.assertFalse(result["cancelled"])
 
+    def test_user_case_teacher_substitution_with_empty_art_and_fach_alt(self):
+        data = {
+            "tage": [{
+                "datum": "2026-09-18",
+                "eintraege": [{
+                    "stunde": "1 - 2",
+                    "klasse": "7n",
+                    "klasse_alt": "",
+                    "vertreter": "Fra",
+                    "lehrer": "",
+                    "art": "",
+                    "fach": "M",
+                    "fach_alt": "",
+                    "raum": "153",
+                    "raum_alt": "",
+                    "hinweis": "",
+                    "stunden": [1, 2],
+                    "von_stunde": 1,
+                    "bis_stunde": 2,
+                    "art_lang": "",
+                    "entfall": False,
+                }],
+            }]
+        }
+        entry = find_substitution(data, date(2026, 9, 18), self.lesson, "7n")
+        self.assertIsNotNone(entry)
+        result = apply_substitution({**self.lesson, "teacher": "Bär", "room": "153"}, entry)
+        self.assertEqual(result["subject"], "Mathematik")
+        self.assertEqual(result["teacher"], "Fra")
+        self.assertEqual(result["room"], "153")
+        self.assertEqual(result["label"], "Vertretung")
+        self.assertFalse(result["cancelled"])
+
+    def test_unique_class_period_falls_back_when_subject_label_differs(self):
+        data = {
+            "tage": [{
+                "datum": "2026-09-18",
+                "eintraege": [{
+                    "klasse": "7n",
+                    "stunden": [1, 2],
+                    "fach": "X",
+                    "vertreter": "Fra",
+                    "art": "",
+                    "entfall": False,
+                }],
+            }]
+        }
+        entry = find_substitution(data, date(2026, 9, 18), self.lesson, "7n")
+        self.assertIsNotNone(entry)
+        self.assertEqual(entry["vertreter"], "Fra")
+
+    def test_ambiguous_class_period_without_subject_match_is_not_applied(self):
+        data = {
+            "tage": [{
+                "datum": "2026-09-18",
+                "eintraege": [
+                    {"klasse": "7n", "stunden": [1], "fach": "X", "vertreter": "A"},
+                    {"klasse": "7n", "stunden": [1], "fach": "Y", "vertreter": "B"},
+                ],
+            }]
+        }
+        self.assertIsNone(find_substitution(data, date(2026, 9, 18), self.lesson, "7n"))
+
     def test_cancellation_keeps_original_subject(self):
         entry = {
             "klasse": "7n",
@@ -87,7 +150,7 @@ class SubstitutionApplyTest(unittest.TestCase):
         self.assertEqual(result["label"], "Entfall")
         self.assertTrue(result["cancelled"])
 
-    def test_wrong_class_subject_or_date_does_not_match(self):
+    def test_wrong_class_or_date_does_not_match(self):
         base_entry = {
             "klasse": "8a",
             "stunden": [1],
@@ -96,9 +159,6 @@ class SubstitutionApplyTest(unittest.TestCase):
             "entfall": True,
         }
         data = {"tage": [{"datum": "2026-09-14", "eintraege": [base_entry]}]}
-        self.assertIsNone(find_substitution(data, date(2026, 9, 14), self.lesson, "7n"))
-
-        data["tage"][0]["eintraege"][0] = {**base_entry, "klasse": "7n", "fach": "D"}
         self.assertIsNone(find_substitution(data, date(2026, 9, 14), self.lesson, "7n"))
         self.assertIsNone(find_substitution(data, date(2026, 9, 15), self.lesson, "7n"))
 
