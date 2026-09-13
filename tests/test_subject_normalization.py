@@ -34,6 +34,17 @@ class SubjectNormalizationTest(unittest.TestCase):
         self.assertEqual(subject_from_course("Ethik 5"), "Ethik")
         self.assertEqual(subject_from_course("7c, 7n Ethik"), "Ethik")
 
+    def test_course_names_drop_technical_identifiers(self):
+        self.assertEqual(subject_from_course("Englisch (E2vd)"), "Englisch")
+        self.assertEqual(subject_from_course("Englisch 7n (E2vd)"), "Englisch")
+        self.assertEqual(subject_from_course("E (E2vd)"), "Englisch")
+
+    def test_descriptive_parentheses_are_preserved(self):
+        self.assertEqual(
+            subject_from_course("Religion (evangelisch) 7n"),
+            "Religion (evangelisch)",
+        )
+
     def test_unknown_subject_is_preserved(self):
         self.assertEqual(
             subject_from_course("Darstellendes Spiel 9c"),
