@@ -2,29 +2,33 @@
 
 Home-Assistant-Custom-Integration für Daten aus dem **Schulportal Hessen (SPH)**.
 
-Die Installation erfolgt einmalig als Integration **Schulportal Hessen**. Sie umfasst aktuell die Module **Stundenplan**, **Schulkalender**, **Mein Unterricht**, **Lerngruppen** und **Vertretungsplan**.
+Aktueller Dokumentationsstand: **Version 0.5.0**.
 
-## Schulabhängige Kartenanpassungen
+## Funktionen
 
-Normale SPH-Karten unterstützen `school-hacks: kfg`. Lehrerauflösung, A/B-Filter
-und Vertretungsanzeige verwenden ein gemeinsames Schulprofil; separate KFG-Karten
-sind nicht mehr erforderlich. [Konfiguration und Umstieg](docs/lovelace/school-hacks.md).
+Die Integration wird pro Kind eingerichtet und umfasst fünf unabhängig aktivierbare Module:
+
+- **Stundenplan** – persönlicher Stundenplan, A/B-Wochen, freie Tage und nativer Kalender.
+- **Schulkalender** – SPH-Kalender mit Sensor, JSON-Sensor und Home-Assistant-Kalender.
+- **Mein Unterricht** – Hausaufgaben, Kurs-/Fachnormalisierung, Fachübersichten und lokale Ergänzungen.
+- **Lerngruppen** – Leistungskontrollen, Kalendertermine und lokale Ergänzungen.
+- **Vertretungsplan** – Vertretungen, Entfälle, Raum-/Fachwechsel, Hinweise, JSON-Sensor und Entfall-Binärsensoren.
+
+Zusätzlich werden Lovelace-Karten automatisch als Ressourcen registriert. Schulspezifische Anpassungen können über **School Hacks** aktiviert werden, ohne separate Kartenkopien anzulegen.
 
 ## Installation über HACS
 
-In HACS das Repository hinzufügen:
+Repository als **Integration** in HACS hinzufügen:
 
 ```text
 https://github.com/leonsio/sph-ha
 ```
 
-Kategorie: **Integration**.
-
 Anschließend unter **Einstellungen → Geräte & Dienste → Integration hinzufügen** nach **Schulportal Hessen** suchen.
 
 ## Einrichtung
 
-Für jedes Kind wird ein eigener Eintrag der Integration angelegt. Benötigt werden:
+Für jedes Kind wird ein eigener Integrationseintrag angelegt. Benötigt werden insbesondere:
 
 - Schulnummer
 - SPH-Benutzername
@@ -33,17 +37,20 @@ Für jedes Kind wird ein eigener Eintrag der Integration angelegt. Benötigt wer
 - Kürzel des Kindes
 - Aktualisierungsintervall
 
-Das Standard-Aktualisierungsintervall beträgt **60 Minuten** und kann nach der Einrichtung geändert werden. Auch Zugangsdaten, Schulnummer, Name und Kürzel können über die Konfiguration angepasst werden.
+Das Standardintervall beträgt **60 Minuten**. Module, Zugangsdaten und weitere Optionen können später geändert werden.
 
-Die Module **Stundenplan**, **Schulkalender**, **Mein Unterricht**, **Lerngruppen** und **Vertretungsplan** können in der Konfiguration einzeln aktiviert oder deaktiviert werden. Für den Stundenplan kann zusätzlich die gewünschte Ausgabe gewählt werden. Beim Schulkalender ist ein optionaler Filter nach Kalenderarten möglich; ein leerer Filter übernimmt alle Einträge. Für den Vertretungsplan kann festgelegt werden, welche Schulstunde die Entfall-Binärsensoren als Bezugsstunde prüfen.
+Zusätzliche Optionen betreffen unter anderem:
 
-Für bewegliche Ferientage kann ein Schulamtsbezirk ausgewählt werden. Die Integration berücksichtigt dabei das jeweilige Schuljahr und stellt die Termine zusätzlich über einen eigenen Kalender bereit.
+- aktive Module,
+- Stundenplan-Ausgabe,
+- Schulkalenderarten,
+- Bezugsstunde für die Vertretungsplan-Binärsensoren,
+- Schulamtsbezirk für bewegliche Ferientage,
+- getrennte oder zusammengefasste SPH-Kalender.
 
-Die Zugangsdaten werden von den Modulen gemeinsam verwendet. Mehrere Kinder können als separate Einträge eingerichtet werden.
+## Beispiel-Entities
 
-## Sensoren und Kalender
-
-Für ein Kind mit Name `Maxim` und Kürzel `Mk` entstehen beispielsweise:
+Für `Maxim` mit Kürzel `Mk` entstehen – abhängig von den aktivierten Modulen – beispielsweise:
 
 ```text
 sensor.stundenplan_maxim_mk
@@ -61,178 +68,138 @@ binary_sensor.erste_stunde_entfaellt_morgen_maxim_mk
 calendar.stundenplan_maxim_mk
 calendar.schulkalender_maxim_mk
 calendar.lerngruppen_maxim_mk
+calendar.sph_maxim_mk
 calendar.bewegliche_ferientage_maxim_mk
 ```
 
-### Stundenplan
+Je nach Kalendereinstellung existieren entweder die einzelnen Kalender oder zusätzlich bzw. alternativ der zusammengefasste `calendar.sph_*`.
 
-Der Stundenplan enthält unter anderem persönliche Stunden, Fach, Lehrkraft, Raum, Uhrzeit und Badge. Badges wie `A` oder `B` kennzeichnen wochenabhängige Stunden.
+## Stundenplan
 
-Der persönliche Plan bleibt im Block `eigener_plan` erhalten. Abhängig von der Konfiguration kann der vollständige SPH-Stundenplan zusätzlich ausgegeben werden; die bisherige Sensorstruktur bleibt aus Kompatibilitätsgründen erhalten.
+Der persönliche Plan steht unter `eigener_plan`. Zusätzlich stehen unter anderem `wochenkennung`, `wochenbeginn`, `freie_tage` und `eigener_grundplan` zur Verfügung.
 
-Zusätzlich wird ein rollierender Stundenplan-Kalender für zwei Wochen rückwirkend und acht Wochen im Voraus erzeugt. A/B-Wochen werden automatisch fortgeschrieben.
+Der native Stundenplan-Kalender erzeugt Unterrichtstermine für ein rollierendes Zeitfenster von zwei Wochen Vergangenheit bis acht Wochen Zukunft. A/B-Wochen werden relativ zur aktuellen SPH-Wochenkennung fortgeschrieben. Freie Tage aus `calendar.deutschland_he` und den konfigurierten beweglichen Ferientagen werden berücksichtigt.
 
-#### Freie Tage
+### Vertretungen im Stundenplan
 
-Wenn `calendar.deutschland_he` vorhanden ist, werden Tage mit Kalendereinträgen als schulfrei behandelt. An diesen Tagen werden Unterrichtsstunden und der Marker `Schulwoche A/B` im Stundenplan-Kalender unterdrückt. Die freien Tage werden ebenfalls bei der Sensor-Ausgabe berücksichtigt.
+Seit 0.5.0 werden Daten aus dem internen SPH-Vertretungsplan auch in den allgemeinen Stundenplankarten und in der nativen Kalendergenerierung berücksichtigt.
 
-Zusätzlich können die **beweglichen Ferientage** des ausgewählten hessischen Schulamtsbezirks berücksichtigt werden. Die Daten werden nach Schuljahr gefiltert, lokal zwischengespeichert und höchstens einmal täglich aus der Quelle aktualisiert. Bei einem fehlgeschlagenen Abruf bleiben die zuletzt erfolgreich gespeicherten Daten erhalten.
+Die allgemeinen `sph-stundenplan-*` Karten verwenden automatisch den zum Kind passenden `sensor.vertretungsplan_*` und können damit unter anderem darstellen:
 
-### Schulkalender
+- Entfall/Ausfall,
+- Vertretungen,
+- Fachwechsel,
+- Raumänderungen,
+- Vertretungslehrkräfte,
+- Hinweise/Nachricht des Tages.
 
-Der Kalender verwendet automatisch das aktuelle **hessische Schuljahr** und bevorzugt den CSV-Export des Schulportals. iCal wird als Fallback verwendet. Die anzuzeigenden Kalenderarten können in den Integrationseinstellungen festgelegt werden. Ist das Feld für Kalenderarten leer, werden alle Arten übernommen.
+Der native Stundenplan-Kalender verwendet serverseitig ausschließlich den internen SPH-Vertretungsplan. Dabei werden bestehende Unterrichtstermine angepasst; stabile UIDs verhindern unnötige doppelte Termine.
 
-### Mein Unterricht
+## Vertretungsplan
 
-Das Modul stellt aktuelle Hausaufgaben aus **„Mein Unterricht“** bereit. Zu den Daten gehören unter anderem:
+Das Modul liest `vertretungsplan.php`. Die Tabellen werden anhand der SPH-`data-field`-Kennzeichnungen ausgewertet und sind dadurch nicht an eine feste Spaltenreihenfolge gebunden.
 
-- Datum und Wochentag
-- Fach/Kurs
-- Thema
-- Aufgabe
-- Lehrkraft
-- Erledigt-Status
-- Quelle (`sph` oder `manuell`)
+Wichtige Daten:
 
-Kursnamen werden auf ein gemeinsames Fach normalisiert. Klassenkennungen wie `05cG`, `7n` oder `5` werden entfernt und bekannte Kürzel ausgeschrieben. Dadurch werden beispielsweise `D 05cG` und `Deutsch 7n` beide unter **Deutsch** geführt, während der ursprüngliche Kursname in `kurs` erhalten bleibt.
+- `tage`, `heute`, `morgen`
+- `anzahl_heute`, `anzahl_morgen`
+- `entfaelle_heute`, `entfaelle_morgen`
+- Hinweise
+- `aktualisiert`, `wird_aktualisiert`
+- `art` und normalisiertes `art_lang`
+- `stunde`, `stunden`, `von_stunde`, `bis_stunde`
+- `entfall`
 
-Zusätzlich enthalten normaler Sensor und JSON-Sensor eine nach Fach gruppierte Übersicht:
+Abkürzungen wie `Vertr`, `Entf.` oder `Freis` werden zusätzlich als Langform bereitgestellt. Der JSON-Sensor enthält denselben vollständigen Payload im Attribut `json`.
 
-- `faecher` – Status, Anzahl, offene/erledigte Einträge, Kurse, Lehrkräfte, letzter Eintrag und offene Themen je Fach
-- `faecher_gesamt` – Anzahl der Fächer mit Einträgen
-- `faecher_offen` – Anzahl der Fächer mit mindestens einem offenen Eintrag
+Die beiden Binärsensoren prüfen die konfigurierte Bezugsstunde. Wenn für einen Tag noch kein Plan veröffentlicht wurde, bleibt der betreffende Sensor `unavailable` statt fälschlich `off` zu melden.
 
-Fehlende Hausaufgaben können lokal ergänzt werden, wenn sie beispielsweise vom Lehrer nicht im Schulportal eingetragen wurden. Diese Einträge werden persistent in Home Assistant gespeichert und bei SPH-Aktualisierungen nicht überschrieben.
+## Mein Unterricht
 
-Manuelle Hausaufgaben werden **eine Woche nach ihrem Aufgabendatum automatisch gelöscht**. Sie können vorher auch direkt über die Lovelace-Karte entfernt werden. SPH-Einträge bleiben schreibgeschützt.
+Kursnamen werden auf ein gemeinsames Fach normalisiert. Klassenkennungen wie `05cG`, `7n` oder `5` werden entfernt und bekannte Kürzel ausgeschrieben. Beispielsweise werden `D 05cG` und `Deutsch 7n` beide dem Fach **Deutsch** zugeordnet; der Originalkurs bleibt in `kurs` erhalten.
 
-Intern verwendet die Funktion die Home-Assistant-Dienste:
+Normaler und JSON-Sensor liefern zusätzlich:
+
+- `faecher`
+- `faecher_gesamt`
+- `faecher_offen`
+
+Manuelle Hausaufgaben werden lokal gespeichert, mit SPH-Daten zusammengeführt und sieben Tage nach ihrem Aufgabendatum automatisch entfernt.
+
+Services:
 
 ```text
 sph.meinunterricht_hausaufgabe_hinzufuegen
 sph.meinunterricht_hausaufgabe_loeschen
 ```
 
-### Vertretungsplan
+## Lerngruppen
 
-Das Modul liest `vertretungsplan.php` und stellt die veröffentlichten Tage mit Vertretungen, Raumänderungen, Ausfällen und allgemeinen Hinweisen bereit. Die Spalten werden anhand der `data-field`-Kennzeichnung des Schulportals ausgewertet und sind damit nicht an eine feste Tabellenreihenfolge gebunden.
+Das Modul liest Leistungskontrollen aus `lerngruppen.php`. Schulstunden werden nach Möglichkeit über den persönlichen Stundenplan in konkrete Start-/Endzeiten übersetzt. Manuelle Leistungskontrollen werden lokal gespeichert und mit SPH-Daten zusammengeführt.
 
-Vertretungsarten werden zusätzlich normalisiert. Abkürzungen wie `Vertr`, `Entf.` oder `Freis` bleiben im Rohfeld `art` erhalten und werden in `art_lang` beispielsweise zu **Vertretung**, **Entfall** oder **Freistunde** ausgeschrieben. Stundenbereiche wie `1 - 2` werden zusätzlich als Liste in `stunden` sowie als `von_stunde` und `bis_stunde` bereitgestellt.
-
-Der normale Sensor liefert unter anderem:
-
-- `tage` – alle veröffentlichten Tage samt Einträgen und Hinweisen
-- `heute` und `morgen`
-- `anzahl_heute`, `anzahl_morgen`
-- `entfaelle_heute`, `entfaelle_morgen`
-- `aktualisiert`
-- `wird_aktualisiert`
-
-Der JSON-Sensor `sensor.vertretungsplan_..._json` enthält im Attribut `json` denselben vollständigen Payload als kompaktes UTF-8-JSON und kann dadurch direkt von ESPHome oder anderen einfachen Clients verarbeitet werden.
-
-Die beiden Binärsensoren für heute und morgen prüfen die in den Integrationsoptionen konfigurierte Bezugsstunde. Solange für einen Tag noch kein Vertretungsplan veröffentlicht wurde, ist der betreffende Binärsensor `unavailable` statt `off`.
-
-### Lerngruppen
-
-Das Modul liest die **Leistungskontrollen** aus `lerngruppen.php`. Der Kursname wird ohne die technische Kennung in Klammern gespeichert. Wenn der Kursname die Klasse des Kindes enthält, wird diese für die kompakte Darstellung entfernt. Die Lehrkraft wird über die zugehörige Lerngruppe ermittelt.
-
-Für Kalendertermine werden die angegebenen Schulstunden mit dem persönlichen Stundenplan abgeglichen. Beginn und Ende richten sich nach der ersten bzw. letzten angegebenen Schulstunde. Art und angegebene Prüfungsdauer bleiben als eigene Felder erhalten.
-
-Beispiel:
-
-```text
-Arbeit: Englisch (60 Min)
-```
-
-Gespeichert werden unter anderem:
-
-- `datum`
-- `kurs`
-- `art`
-- `stunden`
-- `stunden_text`
-- `dauer_minuten`
-- `lehrkraft`
-- `lehrkraft_kürzel`
-- `start`
-- `end`
-- `summary`
-- `uid`
-- `quelle` (`sph` oder `manuell`)
-
-Manuell ergänzte Leistungskontrollen werden persistent in Home Assistant gespeichert und bei SPH-Aktualisierungen nicht überschrieben. Sensor und Kalender enthalten immer die zusammengeführten Daten. Wenn später ein gleichartiger SPH-Termin mit gleichem Datum, Art, Kurs und Stunden vorhanden ist, hat der SPH-Eintrag in der Anzeige Vorrang; der lokale Eintrag bleibt gespeichert.
-
-## Lovelace-Karten
-
-Eine vollständige Übersicht aller Karten mit Funktionsweise und sämtlichen YAML-Konfigurationsparametern befindet sich unter [`docs/lovelace/README.md`](docs/lovelace/README.md).
-
-### Stundenplan
-
-```yaml
-type: custom:sph-stundenplan-card
-entity: sensor.stundenplan_maxim_mk
-title: Stundenplan Maxim
-```
-
-Tagesansicht:
-
-```yaml
-type: custom:sph-stundenplan-tag-card
-entity: sensor.stundenplan_maxim_mk
-title: Heute – Maxim
-```
-
-### Mein Unterricht / Hausaufgaben
-
-```yaml
-type: custom:sph-meinunterricht-card
-entity: sensor.mein_unterricht_maxim_mk
-title: Hausaufgaben Maxim
-```
-
-Die Karte zeigt alle Hausaufgaben tabellarisch mit Datum, Fach, Thema, Aufgabe, Lehrkraft, Status und Quelle. Über **+ Hausaufgabe hinzufügen** können lokale Aufgaben ergänzt werden. Nur manuell hinzugefügte Aufgaben können über die Tabelle gelöscht werden.
-
-Die Karte berücksichtigt die bei Custom Cards relevante Shadow-DOM-Problematik: Unabhängige Home-Assistant-State-Updates führen nicht zu einem vollständigen Neuaufbau des Shadow DOM. Bei einem tatsächlichen Update des Mein-Unterricht-Sensors werden horizontale Scrollposition, geöffneter Dialog, Formularwerte und Fokus wiederhergestellt. Dadurch bleiben horizontales Scrollen und der Eingabedialog stabil.
-
-### Vertretungsplan
-
-```yaml
-type: custom:sph-vertretungsplan-card
-entity: sensor.vertretungsplan_maxim_mk
-title: Vertretungsplan Maxim
-```
-
-Die Karte kann leere Tage ausblenden, die Anzahl der Tage begrenzen oder mit `only_cancellations: true` ausschließlich erkannte Ausfälle anzeigen.
-
-### Lerngruppen / Leistungskontrollen
-
-```yaml
-type: custom:sph-lerngruppen-card
-entity: sensor.lerngruppen_maxim_mk
-title: Leistungskontrollen Maxim
-```
-
-Die Lerngruppen-Karte zeigt alle Termine tabellarisch. Über **+ Termin hinzufügen** können lokale Termine mit Datum, Art, Fach/Kurs, Dauer, Schulstunden und optionaler Lehrkraft ergänzt werden. Manuelle Einträge können direkt in der Tabelle wieder gelöscht werden. Aus dem Schulportal geladene Termine sind schreibgeschützt und können über die Karte nicht gelöscht werden.
-
-Intern verwendet die Karte die Home-Assistant-Dienste:
+Services:
 
 ```text
 sph.lerngruppen_termin_hinzufuegen
 sph.lerngruppen_termin_loeschen
 ```
 
-Auch die Lerngruppen-Karte erhält beim Rendern Scrollposition, Dialogzustand, Formularwerte und Fokus, damit Home-Assistant-Updates den Dialog nicht schließen und die Tabelle nicht nach links zurückspringen lassen.
+## Schulkalender
 
-Die Karten werden von der Integration automatisch als Lovelace-Ressourcen registriert. Für Home Assistant 2026.2+ ist keine manuelle `/local/...`-Ressource erforderlich.
+Das Modul verwendet das aktuelle hessische Schuljahr. CSV wird bevorzugt, iCal dient als Fallback. Kalenderarten können gefiltert werden; ohne Filter werden alle Arten übernommen.
 
-## Verhalten bei Verbindungsproblemen
+## School Hacks
 
-Bei einem fehlgeschlagenen Abruf bleiben die zuletzt erfolgreich geladenen Daten erhalten, soweit das jeweilige Modul bereits Daten geladen hat. Das gilt auch für den Vertretungsplan. Lokal gespeicherte Lerngruppen-Termine und Hausaufgaben bleiben unabhängig von der Erreichbarkeit des Schulportals erhalten. Sobald das Schulportal wieder erreichbar ist, werden die Daten beim nächsten erfolgreichen Aktualisierungsversuch aktualisiert und erneut mit den lokalen Daten zusammengeführt.
+School Hacks erweitern die normalen `sph-*` Karten um schulabhängige Regeln. Es werden **keine separaten Kartenvarianten pro Schule** gepflegt.
 
-Auch die zwischengespeicherten beweglichen Ferientage werden bei einem fehlgeschlagenen Abruf nicht durch leere Daten ersetzt.
+Beispiel:
+
+```yaml
+type: custom:sph-stundenplan-grid-card
+entity: sensor.stundenplan_maxim_mk
+school-hacks: kfg
+```
+
+Datenquellen für Vertretungen:
+
+1. Explizit in der Karte gesetzte Vertretungsquelle bleibt autoritativ.
+2. Bei aktivem School Hack wird zuerst die im Schulprofil definierte schulische Quelle verwendet.
+3. Liefert sie für die konkrete Stunde keinen Treffer, kann der interne SPH-Vertretungsplan als Fallback verwendet werden.
+4. Ohne School Hack wird direkt der interne SPH-Vertretungsplan verwendet.
+
+Derzeit vorhandenes Schulprofil:
+
+- [`kfg` – Kaiserin-Friedrich-Gymnasium Bad Homburg](docs/schools/kfg/README.md)
+
+Allgemeine Architektur und Anleitung für weitere Schulen: [`docs/lovelace/school-hacks.md`](docs/lovelace/school-hacks.md).
+
+## Lovelace-Karten
+
+Verfügbar sind:
+
+- `custom:sph-stundenplan-card`
+- `custom:sph-stundenplan-tag-card`
+- `custom:sph-stundenplan-grid-card`
+- `custom:sph-meinunterricht-card`
+- `custom:sph-lerngruppen-card`
+- `custom:sph-kalender-card`
+- `custom:sph-vertretungsplan-card`
+
+Die Ressourcen werden automatisch registriert; für aktuelle Home-Assistant-Versionen ist kein manueller `/local/...`-Eintrag erforderlich.
+
+Vollständige Karten-Dokumentation: [`docs/lovelace/README.md`](docs/lovelace/README.md).
+
+## Robustheit
+
+Bei temporären Abruffehlern bleiben zuletzt erfolgreich geladene Daten erhalten, soweit das jeweilige Modul bereits Daten besitzt. Lokal gespeicherte Hausaufgaben, Leistungskontrollen und eigene Kalendertermine bleiben unabhängig von der SPH-Erreichbarkeit bestehen.
+
+## Technische Dokumentation
+
+- [Architektur](docs/ARCHITEKTUR.md)
+- [Lovelace-Karten](docs/lovelace/README.md)
+- [School Hacks](docs/lovelace/school-hacks.md)
+- [Schulspezifische Profile](docs/schools/README.md)
 
 ## Hinweis
 
 Dieses Projekt ist ein unabhängiges Community-Projekt und steht nicht in offizieller Verbindung mit dem Schulportal Hessen.
-
-Weitere Informationen zur Quelltextstruktur befinden sich unter [`docs/ARCHITEKTUR.md`](docs/ARCHITEKTUR.md).
