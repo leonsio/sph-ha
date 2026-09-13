@@ -37,6 +37,7 @@ Das Profil wird durch die allgemeine School-Profile-Discovery automatisch gefund
 Das KFG-Profil wird serverseitig auf die veröffentlichten SPH-Daten angewandt. Aktuell werden insbesondere unterstützt:
 
 - Auflösung von Lehrerkürzeln
+- Bereinigung KFG-spezifischer Epochenmarker bei Fachbezeichnungen
 - KFG-spezifische Bezeichnungen für Vertretungsarten
 - Profilkennzeichnung in Sensor-/JSON-Payloads
 - dieselbe Lehrerauflösung in nativen Kalendern
@@ -44,6 +45,28 @@ Das KFG-Profil wird serverseitig auf die veröffentlichten SPH-Daten angewandt. 
 - KFG-spezifische Beschreibungstexte, soweit sie Lehrerfelder enthalten
 
 Die vorhandene Sensorstruktur bleibt erhalten.
+
+## Epochenfächer
+
+Das KFG verwendet bei epochal unterrichteten Fächern Bezeichnungen wie:
+
+```text
+Mu (epo1)
+Ku (epo2)
+```
+
+`epo1`, `epo2` usw. kennzeichnen die jeweilige Epoche beziehungsweise das Halbjahr. Welche Fachbezeichnung welcher Epoche zugeordnet ist, kann sich ändern und wird deshalb **nicht fest im Profil hinterlegt**.
+
+Das KFG-Profil entfernt ausschließlich den Epochenmarker und löst anschließend bekannte Fachkürzel auf. Beispiele:
+
+| SPH-Wert | Anzeige mit KFG-Profil |
+|---|---|
+| `Mu (epo1)` | Musik |
+| `Mu (epo2)` | Musik |
+| `Ku (epo1)` | Kunst |
+| `Ku (epo2)` | Kunst |
+
+Auch weitere Nummern wie `(epo3)` werden als Epochenmarker entfernt. Ohne aktiviertes KFG-Profil greift diese schulspezifische Bereinigung nicht.
 
 ## `sensor.kfg_kollegium`
 
