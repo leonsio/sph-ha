@@ -42,9 +42,18 @@ Das Schul-Profil ändert **nicht**, welcher Stundenplan verwendet wird.
 
 Die vorhandene Einstellung **Stundenplan-Ausgabe** bleibt maßgeblich. Das Profil verarbeitet ausschließlich die Daten, die durch die normale Konfiguration für das Kind vorgesehen sind.
 
-Insbesondere wird `eigener_grundplan` nicht als alternative Quelle für Profilanpassungen verwendet.
+Bei **„Nur eigener Plan“** werden die Profilanpassungen auf `eigener_plan` angewandt. `tage` bleibt entsprechend der bisherigen Konfiguration leer.
 
-Das ist wichtig, weil umfangreichere Stundenpläne je nach Schule mehrere parallele Angebote enthalten können, z. B. gleichzeitig katholische Religion, evangelische Religion und Ethik. Für das Kind bleibt der konfigurierte persönliche Stundenplan maßgeblich.
+Bei **„Eigener Plan + vollständiger SPH-Stundenplan“** werden dieselben Profilanpassungen auf **beide** veröffentlichten Bereiche angewandt:
+
+- `eigener_plan` – persönlicher Stundenplan des Kindes
+- `tage` – vollständiger vom SPH gelieferter Stundenplan
+
+Damit sind z. B. schulabhängige Lehrer- oder Fachnamen in beiden Ausgaben konsistent.
+
+Insbesondere wird `eigener_grundplan` nicht als alternative Quelle für Profilanpassungen verwendet und nicht durch das Profil umgeschrieben.
+
+Das ist wichtig, weil umfangreichere Stundenpläne je nach Schule mehrere parallele Angebote enthalten können, z. B. gleichzeitig katholische Religion, evangelische Religion und Ethik. Für das Kind bleibt der konfigurierte persönliche Stundenplan maßgeblich; bei aktivierter vollständiger Ausgabe wird der zusätzliche Gesamtplan lediglich separat ebenfalls profiliert.
 
 ## Sensoren und JSON
 
