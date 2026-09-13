@@ -143,6 +143,12 @@ Bei vorübergehenden Abruffehlern bleiben zuletzt erfolgreich geladene Daten sow
 - [Schulspezifische Profile](docs/schools/README.md)
 - [Architektur](docs/ARCHITEKTUR.md)
 
+## Danksagung und Inspiration
+
+Ein besonderer Dank geht an das Projekt [lanis-mobile](https://github.com/lanis-mobile). Das Repository diente als Inspirationsquelle und enthält hilfreiche Beispiele für mögliche technische Implementierungen und Anbindungen rund um das [Schulportal Hessen](https://schulportal.hessen.de).
+
+SPH-HA ist ein eigenständiges Projekt und übernimmt daraus keine offizielle Verbindung oder Unterstützung durch das Schulportal Hessen.
+
 ## Hinweis
 
 Dieses Projekt ist ein unabhängiges Community-Projekt und steht nicht in offizieller Verbindung mit dem Schulportal Hessen.
