@@ -14,7 +14,7 @@ TEXT_SUFFIXES = {
     ".yaml",
     ".yml",
 }
-LEGACY_TERM = "school-hacks"
+LEGACY_TERM = "school" + "-hacks"
 
 
 class NoLegacySchoolHacksTest(unittest.TestCase):
