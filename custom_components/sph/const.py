@@ -9,6 +9,7 @@ CONF_CALENDAR_EVENT_TYPES = "calendar_event_types"
 CONF_ACTIVE_MODULES = "active_modules"
 CONF_TIMETABLE_OUTPUT = "timetable_output"
 CONF_SCHOOL_DISTRICT = "school_district"
+CONF_SCHOOL_PROFILE = "school_profile"
 CONF_COMBINE_CALENDARS = "combine_calendars"
 CONF_FIRST_LESSON = "first_lesson"
 CONF_MODULE_STUNDENPLAN = "module_stundenplan"
@@ -24,6 +25,8 @@ DEFAULT_MODULE_ENABLED = True
 # By default, timetable, school calendar and learning-group appointments are
 # exposed through one native SPH calendar. The individual sensors stay separate.
 DEFAULT_COMBINE_CALENDARS = True
+# School profiles are opt-in per child/config entry.
+DEFAULT_SCHOOL_PROFILE = "none"
 # The personal timetable is always exposed. "all" additionally fills the
 # legacy "tage" block with the complete timetable returned by SPH.
 TIMETABLE_OUTPUT_OWN = "own"

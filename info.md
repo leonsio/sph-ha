@@ -2,7 +2,7 @@
 
 Home-Assistant-Custom-Integration für Daten aus dem **Schulportal Hessen (SPH)**.
 
-Aktueller Stand: **0.5.0**.
+Aktueller Stand: **0.6.0**.
 
 ## Module
 
@@ -38,22 +38,19 @@ Danach unter **Einstellungen → Geräte & Dienste → Integration hinzufügen**
 - automatische Lovelace-Ressourcenregistrierung
 - zusammengefasster oder getrennter SPH-Kalender
 - lokale Hausaufgaben, Leistungskontrollen und eigene Kalendertermine
+- pro Kind auswählbare Schul-Profile
 
-Seit 0.5.0 werden interne SPH-Vertretungsdaten auch in den allgemeinen Stundenplankarten und bei der Generierung des nativen Stundenplan-Kalenders berücksichtigt.
+## Schul-Profile
 
-## School Hacks
+Ab 0.6.0 können schulspezifische Besonderheiten direkt im Integrationseintrag des Kindes über **Schul-Profil** ausgewählt werden.
 
-Schulspezifische Anpassungen werden über normale SPH-Karten aktiviert:
+Ein Profil kann Werte serverseitig in Sensoren, JSON und Kalendern aufbereiten und zusätzlich notwendige Darstellungsregeln für die SPH-Lovelace-Karten bereitstellen.
 
-```yaml
-type: custom:sph-stundenplan-grid-card
-entity: sensor.stundenplan_maxim_mk
-school-hacks: kfg
-```
+Das derzeit vorhandene Profil `kfg` ist für das **Kaiserin-Friedrich-Gymnasium Bad Homburg** vorgesehen.
 
-Das derzeit vorhandene Profil `kfg` ist für das **Kaiserin-Friedrich-Gymnasium Bad Homburg** vorgesehen. Weitere Schulen können eigene Profile erhalten, ohne separate Kartenkopien anzulegen.
+Die Karten erkennen das Profil automatisch. Ein zusätzlicher Kartenparameter ist normalerweise nicht erforderlich.
 
-Bei aktivem School Hack wird die schulische Vertretungsquelle bevorzugt; der interne SPH-Vertretungsplan kann als Fallback dienen. Ohne School Hack wird der interne SPH-Vertretungsplan direkt verwendet.
+Der alte Parameter `school-hacks: kfg` bleibt in 0.6.0 als Legacy-Alias erhalten.
 
 ## Beispiel-Entities
 
@@ -72,5 +69,7 @@ calendar.schulkalender_maxim_mk
 ## Dokumentation
 
 Die vollständige Dokumentation befindet sich in der Repository-README und unter `docs/`.
+
+Für Entwickler eigener Profile: `docs/SCHOOL_PROFILES_DEVELOPMENT.md`.
 
 Dieses Projekt ist ein unabhängiges Community-Projekt und steht nicht in offizieller Verbindung mit dem Schulportal Hessen.

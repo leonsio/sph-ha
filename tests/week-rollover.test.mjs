@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {selectSchoolWeek,selectSchoolDay,weekForDate,visibleSchoolBadges,schoolNow,SchoolContext} from '../custom_components/sph/static/school-hacks.js';
-import kfg from '../custom_components/sph/static/school-hacks/kfg.js';
+import {selectSchoolWeek,selectSchoolDay,weekForDate,visibleSchoolBadges,schoolNow,SchoolContext} from '../custom_components/sph/static/school-profile.js';
+import kfg from '../custom_components/sph/static/school-profiles/kfg.js';
 const a={subject:'A-Fach',fach:'A-Unterricht',teacher:'Her',badge:'A',start:'12:25',end:'13:10',index:7,duration:1};
 const b={...a,subject:'B-Fach',fach:'B-Unterricht',badge:'B',end:'15:20'};
 const attrs={wochenkennung:'A',wochenbeginn:'2026-09-07',klasse:'7n',eigener_plan:Array.from({length:5},()=>[a,b]),freie_tage:[]};
@@ -31,10 +31,10 @@ test('missing Friday and missing end time use deterministic fallbacks',()=>{
  assert.equal(selectSchoolWeek(missing,kfg,new Date(2026,8,11,23,59)).week,'A');
  assert.equal(selectSchoolWeek(missing,kfg,new Date(2026,8,12)).week,'B');
 });
-test('unmasked plan restores next week lessons and free dates apply to target dates',()=>{
+test('school profile never falls back to eigener_grundplan',()=>{
  const source={...attrs,eigener_grundplan:attrs.eigener_plan,eigener_plan:[[],[],[],[],[]],freie_tage:['2026-09-07','2026-09-15']};
  const view=selectSchoolWeek(source,kfg,new Date(2026,8,13));
- assert.deepEqual(view.days[0],[b]);assert.deepEqual(view.days[1],[]);
+ assert.deepEqual(view.days,[[],[],[],[],[]]);
  assert.deepEqual(source.eigener_plan,[[],[],[],[],[]]);
 });
 test('DST, year boundary, unknown badge, and generic cards roll to the displayed next week',()=>{
@@ -75,8 +75,8 @@ globalThis.window={customCards:[],setInterval:fn=>{tick=fn;return 1;},clearInter
 for(const name of ['sph-stundenplan-card','sph-stundenplan-grid-card']){
  test(`${name} updates dates, filtering and headings on the clock; grid keeps scroll container`,async(t)=>{
   t.mock.timers.enable({apis:['Date'],now:new Date(2026,8,11,13,9,59).getTime()});
-  await import(`../custom_components/sph/static/${name}.js?v=0.5.1`);
-  const c=new (registry.get(name))();c.isConnected=true;c.setConfig({entity:'sensor.plan','school-hacks':'kfg'});
+  await import(`../custom_components/sph/static/${name}.js?v=0.6.0`);
+  const c=new (registry.get(name))();c.isConnected=true;c.setConfig({entity:'sensor.plan','school-profile':'kfg'});
   c.hass={states:{'sensor.plan':{entity_id:'sensor.plan',attributes:attrs}}};await c._schoolReady;
   assert.match(c.shadowRoot.innerHTML,/(?:Woche|Schulwoche) A/);assert.match(c.shadowRoot.innerHTML,/A-Unterricht/);assert.doesNotMatch(c.shadowRoot.innerHTML,/>\(?A\)?<\/span>/);
   const isGrid=name.includes('grid');
@@ -95,8 +95,8 @@ for(const name of ['sph-stundenplan-card','sph-stundenplan-grid-card']){
   else assert.match(html,/Woche B/);
   assert.match(html,/B-Unterricht/);assert.doesNotMatch(html,/A-Unterricht/);assert.equal(wrap.scrollLeft,120);
   if(isGrid){
-   c.setConfig({entity:'sensor.plan','school-hacks':false});assert.equal(weekLine.hidden,true);assert.equal(weekLine.textContent,'');
-   c.setConfig({entity:'sensor.plan','school-hacks':'kfg'});await c._schoolReady;assert.equal(weekLine.textContent,'Schulwoche B');assert.equal(weekLine.hidden,false);
+   c.setConfig({entity:'sensor.plan','school-profile':false});assert.equal(weekLine.hidden,true);assert.equal(weekLine.textContent,'');
+   c.setConfig({entity:'sensor.plan','school-profile':'kfg'});await c._schoolReady;assert.equal(weekLine.textContent,'Schulwoche B');assert.equal(weekLine.hidden,false);
   }
   const oldClears=clears;c.disconnectedCallback();assert.ok(clears>oldClears);
  });

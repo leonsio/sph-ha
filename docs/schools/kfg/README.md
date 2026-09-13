@@ -1,225 +1,71 @@
-# KFG – Kaiserin-Friedrich-Gymnasium Bad Homburg
+# Schul-Profil `kfg`
 
-Dieses Dokument beschreibt ausschließlich die schulspezifischen Anpassungen für das Profil:
+Das Profil `kfg` enthält die Besonderheiten des **Kaiserin-Friedrich-Gymnasiums Bad Homburg**.
 
-```yaml
-school-hacks: kfg
-```
-
-Das Profil ist für das **Kaiserin-Friedrich-Gymnasium (KFG) in Bad Homburg** vorgesehen.
-
-Allgemeine SPH-Funktionen und die technische School-Hacks-Architektur sind separat dokumentiert:
-
-- [SPH-HA Hauptdokumentation](../../../README.md)
-- [Allgemeine School-Hacks-Dokumentation](../../lovelace/school-hacks.md)
+Ab SPH-HA 0.6.0 ersetzt es die bisherige KFG-Konfiguration über `school-hacks: kfg`.
 
 ## Aktivierung
 
-Die KFG-Anpassungen werden auf den normalen SPH-Karten aktiviert. Separate `custom:kfg-*` Karten werden nicht mehr verwendet.
+Das Profil wird direkt beim Integrationseintrag des Kindes ausgewählt:
 
-### Wochenliste
+**Einstellungen → Geräte & Dienste → Schulportal Hessen → Konfigurieren → Schul-Profil → Kaiserin-Friedrich-Gymnasium Bad Homburg**
 
-```yaml
-type: custom:sph-stundenplan-card
-entity: sensor.stundenplan_maxim_mk
-school-hacks: kfg
-```
-
-### Tagesansicht
-
-```yaml
-type: custom:sph-stundenplan-tag-card
-entity: sensor.stundenplan_maxim_mk
-school-hacks: kfg
-```
-
-### Rasteransicht
-
-```yaml
-type: custom:sph-stundenplan-grid-card
-entity: sensor.stundenplan_maxim_mk
-school-hacks: kfg
-```
-
-## Voraussetzungen
-
-### SPH-Integration
-
-Erforderlich ist ein normaler Stundenplan-Sensor des Kindes, beispielsweise:
+Intern wird gespeichert:
 
 ```text
-sensor.stundenplan_maxim_mk
+school_profile: kfg
 ```
 
-Für die KFG-Regeln werden insbesondere folgende Attribute verwendet:
+Die Auswahl gilt nur für dieses Kind.
 
-- `klasse`
-- `wochenkennung`
-- `wochenbeginn`
-- `eigener_plan`
-- `eigener_grundplan`
-- `freie_tage`
+## Datenebene
 
-### KFG-Kollegium
+Das KFG-Profil wird serverseitig auf die veröffentlichten SPH-Daten angewandt. Dadurch sind KFG-spezifische Anpassungen nicht mehr ausschließlich in Lovelace sichtbar.
 
-Für die Auflösung von Lehrerkürzeln erwartet das Profil:
+Aktuell werden insbesondere unterstützt:
+
+- Auflösung von Lehrerkürzeln
+- KFG-spezifische Bezeichnungen für Vertretungsarten
+- Profilkennzeichnung in Sensor-/JSON-Payloads
+- dieselbe Lehrerauflösung in nativen Kalendern
+- dieselbe Lehrerauflösung in Mein Unterricht und Lerngruppen
+- KFG-spezifische Beschreibungstexte, soweit sie Lehrerfelder enthalten
+
+Die vorhandene Sensorstruktur bleibt dabei erhalten.
+
+## `sensor.kfg_kollegium`
+
+Für die Auflösung von Lehrerkürzeln verwendet ausschließlich dieses Profil:
 
 ```text
 sensor.kfg_kollegium
 ```
 
-Attribut:
+Erwartetes Attribut:
 
 ```text
 lehrer
 ```
 
-Fehlt die Zuordnung für ein Kürzel, bleibt das vorhandene Kürzel erhalten.
-
-### KFG-Vertretungsplan
-
-Das Profil ist für die zusätzliche KFG-Vertretungsplan-Integration ausgelegt:
-
-```text
-https://github.com/leonsio/kfg-vertretungsplan
-```
-
-Bevorzugte Sensoren:
-
-```text
-sensor.vertretungsplan_<klasse>
-sensor.vertretungsplan
-```
-
-Beispiel für Klasse `7n`:
-
-```text
-sensor.vertretungsplan_7n
-```
-
-## Priorität der Vertretungsdaten
-
-Für KFG gilt in den Stundenplankarten:
-
-1. Explizit in der Karte gesetzter `vertretungsplan_sensor` / `vertretungsplan` / `substitution_sensor`.
-2. Klassenspezifischer KFG-Sensor `sensor.vertretungsplan_<klasse>`.
-3. KFG-Fallback `sensor.vertretungsplan`.
-4. Interner SPH-Vertretungsplan des Kindes, wenn die KFG-Quelle für die konkrete Stunde keinen Treffer liefert.
-
-Damit bleibt der **KFG-Vertretungsplan die bevorzugte Quelle**. Der interne SPH-Vertretungsplan ergänzt nur fehlende Treffer.
-
-Ein explizit konfigurierter Sensor bleibt autoritativ und löst keinen stillen automatischen Wechsel auf eine andere Quelle aus.
-
 Beispiel:
 
 ```yaml
-type: custom:sph-stundenplan-tag-card
-entity: sensor.stundenplan_maxim_mk
-school-hacks: kfg
-vertretungsplan_sensor: sensor.vertretungsplan_7n
+lehrer:
+  FRA: Franziska Beispiel
+  BÄR: Bernd Beispiel
 ```
 
-## A/B-Wochen
+Der Sensor ist **keine allgemeine Abhängigkeit von SPH-HA** und wird von keinem anderen Schul-Profil vorausgesetzt.
 
-Das KFG-Profil verwendet:
+Wenn sich `sensor.kfg_kollegium` ändert, veröffentlicht SPH-HA die betroffenen Profil-Ausgaben erneut, damit Sensoren und Kalender die aktualisierte Zuordnung übernehmen.
 
-```javascript
-weekBadges: ["A", "B"]
-unbadgedFallback: true
-hideWeekBadges: true
-```
+Fehlt die Entity oder ein Kürzel, bleibt der vorhandene SPH-Wert unverändert.
 
-### Gegenstück-Regel
+## Vertretungsarten
 
-Existieren für denselben Zeitslot eine A-/B-markierte und eine unmarkierte Variante, wird die zur Zielwoche passende markierte Stunde bevorzugt.
+Das Profil übernimmt die bisherigen KFG-Zuordnungen aus dem School-Hacks-Profil:
 
-Beispiel:
-
-```text
-Woche A → A-Stunde sichtbar
-Woche B → B-Stunde sichtbar
-```
-
-Eine unmarkierte Gegenstunde bleibt nur dann sichtbar, wenn für die Zielwoche keine passende markierte Variante den Slot ersetzt.
-
-Andere Badges gelten nicht automatisch als Wochenkennzeichen.
-
-### Anzeige der Wochenkennung
-
-A/B-Badges werden beim KFG nicht an jeder Unterrichtsstunde wiederholt.
-
-In der Rasteransicht erscheint stattdessen einmalig oberhalb der Tabelle rechtsbündig:
-
-```text
-Schulwoche A
-```
-
-bzw.
-
-```text
-Schulwoche B
-```
-
-## Wechsel auf die nächste Woche
-
-Das Profil verwendet:
-
-```javascript
-advanceWeekAfterFriday: true
-```
-
-Wochenliste und Rasteransicht wechseln:
-
-- am Freitag nach Ende der letzten für die aktuelle A/B-Woche aktiven Unterrichtsstunde auf die nächste Woche,
-- am Samstag und Sonntag auf die kommende Woche.
-
-Die A/B-Kennung wird dabei ebenfalls fortgeschrieben:
-
-```text
-A → B
-B → A
-```
-
-Ein unterrichtsfreier Freitag kann bereits ab Freitag 00:00 zur Folgewoche führen. Fehlen gültige Endzeiten für aktive Freitagsstunden, erfolgt der sichere Wechsel erst am Samstag.
-
-## Tagesansicht
-
-Die Tageskarte verwendet den tatsächlich relevanten Schultag:
-
-- während des Unterrichtstags den aktuellen Tag,
-- nach Ende der letzten aktiven Stunde den nächsten Unterrichtstag,
-- am Wochenende den nächsten Unterrichtstag,
-- unterrichtsfreie Tage werden übersprungen.
-
-A/B-Woche, Vertretungen und Nachricht des Tages beziehen sich immer auf das tatsächlich ausgewählte Datum.
-
-## Lehrerauflösung
-
-Das Profil verwendet:
-
-```javascript
-teachers: {
-  entity: "sensor.kfg_kollegium",
-  attribute: "lehrer"
-}
-```
-
-Die Suche ist nicht von Groß-/Kleinschreibung abhängig.
-
-Beispielsweise können `DRG`, `Drg` oder `drg` demselben Kollegiums-Eintrag zugeordnet werden.
-
-Die Lehrerauflösung kann unter anderem verwendet werden in:
-
-- Stundenplankarten,
-- Lerngruppenkarte,
-- Mein-Unterricht-Karte,
-- beschrifteten Lehrerzeilen der SPH-Kalenderkarte.
-
-## KFG-Vertretungsarten
-
-Das Profil löst unter anderem folgende Kürzel auf:
-
-| Kürzel | Darstellung |
+| KFG-Code | Anzeige |
 |---|---|
 | `Betr` | Betreuung |
 | `Vertr` | Vertretung |
@@ -232,75 +78,116 @@ Das Profil löst unter anderem folgende Kürzel auf:
 | `SES` | Sonderunterricht |
 | `Vtr. ohne Lehrer` | Vertretung ohne Lehrer |
 
-## Vertretungszuordnung
+Im Vertretungsplan-Sensor wird dafür der vorhandene Datensatz um bzw. über `art_lang` lesbar aufbereitet. Der Rohcode `art` bleibt erhalten.
 
-Eine KFG-Vertretung wird nur auf eine passende persönliche Unterrichtsstunde angewendet.
+## Stundenplanquelle
 
-Berücksichtigt werden insbesondere:
+Das KFG-Profil wählt keinen eigenen Stundenplan aus.
 
-- Klasse,
-- Datum,
-- Schulstunde bzw. Stundenbereich,
-- ursprüngliches Fach.
+Die vorhandene Integrationseinstellung **Stundenplan-Ausgabe** bleibt vollständig maßgeblich. Insbesondere wird `eigener_grundplan` nicht als alternative Profilquelle verwendet.
 
-Damit werden Änderungen anderer Lerngruppen nicht pauschal auf das Kind übertragen.
+Das ist relevant, wenn ein umfangreicher Schulplan parallele Angebote enthält, die nicht alle für das Kind gelten.
 
-### Entfall
+## Vertretungen und Wochenplan
 
-Entfall, Ausfall oder Freistunde werden als ausgefallene Stunde dargestellt.
+Konkrete Vertretungen besitzen ein Datum. Sie werden deshalb nicht dauerhaft in den wiederverwendeten Wochenplan eingebrannt.
 
-### Fachwechsel
+Dadurch wird verhindert, dass beispielsweise eine Vertretungslehrkraft aus dieser Woche beim Anzeigen einer späteren Woche fälschlich weiterverwendet wird.
 
-Bei einem Fachwechsel wird das neue Fach angezeigt und das ursprüngliche Fach kann als `statt ...` erscheinen.
+Die Zusammenführung erfolgt in datumsbezogenen Kontexten:
 
-### Raumänderung
+- Stundenplan-Kalender
+- kombinierter SPH-Kalender
+- Stundenplan-Lovelace-Karten
 
-Ein neuer Raum ersetzt den regulären Stundenplanraum.
+Der Vertretungsplan-Sensor selbst enthält die veröffentlichten Änderungen natürlich weiterhin als eigene Datenquelle.
 
-### Vertretungslehrkraft
+## Lovelace
 
-Wenn ein Vertretungslehrer vorhanden ist, wird dessen Kürzel über `sensor.kfg_kollegium` aufgelöst, soweit eine Zuordnung vorhanden ist.
+Die Karten erkennen `school_profile: kfg` automatisch über die zugehörigen Sensoren.
 
-## Nachricht des Tages
+Normalerweise reicht daher:
 
-Das KFG-Profil aktiviert:
-
-```javascript
-news: true
+```yaml
+type: custom:sph-stundenplan-grid-card
+entity: sensor.stundenplan_maxim_mk
 ```
 
-Nachrichten aus dem KFG-Vertretungsplan werden anhand von **Datum und Wochentag** dem dargestellten Tag zugeordnet. Dadurch wird nicht versehentlich die Nachricht eines gleichnamigen Wochentags aus einer anderen Woche verwendet.
+Ein zusätzlicher Parameter ist nicht erforderlich.
 
-Wenn die bevorzugte KFG-Quelle keine passende Nachricht liefert, kann die allgemeine Stundenplankarte auf Hinweise des internen SPH-Vertretungsplans zurückfallen.
+### Expliziter Override
 
-## Native Kalender
+Für Tests kann weiterhin angegeben werden:
 
-Die KFG-School-Hacks wirken ausschließlich im Frontend.
-
-Der native:
-
-```text
-calendar.stundenplan_<kind>_<kürzel>
+```yaml
+school-profile: kfg
 ```
 
-verwendet **nicht** die KFG-Vertretungsplan-Sensoren. Für serverseitig generierte Kalendertermine wird ausschließlich der interne SPH-Vertretungsplan verwendet.
+Der alte Parameter
 
-Das verhindert, dass die Kalenderinhalte davon abhängen, welche Lovelace-Karte oder welches Schulprofil gerade geöffnet ist.
+```yaml
+school-hacks: kfg
+```
 
-## Profilkonfiguration
+bleibt in 0.6.0 als Kompatibilitätsalias erhalten.
 
-Die aktuelle Profilimplementierung liegt unter:
+## KFG-spezifische UI-Regeln
+
+Die bisherigen KFG-Lovelace-Anpassungen wurden in das Frontend-Profil übernommen:
 
 ```text
+custom_components/sph/static/school-profiles/kfg.js
+```
+
+Dazu gehören aktuell:
+
+- A/B-Wochen als Wochenlogik
+- A/B-Badges nicht an jedem einzelnen Unterrichtseintrag anzeigen
+- Schulwoche einmal oberhalb der Grid-Ansicht anzeigen
+- nach Ende der letzten Freitagsstunde auf die nächste Schulwoche wechseln
+- korrekte Fortschreibung A → B bzw. B → A
+- KFG-Vertretungsbezeichnungen
+- Hinweise/Nachrichten des Vertretungsplans
+- visuelle Kennzeichnung von Vertretung, Entfall, Fachwechsel, Tausch usw.
+
+## Dateien
+
+Serverseitige Datenlogik:
+
+```text
+custom_components/sph/school_profiles/kfg.py
+```
+
+Frontend-Darstellung:
+
+```text
+custom_components/sph/static/school-profiles/kfg.js
+```
+
+Legacy-Bridges:
+
+```text
+custom_components/sph/static/school-hacks.js
 custom_components/sph/static/school-hacks/kfg.js
 ```
 
-Schulspezifische Änderungen sollen ausschließlich dort bzw. im gemeinsamen Adapter vorgenommen werden. Neue separate KFG-Karten sollen nicht wieder eingeführt werden.
+Die Legacy-Dateien existieren nur für die Übergangsphase und verweisen auf die neue School-Profile-Implementierung.
 
-## Fehler- und Fallback-Verhalten
+## Ziel für die weitere Entwicklung
 
-- Fehlt `sensor.kfg_kollegium`, bleiben Lehrerkürzel erhalten.
-- Fehlt die klassenspezifische KFG-Vertretungsquelle, wird der KFG-Fallback geprüft.
-- Liefert die KFG-Quelle keinen Treffer für eine konkrete Stunde, kann der interne SPH-Vertretungsplan ergänzen.
-- Ein explizit konfigurierter, aber fehlender Vertretungssensor wird nicht automatisch ersetzt.
-- Ohne Vertretungsdaten bleibt der reguläre SPH-Stundenplan sichtbar.
+Das KFG-Profil soll mit der Zeit kleiner werden. Bei jeder neuen Regel ist zu prüfen, ob sie tatsächlich nur am KFG benötigt wird.
+
+Beispiele für allgemeine Logik, die nicht dauerhaft im KFG-Profil bleiben sollte:
+
+- allgemeine Fachnormalisierung
+- allgemeines Matching eines SPH-Vertretungseintrags auf Datum/Stunde/Klasse
+- Erzeugung von Kalenderterminen
+- allgemeine A/B-Wochenberechnung, sofern sie sich schulübergreifend vereinheitlichen lässt
+
+Nur echte KFG-Abweichungen bleiben im Profil.
+
+## Entwickler
+
+Die vollständige API und Anleitung für eigene Schul-Profile befindet sich unter:
+
+[Schul-Profile entwickeln](../../SCHOOL_PROFILES_DEVELOPMENT.md)

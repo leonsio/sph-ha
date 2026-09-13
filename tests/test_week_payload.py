@@ -12,9 +12,15 @@ class WeekPayloadTest(unittest.TestCase):
         tree = ast.parse(Path('custom_components/sph/module/stundenplan/sensor.py').read_text())
         selected = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name in
                     {'subject_name', 'enrich_days', '_mask_current_week_free_days', '_empty_days_like', 'timetable_payload'}]
+
+        class PassthroughProfile:
+            def transform_timetable_payload(self, payload, hass=None, *, substitution_data=None):
+                return payload
+
         ns = dict(timedelta=timedelta, re=re, SUBJECT_NAMES={'M':'Mathematik'},
                   CONF_CHILD_NAME='child_name', CONF_CHILD_SHORTCUT='child_shortcut',
                   CONF_TIMETABLE_OUTPUT='timetable_output', DEFAULT_TIMETABLE_OUTPUT='own', TIMETABLE_OUTPUT_ALL='all',
+                  get_school_profile=lambda entry: PassthroughProfile(),
                   dt_util=SimpleNamespace(now=lambda:datetime(2026,9,11,12,tzinfo=timezone.utc), get_time_zone=lambda _:timezone.utc))
         exec(compile(ast.Module(body=selected, type_ignores=[]), '<sensor>', 'exec'), ns)
         lesson = {'subject':'M', 'badge':'A', 'end':'13:10'}

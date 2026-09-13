@@ -10,6 +10,7 @@ from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.util import slugify
 
 from .api.client import SphAuthClient
@@ -28,11 +29,12 @@ from .const import (
     DOMAIN,
     SCHOOL_DISTRICT_NONE,
 )
+from .school_profiles import get_school_profile
 
 _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
-CARD_VERSION = "0.5.2"
+CARD_VERSION = "0.6.0"
 CARD_URLS = (
     f"/api/{DOMAIN}/static/sph-stundenplan-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/sph-stundenplan-tag-card.js?v={CARD_VERSION}",
@@ -108,10 +110,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
 
 async def _remove_disabled_calendar_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Remove school-calendar entities entirely when the module is disabled."""
     if bool(entry.data.get(CONF_MODULE_KALENDER, DEFAULT_MODULE_ENABLED)):
         return
-
     registry = er.async_get(hass)
     for platform, unique_id in (
         ("sensor", f"{entry.entry_id}_calendar"),
@@ -125,10 +125,8 @@ async def _remove_disabled_calendar_entities(hass: HomeAssistant, entry: ConfigE
 
 
 async def _remove_disabled_vertretung_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Remove substitution-plan entities when the module is disabled."""
     if bool(entry.data.get(CONF_MODULE_VERTRETUNG, DEFAULT_MODULE_ENABLED)):
         return
-
     registry = er.async_get(hass)
     for platform, unique_id in (
         ("sensor", f"{entry.entry_id}_vertretungsplan"),
@@ -143,10 +141,8 @@ async def _remove_disabled_vertretung_entities(hass: HomeAssistant, entry: Confi
 
 
 async def _remove_inactive_calendar_layout_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Keep only the configured combined or separate user-facing calendars."""
     combine = bool(entry.data.get(CONF_COMBINE_CALENDARS, DEFAULT_COMBINE_CALENDARS))
     registry = er.async_get(hass)
-
     if combine:
         unique_ids = (
             f"{entry.entry_id}_native_calendar",
@@ -155,7 +151,6 @@ async def _remove_inactive_calendar_layout_entities(hass: HomeAssistant, entry: 
         )
     else:
         unique_ids = (f"{entry.entry_id}_sph_calendar",)
-
     for unique_id in unique_ids:
         entity_id = registry.async_get_entity_id("calendar", DOMAIN, unique_id)
         if entity_id:
@@ -164,7 +159,6 @@ async def _remove_inactive_calendar_layout_entities(hass: HomeAssistant, entry: 
 
 
 async def _remove_unconfigured_movable_holiday_calendar(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Remove an old movable-holiday calendar when no district is selected."""
     district = str(entry.data.get(CONF_SCHOOL_DISTRICT, SCHOOL_DISTRICT_NONE)).strip()
     if district and district != SCHOOL_DISTRICT_NONE:
         return
@@ -283,7 +277,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except Exception as err:
             _LOGGER.warning("Schulportal Hessen Vertretungsplan für %s aktuell nicht verfügbar: %s", entry.title, err)
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
+    profile = get_school_profile(entry)
+    entry_data = {
         "auth": auth,
         "timetable": timetable,
         "calendar": calendar,
@@ -291,7 +286,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "lerngruppen": lerngruppen,
         "vertretung": vertretung,
         "movable_holidays": movable_holidays,
+        "school_profile": profile,
     }
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = entry_data
+
+    if profile.state_entities:
+        def _profile_source_changed(_event) -> None:
+            for coordinator in (timetable, calendar, meinunterricht, lerngruppen, vertretung):
+                current = coordinator.data
+                if current is None:
+                    current = getattr(coordinator, "last_successful_data", None)
+                if current is not None:
+                    coordinator.async_set_updated_data(current)
+
+        entry_data["school_profile_unsub"] = async_track_state_change_event(
+            hass,
+            list(profile.state_entities),
+            _profile_source_changed,
+        )
 
     await _remove_disabled_calendar_entities(hass, entry)
     await _remove_disabled_vertretung_entities(hass, entry)
@@ -309,6 +321,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     data = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
+    profile_unsub = data.get("school_profile_unsub")
+    if profile_unsub is not None:
+        profile_unsub()
+
     timetable = data.get("timetable")
     if timetable is not None:
         timetable.async_stop_free_day_tracking()

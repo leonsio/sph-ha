@@ -7,6 +7,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ...api.subjects import subject_name
 from ...const import CONF_CHILD_NAME, CONF_CHILD_SHORTCUT
+from ...school_profiles import get_school_profile
 from ..stundenplan.sensor import child_label
 from .helpers import entries_for, plan_days, today, tomorrow
 
@@ -30,7 +31,7 @@ def vertretung_payload(coordinator, timetable_coordinator, entry) -> dict:
     )
     heute = enrich_entries(entries_for(data, today()))
     morgen = enrich_entries(entries_for(data, tomorrow()))
-    return {
+    payload = {
         "kind": entry.data.get(CONF_CHILD_NAME, ""),
         "kind_kürzel": entry.data.get(CONF_CHILD_SHORTCUT, ""),
         "klasse": timetable_data.get("klasse", ""),
@@ -50,6 +51,10 @@ def vertretung_payload(coordinator, timetable_coordinator, entry) -> dict:
         "geplante_tage": [day.get("datum") for day in days],
         "attribution": "Schulportal Hessen",
     }
+    return get_school_profile(entry).transform_substitution_payload(
+        payload,
+        coordinator.hass,
+    )
 
 
 def compact_json(payload: dict) -> str:

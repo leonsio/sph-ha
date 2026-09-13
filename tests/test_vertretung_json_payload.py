@@ -37,6 +37,10 @@ def _load_sensor_module():
         "CONF_CHILD_NAME = 'child_name'\nCONF_CHILD_SHORTCUT = 'child_shortcut'",
     )
     source = source.replace(
+        "from ...school_profiles import get_school_profile",
+        "class _PassthroughProfile:\n    def transform_substitution_payload(self, payload, hass=None):\n        return payload\ndef get_school_profile(entry):\n    return _PassthroughProfile()",
+    )
+    source = source.replace(
         "from ..stundenplan.sensor import child_label",
         "def child_label(entry):\n    return 'Maxim (Mk)'",
     )
@@ -107,6 +111,7 @@ class VertretungJsonPayloadTest(unittest.TestCase):
                 "wird_aktualisiert": False,
             },
             last_successful_data=None,
+            hass=None,
         )
         timetable = SimpleNamespace(data={"klasse": "05cG"}, last_successful_data=None)
         entry = SimpleNamespace(data={"child_name": "Maxim", "child_shortcut": "Mk"})

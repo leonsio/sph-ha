@@ -26,6 +26,7 @@ from .module.lerngruppen.calendar import SphLearningGroupsCalendar
 from .module.stundenplan.calendar import SphTimetableCalendar
 from .module.stundenplan.movable_holidays import SphMovableHolidaysCalendar
 from .module.stundenplan.sensor import child_label
+from .school_profiles import get_school_profile
 
 
 def _event_datetime(value: str, all_day: bool, hass) -> date | datetime | None:
@@ -49,8 +50,11 @@ def _event_datetime(value: str, all_day: bool, hass) -> date | datetime | None:
     return parsed
 
 
-def _calendar_event(item: dict, hass) -> CalendarEvent | None:
+def _calendar_event(item: dict, hass, entry=None) -> CalendarEvent | None:
     """Convert one cached SPH event to a Home Assistant CalendarEvent."""
+    if entry is not None:
+        item = get_school_profile(entry).transform_calendar_item(item, hass)
+
     all_day = bool(item.get("all_day", False))
     start = _event_datetime(item.get("start", ""), all_day, hass)
     end = _event_datetime(item.get("end", ""), all_day, hass)
@@ -97,7 +101,7 @@ class SphSchoolCalendar(CoordinatorEntity, CalendarEntity):
     def _events(self) -> list[CalendarEvent]:
         events = []
         for item in self.coordinator.data or []:
-            event = _calendar_event(item, self.hass)
+            event = _calendar_event(item, self.hass, self.entry)
             if event is not None:
                 events.append(event)
         return sorted(events, key=lambda event: self._sort_key(event.start))
@@ -195,9 +199,6 @@ class SphCombinedCalendar(CalendarEntity):
         """Attach source helpers and react to every underlying coordinator update."""
         await super().async_added_to_hass()
         for source in self._sources:
-            # The source calendars are helpers only and are not added to the
-            # entity platform in combined mode. They still need HA context for
-            # timezone handling and event conversion.
             source.hass = self.hass
 
         def _source_updated() -> None:
@@ -285,8 +286,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
         if bool(entry.data.get(CONF_MODULE_KALENDER, DEFAULT_MODULE_ENABLED)):
             entities.insert(0, SphSchoolCalendar(data["calendar"], entry))
 
-    # The movable-holiday calendar remains a dedicated technical free-day
-    # source. It is intentionally not merged into the user-facing SPH calendar.
     if data["movable_holidays"].enabled:
         entities.append(SphMovableHolidaysCalendar(data["movable_holidays"], entry))
 

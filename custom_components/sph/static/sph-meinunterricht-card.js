@@ -1,4 +1,4 @@
-import { schoolCard, schoolTeacher } from "./school-hacks.js?v=0.4.24";
+import { schoolCard, schoolTeacher } from "./school-profile.js?v=0.6.0";
 class SphMeinUnterrichtCard extends HTMLElement {
   setConfig(config) {
     this.config = config || {};

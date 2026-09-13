@@ -1,5 +1,5 @@
-import { schoolCard, visibleSchoolBadges, schoolNow, selectSchoolDay, schoolBadges, schoolClasses, schoolStyles } from "./school-hacks.js?v=0.5.1";
-import { substitutionLesson, substitutionNews } from "./substitution-adapter.js?v=0.5.1";
+import { schoolCard, visibleSchoolBadges, schoolNow, selectSchoolDay, schoolBadges, schoolClasses, schoolStyles } from "./school-profile.js?v=0.6.0";
+import { substitutionLesson, substitutionNews } from "./substitution-adapter.js?v=0.6.0";
 class SphStundenplanTagCard extends HTMLElement {
   setConfig(config){this.config=config||{};if(!this.shadowRoot)this.attachShadow({mode:"open"});this._timer=this._timer||null;}
   connectedCallback(){this._startTimer();}

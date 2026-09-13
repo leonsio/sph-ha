@@ -9,6 +9,7 @@ from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
+from ...school_profiles import get_school_profile
 from ..vertretung.apply import apply_substitution, find_substitution
 from .sensor import child_label, subject_name
 
@@ -43,7 +44,7 @@ def _slot_key(lesson: dict) -> tuple:
 
 
 def _filter_day_for_week(day, week: str) -> list[dict]:
-    """Apply the same A/B counterpart semantics as the KFG cards."""
+    """Apply the same A/B counterpart semantics as the timetable cards."""
     lessons = list(day or [])
     wanted = _week_code(week)
     if not wanted:
@@ -188,6 +189,11 @@ class SphTimetableCalendar(CoordinatorEntity, CalendarEntity):
             self._substitution_data(), target, lesson, child_class
         )
         display = apply_substitution(lesson, substitution)
+        display = get_school_profile(self.entry).transform_timetable_display(
+            display,
+            self.hass,
+            substitution=substitution,
+        )
         subject = display["subject"]
         teacher = display["teacher"]
         room = display["room"]
@@ -267,8 +273,6 @@ class SphTimetableCalendar(CoordinatorEntity, CalendarEntity):
 
         target = start_day
         while target < end_day:
-            # Any entry in calendar.deutschland_he marks the complete date as
-            # school-free. Suppress both lessons and the Schulwoche A/B marker.
             if target.isoformat() in free_days:
                 target += timedelta(days=1)
                 continue

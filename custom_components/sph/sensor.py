@@ -21,8 +21,8 @@ from .module.vertretung.sensor import SphVertretungJsonSensor, SphVertretungSens
 async def async_setup_entry(hass, entry, async_add_entities):
     data = hass.data["sph"][entry.entry_id]
     entities = [
-        SphTimetableSensor(data["timetable"], entry),
-        SphTimetableJsonSensor(data["timetable"], entry),
+        SphTimetableSensor(data["timetable"], entry, data.get("vertretung")),
+        SphTimetableJsonSensor(data["timetable"], entry, data.get("vertretung")),
         SphMeinUnterrichtSensor(data["meinunterricht"], entry),
         SphMeinUnterrichtJsonSensor(data["meinunterricht"], entry),
         SphLearningGroupsSensor(data["lerngruppen"], entry),

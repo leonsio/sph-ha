@@ -2,7 +2,7 @@
 
 Home-Assistant-Custom-Integration für Daten aus dem **Schulportal Hessen (SPH)**.
 
-Aktueller Dokumentationsstand: **Version 0.5.0**.
+Aktueller Dokumentationsstand: **Version 0.6.0**.
 
 ## Funktionen
 
@@ -14,7 +14,7 @@ Die Integration wird pro Kind eingerichtet und umfasst fünf unabhängig aktivie
 - **Lerngruppen** – Leistungskontrollen mit Fach, Dauer, Schulstunden und Lehrkraft sowie eigenen lokalen Terminen.
 - **Vertretungsplan** – Vertretungen, Entfälle, Raum- und Fachwechsel sowie Hinweise aus dem Schulportal.
 
-Zusätzlich stellt SPH-HA eigene Lovelace-Karten für Stundenplan, Kalender, Lerngruppen, Mein Unterricht und Vertretungen bereit. Schulspezifische Anpassungen können über **School Hacks** ergänzt werden, ohne separate Kartenvarianten pflegen zu müssen.
+Zusätzlich stellt SPH-HA eigene Lovelace-Karten bereit. Ab Version 0.6 können schulspezifische Besonderheiten über **Schul-Profile** pro Kind aktiviert werden. Profile können sowohl Daten in Sensoren/JSON/Kalendern als auch notwendige Darstellungsregeln der Karten anpassen.
 
 ## Installation über HACS
 
@@ -34,6 +34,7 @@ Für jedes Kind wird ein eigener Integrationseintrag angelegt. Benötigt werden 
 - Schulnummer
 - Benutzername und Passwort des Schulportal-Hessen-Kontos
 - gewünschtes Aktualisierungsintervall
+- optional ein Schul-Profil
 
 Weitere Einstellungen können später über die Integrationsoptionen geändert werden.
 
@@ -46,6 +47,7 @@ Weitere Einstellungen können später über die Integrationsoptionen geändert w
 | **Schulnummer** | Schulnummer des verwendeten Schulportal-Hessen-Zugangs. |
 | **Benutzername** | Benutzername des SPH-Kontos. |
 | **Passwort** | Passwort des SPH-Kontos. |
+| **Schul-Profil** | Optionales, pro Kind gespeichertes Profil für schulspezifische Daten- und Darstellungsanpassungen. Standard ist kein Profil. |
 | **Aktualisierungsintervall** | Legt fest, wie häufig die Daten regulär aktualisiert werden. Zulässig sind 5 bis 1440 Minuten, Standard sind 60 Minuten. |
 | **Bezugsstunde für Entfälle** | Legt fest, welche Schulstunde für die Prüfung auf einen Ausfall heute bzw. morgen verwendet wird. |
 | **Stundenplan-Ausgabe** | Wahl zwischen dem persönlichen Stundenplan und einer erweiterten Ausgabe, die zusätzlich den vollständigen vom SPH gelieferten Stundenplan enthält. |
@@ -60,9 +62,9 @@ Weitere Einstellungen können später über die Integrationsoptionen geändert w
 
 Der persönliche Stundenplan berücksichtigt die vom Schulportal gemeldete A-/B-Woche und kann schulfreie Tage aus Home Assistant sowie die konfigurierten beweglichen Ferientage berücksichtigen.
 
-Vertretungen aus dem SPH-Vertretungsplan können direkt in den Stundenplan-Darstellungen berücksichtigt werden. Dazu gehören unter anderem Entfälle, Vertretungslehrkräfte, Raumänderungen und Fachwechsel.
+Vertretungen aus dem SPH-Vertretungsplan können in datumsbezogenen Stundenplan-Darstellungen und Kalendern berücksichtigt werden. Dazu gehören unter anderem Entfälle, Vertretungslehrkräfte, Raumänderungen und Fachwechsel.
 
-Für die Kalenderansicht wird der Stundenplan über mehrere Wochen fortgeschrieben. Dabei werden A-/B-Wochen automatisch weitergeführt und bekannte Vertretungen auf die jeweiligen Unterrichtstermine angewendet.
+Die Auswahl der Stundenplanquelle bleibt unabhängig vom Schul-Profil. Ein Profil darf insbesondere nicht `eigener_grundplan` als Ersatzquelle verwenden.
 
 ## Schulkalender
 
@@ -93,7 +95,7 @@ Der Vertretungsplan zeigt veröffentlichte Änderungen für die kommenden Schult
 - Vertretungslehrkräfte
 - Hinweise des Tages
 
-Die Informationen werden nicht nur in der eigenen Vertretungsplan-Karte verwendet, sondern können auch in Stundenplan- und Kalenderdarstellungen einfließen.
+Die Informationen werden in der Vertretungsplan-Karte sowie in datumsbezogenen Stundenplan- und Kalenderdarstellungen verwendet.
 
 ## Lovelace-Karten
 
@@ -109,15 +111,33 @@ SPH-HA bringt eigene Karten für folgende Ansichten mit:
 
 Die Karten werden automatisch registriert. Die vollständige Dokumentation einschließlich Screenshots und Konfigurationsbeispielen befindet sich unter [docs/lovelace](docs/lovelace/README.md).
 
-## School Hacks
+## Schul-Profile
 
-School Hacks ergänzen die allgemeinen Lovelace-Karten um schulspezifische Darstellungs- und Zuordnungsregeln. Dadurch müssen keine separaten Kartenvarianten pro Schule gepflegt werden.
+Schul-Profile bündeln ausschließlich die Besonderheiten einer Schule. Sie werden pro Kind ausgewählt und können serverseitig Werte in Sensoren, JSON-Ausgaben und Kalendern sowie optional UI-Regeln für Lovelace anpassen.
+
+Die bestehende Sensorstruktur bleibt dabei grundsätzlich erhalten. Zusätzlich enthalten profilierte Payloads das Metadatum `school_profile`.
 
 Derzeit vorhanden:
 
 - [`kfg` – Kaiserin-Friedrich-Gymnasium Bad Homburg](docs/schools/kfg/README.md)
 
-Allgemeine Beschreibung und Anleitung für weitere Schulen: [School Hacks](docs/lovelace/school-hacks.md).
+Benutzerdokumentation: [Schul-Profile](docs/SCHOOL_PROFILES.md)
+
+Entwicklerdokumentation: [Schul-Profile entwickeln](docs/SCHOOL_PROFILES_DEVELOPMENT.md)
+
+### Migration von School Hacks
+
+Der bisherige Lovelace-Parameter
+
+```yaml
+school-hacks: kfg
+```
+
+ist in 0.6.0 noch als Legacy-Alias vorhanden. Neue Konfigurationen wählen das Profil direkt in der Integration oder verwenden bei einem expliziten Karten-Override:
+
+```yaml
+school-profile: kfg
+```
 
 ## Robustheit
 
@@ -127,7 +147,8 @@ Bei vorübergehenden Abruffehlern bleiben zuletzt erfolgreich geladene Daten sow
 
 - [Entitäten, Sensoren und Services](docs/ENTITAETEN_UND_SERVICES.md)
 - [Lovelace-Karten](docs/lovelace/README.md)
-- [School Hacks](docs/lovelace/school-hacks.md)
+- [Schul-Profile](docs/SCHOOL_PROFILES.md)
+- [Schul-Profile für Entwickler](docs/SCHOOL_PROFILES_DEVELOPMENT.md)
 - [Schulspezifische Profile](docs/schools/README.md)
 - [Architektur](docs/ARCHITEKTUR.md)
 

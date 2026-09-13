@@ -7,6 +7,7 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ...const import CONF_CHILD_NAME, CONF_CHILD_SHORTCUT
+from ...school_profiles import get_school_profile
 from ..stundenplan.sensor import child_label
 from .coordinator import relevant_calendar_events
 
@@ -33,10 +34,12 @@ def calendar_preview(events, event_types=None):
 
 def calendar_json_payload(coordinator, timetable_coordinator, entry) -> dict:
     """Build complete configured calendar data for JSON consumers."""
+    profile = get_school_profile(entry)
     events = relevant_calendar_events(
         coordinator.data,
         coordinator.event_types,
     )
+    transformed = [profile.transform_calendar_item(event, coordinator.hass) for event in events]
     timetable_data = timetable_coordinator.data or {}
     items = [
         {
@@ -50,9 +53,9 @@ def calendar_json_payload(coordinator, timetable_coordinator, entry) -> dict:
             "location": event.get("location", ""),
             "uid": event.get("uid", ""),
         }
-        for event in sorted(events, key=lambda item: str(item.get("start", "")))
+        for event in sorted(transformed, key=lambda item: str(item.get("start", "")))
     ]
-    return {
+    payload = {
         "kind": entry.data.get(CONF_CHILD_NAME, ""),
         "kind_kürzel": entry.data.get(CONF_CHILD_SHORTCUT, ""),
         "klasse": timetable_data.get("klasse", ""),
@@ -60,6 +63,7 @@ def calendar_json_payload(coordinator, timetable_coordinator, entry) -> dict:
         "termine_gesamt": len(items),
         "termine": items,
     }
+    return profile.transform_calendar_payload(payload, coordinator.hass)
 
 
 def compact_json(payload: dict) -> str:
@@ -89,36 +93,39 @@ class SphCalendarSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self):
-        # Filter again at entity level deliberately. This guarantees that the
-        # legacy sensor and all cards consuming its `termine` attribute expose
-        # only calendar categories selected in the integration settings.
         events = relevant_calendar_events(
             self.coordinator.data,
             self.coordinator.event_types,
         )
+        profile = get_school_profile(self.entry)
+        transformed = [
+            profile.transform_calendar_item(event, self.coordinator.hass)
+            for event in events
+        ]
         timetable_data = self.timetable_coordinator.data or {}
         art_counts = Counter(
             str(event.get("art", "")).strip()
-            for event in events
+            for event in transformed
             if str(event.get("art", "")).strip()
         )
         responsible_counts = Counter(
             str(event.get("verantwortlich", "")).strip()
-            for event in events
+            for event in transformed
             if str(event.get("verantwortlich", "")).strip()
         )
-        return {
+        payload = {
             "kind": self.entry.data.get(CONF_CHILD_NAME, ""),
             "kind_kürzel": self.entry.data.get(CONF_CHILD_SHORTCUT, ""),
             "klasse": timetable_data.get("klasse", ""),
             "kalenderarten": list(self.coordinator.event_types),
-            "termine": calendar_preview(events, self.coordinator.event_types),
-            "termine_gesamt": len(events),
-            "termine_weitere": max(0, len(events) - CALENDAR_ATTRIBUTE_LIMIT),
+            "termine": calendar_preview(transformed, self.coordinator.event_types),
+            "termine_gesamt": len(transformed),
+            "termine_weitere": max(0, len(transformed) - CALENDAR_ATTRIBUTE_LIMIT),
             "arten": dict(art_counts),
             "verantwortliche": dict(responsible_counts),
             "attribution": "Schulportal Hessen",
         }
+        return profile.transform_calendar_payload(payload, self.coordinator.hass)
 
 
 class SphCalendarJsonSensor(CoordinatorEntity, SensorEntity):

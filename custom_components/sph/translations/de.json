@@ -3,13 +3,14 @@
     "step": {
       "user": {
         "title": "Schulportal Hessen",
-        "description": "Einrichtung eines Kindes und seines Schulportal-Hessen-Kontos. Wähle die Module aus, die Daten abrufen sollen. Standardmäßig werden Stundenplan, Schulkalender und Lerngruppen in einem gemeinsamen SPH-Kalender zusammengeführt. Optional kann ein Schulamtsbezirk für die beweglichen Ferientage ausgewählt werden.",
+        "description": "Einrichtung eines Kindes und seines Schulportal-Hessen-Kontos. Wähle bei Bedarf ein Schul-Profil für schulspezifische Daten- und Darstellungsanpassungen.",
         "data": {
           "child_name": "Name des Kindes",
           "child_shortcut": "Kürzel des Kindes",
           "school_id": "Schulnummer",
           "username": "Benutzername",
           "password": "Passwort",
+          "school_profile": "Schul-Profil",
           "update_interval": "Aktualisierungsintervall (Minuten)",
           "first_lesson": "Bezugsstunde für Entfall-Sensoren",
           "timetable_output": "Stundenplan-Ausgabe",
@@ -29,12 +30,14 @@
     "step": {
       "init": {
         "title": "Schulportal Hessen konfigurieren",
+        "description": "Das Schul-Profil wird pro Kind gespeichert. Es kann Sensor- und Kalenderwerte schulspezifisch aufbereiten und wird von den SPH-Lovelace-Karten automatisch erkannt.",
         "data": {
           "child_name": "Name des Kindes",
           "child_shortcut": "Kürzel des Kindes",
           "school_id": "Schulnummer",
           "username": "Benutzername",
           "password": "Passwort",
+          "school_profile": "Schul-Profil",
           "update_interval": "Aktualisierungsintervall (Minuten)",
           "first_lesson": "Bezugsstunde für Entfall-Sensoren",
           "timetable_output": "Stundenplan-Ausgabe",

@@ -16,6 +16,7 @@ from ...const import (
     DEFAULT_TIMETABLE_OUTPUT,
     TIMETABLE_OUTPUT_ALL,
 )
+from ...school_profiles import get_school_profile
 
 
 def subject_name(subject):
@@ -69,7 +70,7 @@ def _empty_days_like(days):
     return [[] for _ in (days or [])]
 
 
-def timetable_payload(coordinator, entry) -> dict:
+def timetable_payload(coordinator, entry, substitution_coordinator=None) -> dict:
     """Build the timetable payload shared by normal and JSON sensors."""
     data = coordinator.data or coordinator.last_successful_data or {}
     free_days = list(data.get("free_days", []) or [])
@@ -83,7 +84,7 @@ def timetable_payload(coordinator, entry) -> dict:
         all_days if timetable_output == TIMETABLE_OUTPUT_ALL else _empty_days_like(all_days)
     )
 
-    return {
+    payload = {
         "kind": entry.data.get(CONF_CHILD_NAME, ""),
         "kind_kürzel": entry.data.get(CONF_CHILD_SHORTCUT, ""),
         "klasse": data.get("klasse", ""),
@@ -96,6 +97,22 @@ def timetable_payload(coordinator, entry) -> dict:
         "freie_tage_kalender": data.get("free_day_calendar", ""),
     }
 
+    substitution_data = {}
+    if substitution_coordinator is not None and getattr(
+        substitution_coordinator, "enabled", False
+    ):
+        substitution_data = (
+            substitution_coordinator.data
+            or getattr(substitution_coordinator, "last_successful_data", None)
+            or {}
+        )
+
+    return get_school_profile(entry).transform_timetable_payload(
+        payload,
+        coordinator.hass,
+        substitution_data=substitution_data,
+    )
+
 
 def compact_json(payload: dict) -> str:
     """Serialize data as compact UTF-8 JSON for external consumers."""
@@ -106,11 +123,21 @@ class SphTimetableSensor(CoordinatorEntity, SensorEntity):
     _attr_has_entity_name = False
     _attr_icon = "mdi:calendar-clock"
 
-    def __init__(self, coordinator, entry):
+    def __init__(self, coordinator, entry, substitution_coordinator=None):
         super().__init__(coordinator)
         self.entry = entry
+        self.substitution_coordinator = substitution_coordinator
         self._attr_unique_id = f"{entry.entry_id}_timetable"
         self._attr_name = f"Stundenplan {child_label(entry)}"
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        if self.substitution_coordinator is not None and getattr(
+            self.substitution_coordinator, "enabled", False
+        ):
+            self.async_on_remove(
+                self.substitution_coordinator.async_add_listener(self.async_write_ha_state)
+            )
 
     def _current_data(self):
         """Return current data or the last successfully parsed timetable."""
@@ -127,7 +154,11 @@ class SphTimetableSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self):
-        return timetable_payload(self.coordinator, self.entry)
+        return timetable_payload(
+            self.coordinator,
+            self.entry,
+            self.substitution_coordinator,
+        )
 
 
 class SphTimetableJsonSensor(CoordinatorEntity, SensorEntity):
@@ -136,11 +167,21 @@ class SphTimetableJsonSensor(CoordinatorEntity, SensorEntity):
     _attr_has_entity_name = False
     _attr_icon = "mdi:code-json"
 
-    def __init__(self, coordinator, entry):
+    def __init__(self, coordinator, entry, substitution_coordinator=None):
         super().__init__(coordinator)
         self.entry = entry
+        self.substitution_coordinator = substitution_coordinator
         self._attr_unique_id = f"{entry.entry_id}_timetable_json"
         self._attr_name = f"Stundenplan {child_label(entry)} JSON"
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        if self.substitution_coordinator is not None and getattr(
+            self.substitution_coordinator, "enabled", False
+        ):
+            self.async_on_remove(
+                self.substitution_coordinator.async_add_listener(self.async_write_ha_state)
+            )
 
     @property
     def available(self):
@@ -152,7 +193,13 @@ class SphTimetableJsonSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self):
-        value = compact_json(timetable_payload(self.coordinator, self.entry))
+        value = compact_json(
+            timetable_payload(
+                self.coordinator,
+                self.entry,
+                self.substitution_coordinator,
+            )
+        )
         return {
             "json": value,
             "format": "application/json",
