@@ -6,6 +6,7 @@ from datetime import date
 import json
 from pathlib import Path
 from types import SimpleNamespace
+import unittest
 
 SENSOR_PATH = (
     Path(__file__).resolve().parents[1]
@@ -65,62 +66,68 @@ def _load_sensor_module():
     return namespace
 
 
-def test_json_payload_contains_full_plan():
-    module = _load_sensor_module()
-    coordinator = SimpleNamespace(
-        data={
-            "tage": [
-                {
-                    "datum": "2026-08-26",
-                    "wochentag": "Mittwoch",
-                    "eintraege": [
-                        {
-                            "fach": "M",
-                            "art": "Entf.",
-                            "art_lang": "Entfall",
-                            "entfall": True,
-                            "stunden": [1, 2],
-                        }
-                    ],
-                    "hinweise": ["Hinweis"],
-                    "anzahl": 1,
-                },
-                {
-                    "datum": "2026-08-27",
-                    "wochentag": "Donnerstag",
-                    "eintraege": [
-                        {
-                            "fach": "D",
-                            "art": "Vertr",
-                            "art_lang": "Vertretung",
-                            "entfall": False,
-                            "stunden": [3],
-                        }
-                    ],
-                    "hinweise": [],
-                    "anzahl": 1,
-                },
-            ],
-            "aktualisiert": "2026-08-26T07:12:44",
-            "wird_aktualisiert": False,
-        },
-        last_successful_data=None,
-    )
-    timetable = SimpleNamespace(data={"klasse": "05cG"}, last_successful_data=None)
-    entry = SimpleNamespace(data={"child_name": "Maxim", "child_shortcut": "Mk"})
+class VertretungJsonPayloadTest(unittest.TestCase):
+    def test_json_payload_contains_full_plan(self):
+        module = _load_sensor_module()
+        coordinator = SimpleNamespace(
+            data={
+                "tage": [
+                    {
+                        "datum": "2026-08-26",
+                        "wochentag": "Mittwoch",
+                        "eintraege": [
+                            {
+                                "fach": "M",
+                                "art": "Entf.",
+                                "art_lang": "Entfall",
+                                "entfall": True,
+                                "stunden": [1, 2],
+                            }
+                        ],
+                        "hinweise": ["Hinweis"],
+                        "anzahl": 1,
+                    },
+                    {
+                        "datum": "2026-08-27",
+                        "wochentag": "Donnerstag",
+                        "eintraege": [
+                            {
+                                "fach": "D",
+                                "art": "Vertr",
+                                "art_lang": "Vertretung",
+                                "entfall": False,
+                                "stunden": [3],
+                            }
+                        ],
+                        "hinweise": [],
+                        "anzahl": 1,
+                    },
+                ],
+                "aktualisiert": "2026-08-26T07:12:44",
+                "wird_aktualisiert": False,
+            },
+            last_successful_data=None,
+        )
+        timetable = SimpleNamespace(data={"klasse": "05cG"}, last_successful_data=None)
+        entry = SimpleNamespace(data={"child_name": "Maxim", "child_shortcut": "Mk"})
 
-    payload = module["vertretung_payload"](coordinator, timetable, entry)
-    encoded = module["compact_json"](payload)
-    decoded = json.loads(encoded)
+        payload = module["vertretung_payload"](coordinator, timetable, entry)
+        encoded = module["compact_json"](payload)
+        decoded = json.loads(encoded)
 
-    assert decoded["kind"] == "Maxim"
-    assert decoded["kind_kürzel"] == "Mk"
-    assert decoded["klasse"] == "05cG"
-    assert decoded["anzahl_heute"] == 1
-    assert decoded["anzahl_morgen"] == 1
-    assert decoded["entfaelle_heute"] == 1
-    assert decoded["entfaelle_morgen"] == 0
-    assert decoded["heute"][0]["fach_lang"] == "Mathematik"
-    assert decoded["morgen"][0]["fach_lang"] == "Deutsch"
-    assert decoded["tage"][0]["eintraege"][0]["art_lang"] == "Entfall"
-    assert decoded["aktualisiert"] == "2026-08-26T07:12:44"
+        self.assertEqual(decoded["kind"], "Maxim")
+        self.assertEqual(decoded["kind_kürzel"], "Mk")
+        self.assertEqual(decoded["klasse"], "05cG")
+        self.assertEqual(decoded["anzahl_heute"], 1)
+        self.assertEqual(decoded["anzahl_morgen"], 1)
+        self.assertEqual(decoded["entfaelle_heute"], 1)
+        self.assertEqual(decoded["entfaelle_morgen"], 0)
+        self.assertEqual(decoded["heute"][0]["fach_lang"], "Mathematik")
+        self.assertEqual(decoded["morgen"][0]["fach_lang"], "Deutsch")
+        self.assertEqual(decoded["tage"][0]["eintraege"][0]["art_lang"], "Entfall")
+        self.assertEqual(decoded["aktualisiert"], "2026-08-26T07:12:44")
+        self.assertEqual(decoded["attribution"], "Schulportal Hessen")
+
+
+if __name__ == "__main__":
+    unittest.main()
