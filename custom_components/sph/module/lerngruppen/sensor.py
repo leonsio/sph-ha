@@ -6,17 +6,22 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ...const import CONF_CHILD_NAME, CONF_CHILD_SHORTCUT
+from ...school_profiles import get_school_profile
 from ..stundenplan.sensor import child_label
 
 
 def learning_groups_payload(coordinator, entry) -> dict:
     items = list(coordinator.data or [])
-    return {
+    payload = {
         "kind": entry.data.get(CONF_CHILD_NAME, ""),
         "kind_kürzel": entry.data.get(CONF_CHILD_SHORTCUT, ""),
         "anzahl": len(items),
         "leistungskontrollen": items,
     }
+    return get_school_profile(entry).transform_learning_groups_payload(
+        payload,
+        coordinator.hass,
+    )
 
 
 def compact_json(payload: dict) -> str:
