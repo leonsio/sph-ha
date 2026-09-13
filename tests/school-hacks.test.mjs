@@ -61,7 +61,7 @@ globalThis.HTMLElement = class {attachShadow(){this.shadowRoot={innerHTML:'',que
 for (const name of ['stundenplan-card','stundenplan-tag-card','stundenplan-grid-card']) {
  test(`normal renderer with optional school profile: ${name}`,async(t)=>{
   t.mock.timers.enable({apis:['Date'],now:new Date(2026,8,7,8).getTime()});
-  await import(`../custom_components/sph/static/sph-${name}.js?v=0.4.23`);
+  await import(`../custom_components/sph/static/sph-${name}.js?v=0.4.24`);
   const h=structuredClone(hass);
   h.states[timetable.entity_id].attributes.eigener_plan=Array.from({length:5},()=>[{...lesson,fach:'Aktives Fach',badge:'A'},{...lesson,subject:'F',fach:'Fallback Fach',badge:null}]);
   for(const prefix of ['sph']){

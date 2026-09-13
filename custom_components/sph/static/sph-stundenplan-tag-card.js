@@ -1,4 +1,4 @@
-import { schoolCard, visibleSchoolBadges, schoolNow, selectSchoolDay, schoolDays, schoolLesson, schoolNews, schoolBadges, schoolClasses, schoolStyles } from "./school-hacks.js?v=0.4.23";
+import { schoolCard, visibleSchoolBadges, schoolNow, selectSchoolDay, schoolDays, schoolLesson, schoolNews, schoolBadges, schoolClasses, schoolStyles } from "./school-hacks.js?v=0.4.24";
 class SphStundenplanTagCard extends HTMLElement {
   setConfig(config){this.config=config||{};if(!this.shadowRoot)this.attachShadow({mode:"open"});this._timer=this._timer||null;}
   connectedCallback(){this._startTimer();}

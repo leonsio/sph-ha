@@ -1,4 +1,4 @@
-import { schoolCard, visibleSchoolBadges, schoolNow, selectSchoolWeek, schoolLesson, schoolNews, schoolHeading, schoolBadges, schoolClasses, schoolStyles } from "./school-hacks.js?v=0.4.23";
+import { schoolCard, visibleSchoolBadges, schoolNow, selectSchoolWeek, schoolLesson, schoolNews, schoolHeading, schoolBadges, schoolClasses, schoolStyles } from "./school-hacks.js?v=0.4.24";
 class SphStundenplanCard extends HTMLElement {
   static schoolWeekView = true;
   setConfig(config) { this.config = config || {}; if (!this.shadowRoot) this.attachShadow({ mode: "open" }); }
