@@ -6,6 +6,7 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ...const import CONF_CHILD_NAME, CONF_CHILD_SHORTCUT
+from ...school_profiles import get_school_profile
 from .helpers import subject_overview
 
 
@@ -21,7 +22,7 @@ def meinunterricht_payload(coordinator, entry) -> dict:
     """Build the complete Mein Unterricht payload."""
     tasks = coordinator.data or []
     subjects = subject_overview(tasks)
-    return {
+    payload = {
         "kind": entry.data.get(CONF_CHILD_NAME, ""),
         "kind_kürzel": entry.data.get(CONF_CHILD_SHORTCUT, ""),
         "aufgaben": tasks,
@@ -32,6 +33,10 @@ def meinunterricht_payload(coordinator, entry) -> dict:
         "faecher_gesamt": len(subjects),
         "faecher_offen": sum(1 for subject in subjects if subject["offen"]),
     }
+    return get_school_profile(entry).transform_meinunterricht_payload(
+        payload,
+        coordinator.hass,
+    )
 
 
 def compact_json(payload: dict) -> str:
