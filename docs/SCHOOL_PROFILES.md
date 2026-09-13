@@ -1,20 +1,18 @@
 # Schul-Profile
 
-Ab Version 0.6.0 unterstützt SPH-HA **Schul-Profile**. Ein Profil bündelt Besonderheiten einer bestimmten Schule und wird **pro Kind** in der Integration ausgewählt.
+Schul-Profile bündeln Besonderheiten einer bestimmten Schule und werden **pro Kind** im jeweiligen Integrationseintrag ausgewählt.
 
 ## Zweck
 
-SPH-HA versucht möglichst viele Funktionen allgemein für alle Schulen abzubilden. Manche Schulen verwenden jedoch eigene Kürzel, Zuordnungen oder Darstellungsregeln. Solche Abweichungen können über ein Schul-Profil ergänzt werden.
+SPH-HA bildet allgemeine Funktionen möglichst schulübergreifend im Core ab. Schul-Profile ergänzen ausschließlich schulspezifische Abweichungen, zum Beispiel:
 
-Ein Profil kann sowohl serverseitige Daten als auch die mitgelieferten Lovelace-Karten beeinflussen. Dadurch erscheinen schulspezifisch aufbereitete Werte nicht nur in einer Karte, sondern – soweit sinnvoll – auch in Sensoren, JSON-Ausgaben und Kalendern.
-
-Typische Beispiele:
-
-- Lehrerkürzel in Namen auflösen
+- Lehrerkürzel in vollständige Namen auflösen
 - schulspezifische Fachnamen verwenden
 - besondere Vertretungscodes benennen
-- Kalenderbeschreibungen anpassen
-- A/B-Wochen in den SPH-Karten schulspezifisch darstellen
+- Beschreibungen in Sensoren und Kalendern aufbereiten
+- A/B-Wochen oder andere Darstellungsregeln in den SPH-Lovelace-Karten anpassen
+
+Ein Profil kann sowohl serverseitige Daten als auch optionale Darstellungsregeln beeinflussen. Dadurch stehen schulspezifisch aufbereitete Werte – soweit fachlich sinnvoll – in Sensoren, JSON-Ausgaben, Kalendern und Lovelace zur Verfügung.
 
 ## Auswahl
 
@@ -34,32 +32,28 @@ Vorhandene Profile:
 
 ## Pro Kind
 
-Das Profil gehört immer zum Config-Entry des Kindes. Zwei Kinder in derselben Home-Assistant-Installation können daher unterschiedliche Profile verwenden.
+Das Profil gehört zum Config-Entry des Kindes. Mehrere Kinder in derselben Home-Assistant-Installation können daher unterschiedliche Profile verwenden.
 
-## Stundenplan-Auswahl bleibt unabhängig
+## Stundenplan-Auswahl
 
-Das Schul-Profil ändert **nicht**, welcher Stundenplan verwendet wird.
+Das Schul-Profil ändert **nicht**, welcher Stundenplan verwendet wird. Die Einstellung **Stundenplan-Ausgabe** bleibt maßgeblich.
 
-Die vorhandene Einstellung **Stundenplan-Ausgabe** bleibt maßgeblich. Das Profil verarbeitet ausschließlich die Daten, die durch die normale Konfiguration für das Kind vorgesehen sind.
+Bei **„Nur eigener Plan“** werden Profilanpassungen auf `eigener_plan` angewandt. `tage` bleibt entsprechend der Konfiguration leer.
 
-Bei **„Nur eigener Plan“** werden die Profilanpassungen auf `eigener_plan` angewandt. `tage` bleibt entsprechend der bisherigen Konfiguration leer.
-
-Bei **„Eigener Plan + vollständiger SPH-Stundenplan“** werden dieselben Profilanpassungen auf **beide** veröffentlichten Bereiche angewandt:
+Bei **„Eigener Plan + vollständiger SPH-Stundenplan“** werden dieselben Profilanpassungen auf beide veröffentlichten Bereiche angewandt:
 
 - `eigener_plan` – persönlicher Stundenplan des Kindes
 - `tage` – vollständiger vom SPH gelieferter Stundenplan
 
-Damit sind z. B. schulabhängige Lehrer- oder Fachnamen in beiden Ausgaben konsistent.
+`eigener_grundplan` wird nicht als alternative Profilquelle verwendet und nicht durch das Profil umgeschrieben.
 
-Insbesondere wird `eigener_grundplan` nicht als alternative Quelle für Profilanpassungen verwendet und nicht durch das Profil umgeschrieben.
-
-Das ist wichtig, weil umfangreichere Stundenpläne je nach Schule mehrere parallele Angebote enthalten können, z. B. gleichzeitig katholische Religion, evangelische Religion und Ethik. Für das Kind bleibt der konfigurierte persönliche Stundenplan maßgeblich; bei aktivierter vollständiger Ausgabe wird der zusätzliche Gesamtplan lediglich separat ebenfalls profiliert.
+Das ist wichtig, weil vollständige Schulpläne je nach Schule mehrere parallele Angebote enthalten können, die nicht alle für ein einzelnes Kind gelten.
 
 ## Sensoren und JSON
 
-Die bestehende Struktur der Sensoren und JSON-Sensoren bleibt erhalten. Profile sollen Werte anpassen, aber bestehende Schlüssel und Verschachtelungen nicht unnötig verändern.
+Die bestehende Struktur der Sensoren und JSON-Sensoren bleibt erhalten. Profile passen Werte an, ohne vorhandene Schlüssel und Verschachtelungen unnötig zu verändern.
 
-Zusätzlich wird das aktive Profil als Metadatum ausgegeben:
+Profilierte Payloads enthalten zusätzlich:
 
 ```yaml
 school_profile: kfg
@@ -69,13 +63,13 @@ Die SPH-Lovelace-Karten können das Profil dadurch automatisch erkennen.
 
 ## Kalender
 
-Serverseitige Profilanpassungen werden auch bei den nativen Kalender-Entities berücksichtigt. Dadurch können beispielsweise aufgelöste Lehrernamen oder schulspezifische Fachnamen auch im Kalender erscheinen.
+Serverseitige Profilanpassungen werden auch in nativen Kalender-Entities berücksichtigt. Dadurch können beispielsweise aufgelöste Lehrernamen oder schulspezifische Fachnamen auch in Kalenderterminen erscheinen.
 
-Datumsabhängige Änderungen wie eine konkrete Vertretung werden nur dort angewandt, wo das konkrete Datum bekannt ist. Sie werden nicht dauerhaft in einen wiederverwendeten Wochenplan geschrieben.
+Datumsabhängige Änderungen wie eine konkrete Vertretung werden nur in Kontexten angewandt, in denen das konkrete Datum bekannt ist. Sie werden nicht dauerhaft in einen wiederverwendeten Wochenplan geschrieben.
 
 ## Lovelace
 
-Bei einem in der Integration ausgewählten Profil muss normalerweise kein zusätzlicher Parameter in der Karte gesetzt werden.
+Wenn das Profil im Integrationseintrag ausgewählt ist, ist normalerweise kein zusätzlicher Kartenparameter erforderlich.
 
 Beispiel:
 
@@ -84,25 +78,23 @@ type: custom:sph-stundenplan-grid-card
 entity: sensor.stundenplan_maxim_mk
 ```
 
-Für Tests oder einen expliziten Override kann verwendet werden:
+Für Tests oder einen gezielten Karten-Override kann das Profil direkt angegeben werden:
 
 ```yaml
 school-profile: kfg
 ```
 
-Der bisherige Parameter
+Mit
 
 ```yaml
-school-hacks: kfg
+school-profile: false
 ```
 
-bleibt in Version 0.6.0 aus Kompatibilitätsgründen als Legacy-Alias bestehen. Neue Konfigurationen sollten `school-profile` verwenden bzw. das Profil direkt in der Integration auswählen.
+kann die Profil-Darstellung einer einzelnen Karte deaktiviert werden, auch wenn der Sensor ein Profil meldet.
 
 ## KFG
 
-Das bisherige KFG-School-Hacks-Profil wurde in das neue KFG-Schul-Profil übernommen.
-
-Das Profil enthält unter anderem:
+Das Profil `kfg` enthält die Besonderheiten des Kaiserin-Friedrich-Gymnasiums Bad Homburg. Dazu gehören insbesondere:
 
 - KFG-spezifische Vertretungsbezeichnungen
 - Auflösung von Lehrerkürzeln über die KFG-eigene Kollegiums-Entity
