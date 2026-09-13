@@ -22,7 +22,7 @@ Angezeigt werden unter anderem:
 
 ## Vertretungsinformationen
 
-Seit 0.5.0 verwendet die Karte ohne School Hack automatisch den zum Kind passenden internen `sensor.vertretungsplan_*`.
+Die Karte verwendet automatisch den zum Kind passenden internen `sensor.vertretungsplan_*`. Ein aktives Schul-Profil kann zusätzlich eine bevorzugte Vertretungsquelle definieren.
 
 Mögliche Darstellungen:
 
@@ -33,19 +33,29 @@ Mögliche Darstellungen:
 - Vertretungslehrkraft
 - Nachricht/Hinweise des Tages
 
-Mit `school-hacks: <profil>` wird zuerst die bevorzugte Vertretungsquelle des Schulprofils verwendet. Falls sie für eine konkrete Stunde keinen Treffer liefert, kann der interne SPH-Vertretungsplan als Fallback dienen.
+Die Quellen-Priorität lautet:
 
-Eine explizite Kartenquelle über `vertretungsplan_sensor`, `vertretungsplan` oder `substitution_sensor` bleibt autoritativ.
+1. explizite Kartenquelle über `vertretungsplan_sensor`, `vertretungsplan` oder `substitution_sensor`,
+2. bevorzugte Quelle des aktiven Schul-Profils,
+3. interner SPH-Vertretungsplan als Fallback.
 
-## School Hacks
+Eine explizite Kartenquelle bleibt autoritativ.
+
+## Schul-Profile
+
+Das im Integrationseintrag ausgewählte Profil wird über das Sensorattribut `school_profile` automatisch erkannt.
+
+Für Tests oder einen gezielten Override:
 
 ```yaml
 type: custom:sph-stundenplan-card
 entity: sensor.stundenplan_maxim_mk
-school-hacks: kfg
+school-profile: kfg
 ```
 
-Allgemeine Beschreibung: [School Hacks](school-hacks.md).
+Mit `school-profile: false` kann die Profil-Darstellung für eine einzelne Karte deaktiviert werden.
+
+Allgemeine Beschreibung: [Schul-Profile](../SCHOOL_PROFILES.md).
 
 KFG: [Kaiserin-Friedrich-Gymnasium Bad Homburg](../schools/kfg/README.md).
 
@@ -68,7 +78,7 @@ Passende Termine aus `sensor.schulkalender_*` der Arten `Arbeiten` und `Klausure
 | `entity` | Entity-ID | automatisch | Stundenplan-Sensor |
 | `sensor` | Entity-ID | automatisch | Alias für `entity` |
 | `child` | String | leer | Auswahl über Kind/Kürzel |
-| `school-hacks` | String/false | false | Optionales Schulprofil |
+| `school-profile` | String/false | automatisch | Expliziter Schul-Profil-Override |
 | `vertretungsplan_sensor` | Entity-ID | automatisch | Explizite Vertretungsquelle |
 | `vertretungsplan` | Entity-ID | automatisch | Alias |
 | `substitution_sensor` | Entity-ID | automatisch | Alias |
@@ -83,6 +93,6 @@ title: Stundenplan Maxim
 
 ## Hinweise
 
-- Die Karte verändert keine SPH-Daten.
-- School Hacks wirken nur auf die Darstellung.
+- Die Karte verändert keine Home-Assistant-State-Objekte.
+- Das aktive Profil wird normalerweise aus dem Stundenplan-Sensor übernommen.
 - Der interne Vertretungsplan wird anhand des Kindes ausgewählt; bei mehreren Integrationsinstanzen ist eine explizite Stundenplan-Entity empfehlenswert.
