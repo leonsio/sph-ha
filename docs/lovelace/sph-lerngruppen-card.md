@@ -1,71 +1,70 @@
 # SPH Lerngruppen
 
-> Schulprofile: Normale SPH-Karten unterstützen `school-hacks: kfg`.
-> [Konfiguration und Umstieg](school-hacks.md).
-
-
 Kartentyp: `custom:sph-lerngruppen-card`
 
-## Funktionsweise
+## Funktion
 
-Die Karte zeigt die vom SPH-Lerngruppen-Modul bereitgestellten Leistungskontrollen in einer Tabelle. Angezeigt werden Datum, Art, Fach/Kurs, Dauer, Stunden, Lehrkraft und Quelle.
+Die Karte zeigt Leistungskontrollen aus dem SPH-Lerngruppen-Modul. Angezeigt werden Datum, Art, Fach/Kurs, Dauer, Schulstunden, Lehrkraft und Quelle.
 
-Neben den vom Schulportal geladenen Daten können direkt über die Karte eigene Termine angelegt werden. Manuelle Termine werden lokal in SPH-HA gespeichert und mit den SPH-Daten zusammengeführt. Nur manuell angelegte Einträge erhalten eine Lösch-Schaltfläche; importierte SPH-Termine bleiben schreibgeschützt.
+Neben SPH-Daten können lokale Termine angelegt werden. Nur lokal erstellte Termine sind über die Karte löschbar.
 
-Beim Anlegen können Datum, Art, Fach/Kurs, Dauer in Minuten, Schulstunden und Lehrkraft angegeben werden. Stundenangaben wie `3,4` oder Bereiche werden vom Backend normalisiert. Sind zu den angegebenen Stunden Zeiten aus dem persönlichen Stundenplan bekannt, kann das Lerngruppen-Modul daraus zeitlich begrenzte Kalendertermine ableiten; andernfalls bleibt der Termin ganztägig.
+## Zeitzuordnung
+
+Schulstunden wie `3`, `3,4` oder `3-4` werden im Backend normalisiert. Wenn der persönliche Stundenplan für diese Stunden Zeiten enthält, erzeugt das Modul zeitgebundene Kalendertermine; andernfalls bleibt der Termin ganztägig.
+
+## School Hacks
+
+Ein Schulprofil kann beispielsweise Lehrerkürzel auflösen:
+
+```yaml
+type: custom:sph-lerngruppen-card
+entity: sensor.lerngruppen_maxim_mk
+school-hacks: kfg
+```
+
+Allgemein: [School Hacks](school-hacks.md).
 
 ## Entity-Auswahl
 
-Reihenfolge:
+1. `entity` oder `sensor`.
+2. Bei `child`: passender `sensor.lerngruppen_*` über `kind_kürzel`.
+3. Sonst erster passender strukturierter Lerngruppen-Sensor.
 
-1. `entity` oder `sensor`, falls konfiguriert und vorhanden.
-2. Bei gesetztem `child`: ein `sensor.lerngruppen_*` mit passendem `kind_kürzel`.
-3. Andernfalls der erste passende `sensor.lerngruppen_*` mit dem Attribut `leistungskontrollen`.
+JSON-Sensoren mit `_json` werden nicht als Kartenquelle verwendet.
 
-JSON-Sensoren mit `_json` werden nicht verwendet.
-
-## Konfigurationsparameter
+## Konfiguration
 
 | Parameter | Typ | Standard | Beschreibung |
 |---|---|---|---|
 | `type` | String | erforderlich | `custom:sph-lerngruppen-card` |
 | `title` | String | `Lerngruppen – Leistungskontrollen` | Kartentitel |
-| `entity` | Entity-ID | automatisch | Expliziter Lerngruppen-Sensor |
-| `sensor` | Entity-ID | automatisch | Alias für `entity` |
-| `child` | String | leer | Auswahl über `kind_kürzel` |
-
-## Beispiel
-
-```yaml
-type: custom:sph-lerngruppen-card
-title: Leistungskontrollen
-child: mk
-```
-
-Explizite Entity:
-
-```yaml
-type: custom:sph-lerngruppen-card
-entity: sensor.lerngruppen_maxim_mk
-```
+| `entity` | Entity-ID | automatisch | Strukturierter Lerngruppen-Sensor |
+| `sensor` | Entity-ID | automatisch | Alias |
+| `child` | String | leer | Kind/Kürzel |
+| `school-hacks` | String/false | false | Optionales Schulprofil |
 
 ## Eigene Termine
 
-Mit `+ Termin hinzufügen` öffnet die Karte einen Dialog mit folgenden Feldern:
+`+ Termin hinzufügen` öffnet einen Dialog für:
 
-| Feld | Pflicht | Beschreibung |
-|---|---|---|
-| Datum | ja | Datum der Leistungskontrolle |
-| Art | ja | z. B. Arbeit, Test, Klausur |
-| Fach/Kurs | ja | Fach oder Kursbezeichnung |
-| Dauer (Min) | nein | 1 bis 1440 Minuten |
-| Stunden | nein | z. B. `3,4` oder `3-4` |
-| Lehrkraft | nein | Freitext |
+- Datum
+- Art
+- Fach/Kurs
+- optionale Dauer in Minuten
+- optionale Schulstunden
+- optionale Lehrkraft
 
-Die Karte verwendet dafür die SPH-Services `sph.lerngruppen_termin_hinzufuegen` und `sph.lerngruppen_termin_loeschen`.
+Services:
+
+```text
+sph.lerngruppen_termin_hinzufuegen
+sph.lerngruppen_termin_loeschen
+```
+
+Lokale Termine werden persistent gespeichert und mit SPH-Terminen zusammengeführt. Ein passender späterer SPH-Termin kann den lokalen Eintrag in der Anzeige verdrängen, ohne den lokalen Datensatz zu löschen.
 
 ## Hinweise
 
-- Importierte SPH-Einträge können aus der Karte nicht gelöscht werden.
-- Die Tabelle ist auf schmalen Displays horizontal scrollbar.
-- Während ein Dialog geöffnet ist, versucht die Karte Eingabewerte und Fokus auch bei Sensorupdates beizubehalten.
+- Importierte SPH-Termine sind schreibgeschützt.
+- Die Tabelle ist horizontal scrollbar.
+- Dialogzustand, Eingabewerte, Fokus und Scrollposition werden bei Sensorupdates möglichst erhalten.
