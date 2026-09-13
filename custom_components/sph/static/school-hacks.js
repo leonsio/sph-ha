@@ -56,7 +56,11 @@ const endMinutes = value => {
 };
 export function selectSchoolWeek(attrs, profile, now = new Date()) {
   const monday = mondayOf(now);
-  if (profile?.advanceWeekAfterFriday) {
+  // The normal SPH cards need the same calendar-week rollover as school
+  // profiles so dated substitutions are matched against the week actually
+  // shown. A school profile can explicitly opt out with false.
+  const advanceWeekAfterFriday = profile?.advanceWeekAfterFriday !== false;
+  if (advanceWeekAfterFriday) {
     const weekday = (now.getDay()+6)%7;
     const friday = new Date(monday); friday.setDate(friday.getDate()+4);
     const lessons = planForDate(attrs, friday, profile, now);
@@ -66,7 +70,7 @@ export function selectSchoolWeek(attrs, profile, now = new Date()) {
     if (weekday > 4 || (weekday === 4 && finished)) monday.setDate(monday.getDate()+7);
   }
   const week = weekForDate(attrs, monday, now);
-  const days = profile?.advanceWeekAfterFriday ? Array.from({length:5}, (_, i) => {
+  const days = advanceWeekAfterFriday ? Array.from({length:5}, (_, i) => {
     const date = new Date(monday); date.setDate(date.getDate()+i);
     return planForDate(attrs,date,profile,now);
   }) : (Array.isArray(attrs.eigener_plan) ? attrs.eigener_plan : []).map(day => filterDay(day,week,profile));
@@ -226,12 +230,17 @@ export function schoolCard(Base) {
     }
     _startSchoolClock() {
       this._stopSchoolClock();
-      if (Base.schoolWeekView && this.isConnected && this._school?.profile.advanceWeekAfterFriday) {
+      const profile = this._school?.profile;
+      const advanceWeekAfterFriday = profile?.advanceWeekAfterFriday !== false;
+      if (Base.schoolWeekView && this.isConnected && advanceWeekAfterFriday) {
         this._schoolClockKey = null;
         this._schoolClock = window.setInterval(() => {
           if (!this._hass) return;
-          const attrs = this._school.timetable(this._hass)?.attributes || {};
-          const view = selectSchoolWeek(attrs,this._school.profile,schoolNow(this));
+          const timetable = this._school?.timetable
+            ? this._school.timetable(this._hass)
+            : this._findEntity?.(this._hass);
+          const attrs = timetable?.attributes || {};
+          const view = selectSchoolWeek(attrs,profile,schoolNow(this));
           const key = `${dateKey(view.monday)}|${view.week}`;
           if (key !== this._schoolClockKey) { this._schoolClockKey = key; this._render(); }
         }, 1000);
@@ -247,8 +256,8 @@ export function schoolCard(Base) {
       this._schoolError = null;
       this._renderedEntity = null;
       this._schoolLoading = Boolean(name);
-      if (!name) { if (this._schoolHass) this.hass = this._schoolHass; return; }
-      if (!profiles.has(name)) profiles.set(name, import(`./school-hacks/${name}.js?v=0.4.24`).then(m => m.default).catch(error => { profiles.delete(name); throw error; }));
+      if (!name) { if (this._schoolHass) this.hass = this._schoolHass; this._startSchoolClock(); return; }
+      if (!profiles.has(name)) profiles.set(name, import(`./school-hacks/${name}.js?v=0.5.1`).then(m => m.default).catch(error => { profiles.delete(name); throw error; }));
       this._schoolReady = profiles.get(name).then(profile => {
         if (generation !== this._schoolGeneration) return;
         this._school = new SchoolContext(profile, this);
