@@ -18,6 +18,16 @@ Angezeigt werden:
 - Arbeiten/Klausuren aus dem Schulkalender
 - Vertretungsinformationen
 
+## Screenshots
+
+### Allgemeine Rasteransicht
+
+![SPH Stundenplan Raster](images/wochenplan-grid.webp)
+
+### Beispiel mit KFG School Hack
+
+![SPH Stundenplan Raster mit KFG School Hack](images/wochenplan-grid-kfg.webp)
+
 ## Vertretungen
 
 Ohne School Hack verwendet die Karte automatisch den internen SPH-Vertretungsplan des Kindes.
