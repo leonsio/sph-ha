@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pathlib
+import unittest
 
 from bs4 import BeautifulSoup
 
@@ -28,51 +29,58 @@ def _load_client():
 SphVertretungClient = _load_client()
 
 
-def test_parser():
-    soup = BeautifulSoup(FIXTURE.read_text(encoding="utf-8"), "html.parser")
-    data = SphVertretungClient._parse_page(soup)
+class VertretungParserTest(unittest.TestCase):
+    def setUp(self):
+        soup = BeautifulSoup(FIXTURE.read_text(encoding="utf-8"), "html.parser")
+        self.data = SphVertretungClient._parse_page(soup)
 
-    assert [day["datum"] for day in data["tage"]] == [
-        "2026-08-26",
-        "2026-08-27",
-        "2026-08-28",
-    ]
-    assert data["aktualisiert"] == "2026-08-26T07:12:44"
-    assert data["wird_aktualisiert"] is False
+    def test_parser(self):
+        data = self.data
+        self.assertEqual(
+            [day["datum"] for day in data["tage"]],
+            ["2026-08-26", "2026-08-27", "2026-08-28"],
+        )
+        self.assertEqual(data["aktualisiert"], "2026-08-26T07:12:44")
+        self.assertFalse(data["wird_aktualisiert"])
 
-    today = data["tage"][0]
-    assert today["relativ"] == "heute"
-    assert today["woche"] == "A-Woche"
-    assert today["anzahl"] == 3
-    assert today["entfaelle"] == 2
-    assert today["hinweise"] == [
-        "Der Schulhof ist wegen Bauarbeiten gesperrt.",
-        "Die Mensa öffnet erst ab 12:00 Uhr.",
-    ]
+        today = data["tage"][0]
+        self.assertEqual(today["relativ"], "heute")
+        self.assertEqual(today["woche"], "A-Woche")
+        self.assertEqual(today["anzahl"], 3)
+        self.assertEqual(today["entfaelle"], 2)
+        self.assertEqual(
+            today["hinweise"],
+            [
+                "Der Schulhof ist wegen Bauarbeiten gesperrt.",
+                "Die Mensa öffnet erst ab 12:00 Uhr.",
+            ],
+        )
 
-    first, second, third = today["eintraege"]
-    assert first["stunden"] == [1, 2]
-    assert first["entfall"] is True
-    assert first["art_lang"] == "Entfall"
-    assert second["art"] == "Vertr"
-    assert second["art_lang"] == "Vertretung"
-    assert second["entfall"] is False
-    assert third["art_lang"] == "Entfall"
-    assert third["entfall"] is True
+        first, second, third = today["eintraege"]
+        self.assertEqual(first["stunden"], [1, 2])
+        self.assertTrue(first["entfall"])
+        self.assertEqual(first["art_lang"], "Entfall")
+        self.assertEqual(second["art"], "Vertr")
+        self.assertEqual(second["art_lang"], "Vertretung")
+        self.assertFalse(second["entfall"])
+        self.assertEqual(third["art_lang"], "Entfall")
+        self.assertTrue(third["entfall"])
 
-    tomorrow = data["tage"][1]
-    assert tomorrow["eintraege"][0]["fach_alt"] == "D"
-    assert tomorrow["eintraege"][0]["art_lang"] == "Freisetzung"
-    assert tomorrow["eintraege"][0]["entfall"] is True
+        tomorrow = data["tage"][1]
+        self.assertEqual(tomorrow["eintraege"][0]["fach_alt"], "D")
+        self.assertEqual(tomorrow["eintraege"][0]["art_lang"], "Freisetzung")
+        self.assertTrue(tomorrow["eintraege"][0]["entfall"])
+        self.assertEqual(data["tage"][2]["anzahl"], 0)
 
-    assert data["tage"][2]["anzahl"] == 0
+    def test_art_and_lesson_normalization(self):
+        resolve = SphVertretungClient._art_long
+        self.assertEqual(resolve("Betr"), "Betreuung")
+        self.assertEqual(resolve("taus"), "Tausch")
+        self.assertEqual(resolve("Entf."), "Entfall")
+        self.assertEqual(resolve("Wandertag"), "Wandertag")
+        self.assertEqual(SphVertretungClient._parse_lessons("1 - 3"), [1, 2, 3])
+        self.assertEqual(SphVertretungClient._parse_lessons("4"), [4])
 
 
-def test_art_and_lesson_normalization():
-    resolve = SphVertretungClient._art_long
-    assert resolve("Betr") == "Betreuung"
-    assert resolve("taus") == "Tausch"
-    assert resolve("Entf.") == "Entfall"
-    assert resolve("Wandertag") == "Wandertag"
-    assert SphVertretungClient._parse_lessons("1 - 3") == [1, 2, 3]
-    assert SphVertretungClient._parse_lessons("4") == [4]
+if __name__ == "__main__":
+    unittest.main()
