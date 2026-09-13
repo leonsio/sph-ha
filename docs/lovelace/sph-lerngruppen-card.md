@@ -8,6 +8,18 @@ Die Karte zeigt Leistungskontrollen aus dem SPH-Lerngruppen-Modul. Angezeigt wer
 
 Neben SPH-Daten können lokale Termine angelegt werden. Nur lokal erstellte Termine sind über die Karte löschbar.
 
+## Fach- und Kursbezeichnungen
+
+Für Lerngruppen wird dieselbe zentrale Fachnormalisierung wie bei **Mein Unterricht** verwendet. Klassenkennungen und technische Kurskennungen werden für die sichtbare Fachbezeichnung entfernt, beispielsweise:
+
+- `Deutsch 7n` → `Deutsch`
+- `D 05cG` → `Deutsch`
+- `Englisch 7n (E2vd)` → `Englisch`
+
+Der Sensor stellt dafür je Leistungskontrolle zusätzlich `fach` bereit. `kurs` bleibt als konkrete Kursbezeichnung verfügbar. Die Karte zeigt bevorzugt `fach` und verwendet `kurs` nur als Rückfallwert für ältere oder unvollständige Datensätze.
+
+Auch die Zusammenfassung des Lerngruppen-Kalenders verwendet die normalisierte Fachbezeichnung.
+
 ## Screenshot
 
 ![SPH Lerngruppen – Leistungskontrollen](images/lernkontrollen.webp)
