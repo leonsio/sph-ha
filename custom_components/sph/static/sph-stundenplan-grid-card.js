@@ -1,5 +1,5 @@
-import { schoolCard, visibleSchoolBadges, schoolNow, selectSchoolWeek, schoolHeading, schoolBadges, schoolClasses, schoolStyles } from "./school-hacks.js?v=0.4.24";
-import { substitutionLesson } from "./substitution-adapter.js?v=0.5.0";
+import { schoolCard, visibleSchoolBadges, schoolNow, selectSchoolWeek, schoolHeading, schoolBadges, schoolClasses, schoolStyles } from "./school-hacks.js?v=0.5.1";
+import { substitutionLesson } from "./substitution-adapter.js?v=0.5.1";
 class SphStundenplanGridCard extends HTMLElement {
   static schoolWeekView = true;
   setConfig(config) {
