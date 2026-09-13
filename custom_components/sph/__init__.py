@@ -29,7 +29,7 @@ from .const import (
     DOMAIN,
     SCHOOL_DISTRICT_NONE,
 )
-from .school_profiles import get_school_profile
+from .school_profiles import get_school_profile, school_profile_frontend_paths
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -94,9 +94,18 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     from .module.meinunterricht.services import async_register_services as async_register_meinunterricht_services
 
     static_dir = Path(__file__).parent / "static"
-    await hass.http.async_register_static_paths(
-        [StaticPathConfig(f"/api/{DOMAIN}/static", str(static_dir), False)]
+    static_paths = [
+        StaticPathConfig(f"/api/{DOMAIN}/static", str(static_dir), False)
+    ]
+    static_paths.extend(
+        StaticPathConfig(
+            f"/api/{DOMAIN}/school_profiles/{profile_id}/frontend",
+            str(frontend_dir),
+            False,
+        )
+        for profile_id, frontend_dir in school_profile_frontend_paths()
     )
+    await hass.http.async_register_static_paths(static_paths)
     await async_register_lerngruppen_services(hass)
     await async_register_meinunterricht_services(hass)
 
