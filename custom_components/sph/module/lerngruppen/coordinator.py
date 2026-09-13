@@ -7,6 +7,7 @@ import re
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from ...api.client import SphAuthClient
+from ...api.subjects import subject_from_course
 from ...const import (
     CONF_MODULE_LERNGRUPPEN,
     CONF_UPDATE_INTERVAL,
@@ -99,7 +100,11 @@ class SphLearningGroupsCoordinator(DataUpdateCoordinator):
     @staticmethod
     def _duplicate_key(item: dict) -> tuple:
         """Build a conservative key for the same assessment from both sources."""
-        course = re.sub(r"\s+", " ", str(item.get("kurs", "")).strip()).casefold()
+        course = re.sub(
+            r"\s+",
+            " ",
+            str(item.get("fach") or item.get("kurs", "")).strip(),
+        ).casefold()
         art = re.sub(r"\s+", " ", str(item.get("art", "")).strip()).casefold()
         periods = tuple(
             int(value)
@@ -136,13 +141,13 @@ class SphLearningGroupsCoordinator(DataUpdateCoordinator):
         return course
 
     @staticmethod
-    def _display_summary(item: dict, course: str) -> str:
+    def _display_summary(item: dict, subject: str) -> str:
         """Build the compact calendar/sensor label for a Leistungskontrolle."""
         art = str(item.get("art", "")).strip()
-        if art and course:
-            title = f"{art}: {course}"
+        if art and subject:
+            title = f"{art}: {subject}"
         else:
-            title = art or course or "Leistungskontrolle"
+            title = art or subject or "Leistungskontrolle"
 
         duration = item.get("dauer_minuten")
         try:
@@ -156,8 +161,10 @@ class SphLearningGroupsCoordinator(DataUpdateCoordinator):
         result = dict(item)
         result["quelle"] = str(result.get("quelle") or "sph")
         cleaned_course = self._clean_course(result.get("kurs", ""))
+        normalized_subject = subject_from_course(cleaned_course) or cleaned_course
         result["kurs"] = cleaned_course
-        result["summary"] = self._display_summary(result, cleaned_course)
+        result["fach"] = normalized_subject
+        result["summary"] = self._display_summary(result, normalized_subject)
 
         try:
             day = datetime.fromisoformat(str(item.get("datum", ""))).date()
