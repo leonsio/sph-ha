@@ -16,6 +16,10 @@ Angezeigt werden unter anderem:
 - Kalenderhinweise für Arbeiten/Klausuren
 - Vertretungsinformationen
 
+## Screenshot
+
+![SPH Stundenplan – Wochenplan als Liste](images/wochenplan.webp)
+
 ## Vertretungsinformationen
 
 Seit 0.5.0 verwendet die Karte ohne School Hack automatisch den zum Kind passenden internen `sensor.vertretungsplan_*`.
