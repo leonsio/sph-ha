@@ -1,29 +1,33 @@
-"""Regression tests for the server-side School Profile API."""
+"""Regression tests for the dynamic server-side School Profile API."""
 
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 import sys
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-PROFILE_DIR = ROOT / "custom_components" / "sph" / "school_profiles"
+SPH_DIR = ROOT / "custom_components" / "sph"
+PROFILE_DIR = SPH_DIR / "school_profiles"
 
-# The repository's lightweight Python CI intentionally does not install Home
-# Assistant. Build only the package shells required for relative profile imports
-# so importing these tests does not execute custom_components.sph.__init__.
+# The lightweight Python CI intentionally does not install Home Assistant.
+# Create only the parent package shells so school_profiles can be imported
+# without executing custom_components.sph.__init__.
 for name, path in (
     ("custom_components", ROOT / "custom_components"),
-    ("custom_components.sph", ROOT / "custom_components" / "sph"),
-    ("custom_components.sph.school_profiles", PROFILE_DIR),
+    ("custom_components.sph", SPH_DIR),
 ):
     package = ModuleType(name)
     package.__path__ = [str(path)]
     sys.modules.setdefault(name, package)
 
 
-def _load(name: str, path: Path):
-    spec = spec_from_file_location(name, path)
+def _load_package(name: str, path: Path, search_path: Path):
+    spec = spec_from_file_location(
+        name,
+        path,
+        submodule_search_locations=[str(search_path)],
+    )
     assert spec and spec.loader
     module = module_from_spec(spec)
     sys.modules[name] = module
@@ -31,16 +35,13 @@ def _load(name: str, path: Path):
     return module
 
 
-BASE = _load(
-    "custom_components.sph.school_profiles.base",
-    PROFILE_DIR / "base.py",
+REGISTRY = _load_package(
+    "custom_components.sph.school_profiles",
+    PROFILE_DIR / "__init__.py",
+    PROFILE_DIR,
 )
-KFG = _load(
-    "custom_components.sph.school_profiles.kfg",
-    PROFILE_DIR / "kfg.py",
-)
-SchoolProfile = BASE.SchoolProfile
-KFGProfile = KFG.KFGProfile
+SchoolProfile = REGISTRY.SchoolProfile
+KFGProfile = type(REGISTRY.available_school_profiles()["kfg"])
 
 
 class _State:
@@ -58,7 +59,40 @@ class _Hass:
         self.states = _States(states or {})
 
 
-class SchoolProfileTest(unittest.TestCase):
+class SchoolProfileDiscoveryTest(unittest.TestCase):
+    def test_profile_package_is_discovered_without_central_school_import(self):
+        profiles = REGISTRY.available_school_profiles()
+        self.assertIn("none", profiles)
+        self.assertIn("kfg", profiles)
+        self.assertNotIn("KFGProfile", (PROFILE_DIR / "__init__.py").read_text())
+        self.assertTrue((PROFILE_DIR / "kfg" / "profile.py").is_file())
+        self.assertTrue((PROFILE_DIR / "kfg" / "frontend" / "lovelace.js").is_file())
+
+    def test_profile_supplies_configuration_and_frontend_metadata(self):
+        profile = REGISTRY.available_school_profiles()["kfg"]
+        metadata = profile.metadata()
+        self.assertEqual(metadata["id"], "kfg")
+        self.assertEqual(metadata["name"], "Kaiserin-Friedrich-Gymnasium Bad Homburg")
+        self.assertTrue(metadata["description"])
+        self.assertEqual(metadata["frontend_module"], "lovelace.js")
+        self.assertEqual(
+            profile.config_option(),
+            {"value": "kfg", "label": "Kaiserin-Friedrich-Gymnasium Bad Homburg"},
+        )
+        self.assertIn(profile.config_option(), REGISTRY.school_profile_options())
+
+    def test_frontend_paths_are_derived_from_discovered_profile_packages(self):
+        paths = dict(REGISTRY.school_profile_frontend_paths())
+        self.assertEqual(paths["kfg"], PROFILE_DIR / "kfg" / "frontend")
+
+    def test_get_school_profile_uses_discovered_registry(self):
+        entry = SimpleNamespace(data={"school_profile": "kfg"})
+        self.assertIsInstance(REGISTRY.get_school_profile(entry), KFGProfile)
+        unknown = SimpleNamespace(data={"school_profile": "does-not-exist"})
+        self.assertEqual(REGISTRY.get_school_profile(unknown).id, "none")
+
+
+class SchoolProfileTransformTest(unittest.TestCase):
     def test_base_profile_has_no_school_specific_state_dependency(self):
         profile = SchoolProfile()
         self.assertEqual(profile.state_entities, ())
@@ -102,8 +136,6 @@ class SchoolProfileTest(unittest.TestCase):
             "eigener_plan": [
                 [{"subject": "D", "fach": "Deutsch", "teacher": "FRA"}]
             ],
-            # ``tage`` is populated when timetable_output == "all". It may
-            # contain groups not present in the child's personal timetable.
             "tage": [
                 [{"subject": "M", "fach": "Mathematik", "teacher": "SPI"}]
             ],
@@ -116,12 +148,8 @@ class SchoolProfileTest(unittest.TestCase):
         self.assertEqual(result["eigener_plan"][0][0]["fach"], "Deutsch")
         self.assertEqual(result["tage"][0][0]["teacher"], "Herr Spiegel")
         self.assertEqual(result["tage"][0][0]["fach"], "Mathematik")
-
-        # eigener_grundplan is neither a profile source nor a transformed output.
         self.assertEqual(result["eigener_grundplan"], grundplan)
         self.assertEqual(result["eigener_grundplan"][0][0]["teacher"], "BÄR")
-
-        # The source payload remains untouched.
         self.assertEqual(payload["eigener_plan"][0][0]["teacher"], "FRA")
         self.assertEqual(payload["tage"][0][0]["teacher"], "SPI")
 
