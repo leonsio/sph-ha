@@ -16,6 +16,22 @@ school_profile: kfg
 
 Die Auswahl gilt nur für dieses Kind.
 
+## Profilpaket
+
+Alle KFG-spezifischen Laufzeitdateien liegen gemeinsam unter:
+
+```text
+custom_components/sph/school_profiles/kfg/
+├── __init__.py
+├── profile.py
+└── frontend/
+    └── lovelace.js
+```
+
+`profile.py` liefert Profil-ID, Anzeigename, Beschreibung, Frontend-Einstiegspunkt und die serverseitige KFG-Logik. `frontend/lovelace.js` enthält ausschließlich KFG-spezifische Darstellungsregeln.
+
+Das Profil wird durch die allgemeine School-Profile-Discovery automatisch gefunden. Der Core enthält keine KFG-spezifische Registrierung.
+
 ## Datenebene
 
 Das KFG-Profil wird serverseitig auf die veröffentlichten SPH-Daten angewandt. Aktuell werden insbesondere unterstützt:
@@ -122,7 +138,7 @@ kann die Profil-Darstellung einer einzelnen Karte deaktiviert werden.
 Das Frontend-Profil befindet sich unter:
 
 ```text
-custom_components/sph/static/school-profiles/kfg.js
+custom_components/sph/school_profiles/kfg/frontend/lovelace.js
 ```
 
 Es definiert aktuell:
@@ -135,20 +151,6 @@ Es definiert aktuell:
 - KFG-Vertretungsbezeichnungen
 - Hinweise/Nachrichten des Vertretungsplans
 - visuelle Kennzeichnung von Vertretung, Entfall, Fachwechsel, Tausch und weiteren Änderungsarten
-
-## Dateien
-
-Serverseitige Datenlogik:
-
-```text
-custom_components/sph/school_profiles/kfg.py
-```
-
-Frontend-Darstellung:
-
-```text
-custom_components/sph/static/school-profiles/kfg.js
-```
 
 ## Entwicklungsregel
 
