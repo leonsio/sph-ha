@@ -22,11 +22,11 @@ Angezeigt werden:
 
 ### Allgemeine Rasteransicht
 
-![SPH Stundenplan Raster](images/wochenplan-grid.webp)
+![SPH Stundenplan Raster](images/wochenplan-grid.png)
 
 ### Beispiel mit KFG School Hack
 
-![SPH Stundenplan Raster mit KFG School Hack](images/wochenplan-grid-kfg.webp)
+![SPH Stundenplan Raster mit KFG School Hack](images/wochenplan-grid-kfg.png)
 
 ## Vertretungen
 
