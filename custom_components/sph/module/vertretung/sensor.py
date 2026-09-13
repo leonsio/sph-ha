@@ -48,6 +48,7 @@ def vertretung_payload(coordinator, timetable_coordinator, entry) -> dict:
         "aktualisiert": data.get("aktualisiert"),
         "wird_aktualisiert": bool(data.get("wird_aktualisiert")),
         "geplante_tage": [day.get("datum") for day in days],
+        "attribution": "Schulportal Hessen",
     }
 
 
