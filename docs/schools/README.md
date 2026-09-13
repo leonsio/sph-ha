@@ -1,8 +1,8 @@
-# Schulspezifische School-Hacks-Profile
+# Schulspezifische Schul-Profile
 
 Dieser Ordner enthält die Dokumentation zu den vorhandenen schulspezifischen Profilen.
 
-Die eigentliche allgemeine School-Hacks-Architektur ist unter [`../lovelace/school-hacks.md`](../lovelace/school-hacks.md) dokumentiert.
+Die allgemeine Benutzer-Dokumentation befindet sich unter [`../SCHOOL_PROFILES.md`](../SCHOOL_PROFILES.md). Die Entwickler-API und Anleitung für neue Profile ist unter [`../SCHOOL_PROFILES_DEVELOPMENT.md`](../SCHOOL_PROFILES_DEVELOPMENT.md) beschrieben.
 
 ## Vorhandene Profile
 
@@ -10,18 +10,25 @@ Die eigentliche allgemeine School-Hacks-Architektur ist unter [`../lovelace/scho
 |---|---|---|
 | `kfg` | Kaiserin-Friedrich-Gymnasium Bad Homburg | [KFG](kfg/README.md) |
 
-## Regel für neue Schulen
+## Struktur
 
-Für jedes neue Profil unter
+Ein Profil kann aus zwei Teilen bestehen:
 
 ```text
-custom_components/sph/static/school-hacks/<name>.js
+custom_components/sph/school_profiles/<name>.py
+custom_components/sph/static/school-profiles/<name>.js
 ```
 
-wird eine eigene Dokumentation angelegt unter
+Der Python-Teil verarbeitet schulspezifische Daten für Sensoren, JSON und Kalender. Der JavaScript-Teil ist optional und enthält nur Darstellungsregeln für die mitgelieferten Lovelace-Karten.
+
+Für jedes neue Profil wird zusätzlich eine Schuldokumentation angelegt:
 
 ```text
 docs/schools/<name>/README.md
 ```
 
-Die Schul-README beschreibt ausschließlich schulbezogene Besonderheiten, externe Datenquellen, Voraussetzungen und empfohlene YAML-Konfigurationen. Allgemeine Adapter- und Prioritätslogik bleibt in der zentralen School-Hacks-Dokumentation.
+## Grundregel
+
+Profile sollen langfristig möglichst klein bleiben. Sobald eine Regel schulübergreifend sinnvoll ist, sollte sie in die allgemeine Integration verschoben werden.
+
+Schulspezifische externe Entities gehören ausschließlich in das jeweilige Profil. Beispielsweise ist `sensor.kfg_kollegium` nur Bestandteil des KFG-Profils und keine allgemeine Abhängigkeit von SPH-HA.
