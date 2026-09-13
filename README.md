@@ -111,6 +111,10 @@ SPH-HA bringt eigene Karten für folgende Ansichten mit:
 
 Die Karten werden automatisch registriert. Die vollständige Dokumentation einschließlich Screenshots und Konfigurationsbeispielen befindet sich unter [docs/lovelace](docs/lovelace/README.md).
 
+## 7,5"-ePaper-Display
+
+Die von SPH-HA bereitgestellten Informationen können alternativ zu Lovelace auch auf einem **7,5"-ePaper-Display** dargestellt werden. Im Ordner [`epaper`](epaper/README.md) befindet sich eine Beispielkonfiguration für ESPHome, die unter anderem Stundenplan, Hausaufgaben, anstehende Arbeiten und weitere Informationen auf einem 800 × 480 Pixel großen ePaper-Display anzeigt.
+
 ## Schul-Profile
 
 Schul-Profile bündeln ausschließlich die Besonderheiten einer Schule. Sie werden pro Kind ausgewählt und können serverseitig Werte in Sensoren, JSON-Ausgaben und Kalendern sowie optional UI-Regeln für Lovelace anpassen.
@@ -133,6 +137,7 @@ Bei vorübergehenden Abruffehlern bleiben zuletzt erfolgreich geladene Daten sow
 
 - [Entitäten, Sensoren und Services](docs/ENTITAETEN_UND_SERVICES.md)
 - [Lovelace-Karten](docs/lovelace/README.md)
+- [7,5"-ePaper-Beispiel](epaper/README.md)
 - [Schul-Profile](docs/SCHOOL_PROFILES.md)
 - [Schul-Profile für Entwickler](docs/SCHOOL_PROFILES_DEVELOPMENT.md)
 - [Schulspezifische Profile](docs/schools/README.md)
