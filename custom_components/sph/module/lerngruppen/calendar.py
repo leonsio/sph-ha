@@ -6,10 +6,14 @@ from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
+from ...school_profiles import get_school_profile
 from ..stundenplan.sensor import child_label
 
 
-def _as_calendar_event(item: dict, hass) -> CalendarEvent | None:
+def _as_calendar_event(item: dict, hass, entry=None) -> CalendarEvent | None:
+    if entry is not None:
+        item = get_school_profile(entry).transform_calendar_item(item, hass)
+
     all_day = bool(item.get("all_day", False))
     try:
         if all_day:
@@ -70,7 +74,7 @@ class SphLearningGroupsCalendar(CoordinatorEntity, CalendarEntity):
     def _events(self) -> list[CalendarEvent]:
         events = []
         for item in self.coordinator.data or []:
-            event = _as_calendar_event(item, self.hass)
+            event = _as_calendar_event(item, self.hass, self.entry)
             if event is not None:
                 events.append(event)
         return sorted(events, key=lambda event: self._sort_key(event.start, self.hass))
