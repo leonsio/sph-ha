@@ -1,74 +1,91 @@
 # SPH Mein Unterricht
 
-> Schulprofile: Normale SPH-Karten unterstützen `school-hacks: kfg`.
-> [Konfiguration und Umstieg](school-hacks.md).
-
-
 Kartentyp: `custom:sph-meinunterricht-card`
 
-## Funktionsweise
+## Funktion
 
-Die Karte zeigt die vom SPH-Modul „Mein Unterricht“ bereitgestellten Hausaufgaben tabellarisch. Angezeigt werden Datum, Fach/Kurs, Thema, Aufgabe, Lehrer, Status und Quelle.
+Die Karte zeigt Hausaufgaben aus dem Modul **Mein Unterricht** tabellarisch. Angezeigt werden unter anderem Datum, Fach/Kurs, Thema, Aufgabe, Lehrkraft, Status und Quelle.
 
-Zusätzlich können eigene Hausaufgaben direkt in der Karte angelegt werden. Diese werden lokal in SPH-HA gespeichert und mit den vom Schulportal geladenen Einträgen zusammengeführt. Nur manuell erstellte Hausaufgaben können aus der Karte wieder gelöscht werden.
+Lokale Hausaufgaben können direkt über die Karte angelegt und wieder gelöscht werden. Vom Schulportal geladene Einträge bleiben schreibgeschützt.
 
-Manuelle Hausaufgaben werden sieben Tage nach dem eingetragenen Hausaufgabendatum automatisch aus dem lokalen Speicher entfernt.
+## Kurs- und Fachnormalisierung
+
+Seit 0.5.0 werden Kursnamen bereits im Backend auf gemeinsame Fachbezeichnungen normalisiert.
+
+Beispiele:
+
+```text
+D 05cG      → Deutsch
+Deutsch 7n  → Deutsch
+M 05cG      → Mathematik
+Biologie 05cg → Biologie
+```
+
+Klassenbestandteile werden entfernt, bekannte Kürzel ausgeschrieben und der ursprüngliche Kursname bleibt im Feld `kurs` erhalten.
+
+Normaler Sensor und JSON-Sensor enthalten zusätzlich:
+
+- `faecher`
+- `faecher_gesamt`
+- `faecher_offen`
+
+Die Karte selbst bleibt primär eine Aufgabenansicht; die Fachübersicht steht für weitere Dashboards und Automationen im Sensor zur Verfügung.
+
+## School Hacks
+
+Ein Schulprofil kann beispielsweise Lehrerkürzel auflösen:
+
+```yaml
+type: custom:sph-meinunterricht-card
+entity: sensor.mein_unterricht_maxim_mk
+school-hacks: kfg
+```
+
+Allgemein: [School Hacks](school-hacks.md).
 
 ## Entity-Auswahl
 
-Reihenfolge:
+1. `entity` oder `sensor`.
+2. Bei `child`: passender `sensor.mein_unterricht_*` über `kind_kürzel`.
+3. Sonst erster passender strukturierter Mein-Unterricht-Sensor.
 
-1. `entity` oder `sensor`, falls konfiguriert und vorhanden.
-2. Bei gesetztem `child`: ein `sensor.mein_unterricht_*` mit passendem `kind_kürzel`.
-3. Andernfalls der erste passende `sensor.mein_unterricht_*` mit dem Attribut `aufgaben`.
+JSON-Sensoren mit `_json` werden nicht als Kartenquelle gewählt.
 
-JSON-Sensoren mit `_json` werden nicht verwendet.
-
-## Konfigurationsparameter
+## Konfiguration
 
 | Parameter | Typ | Standard | Beschreibung |
 |---|---|---|---|
 | `type` | String | erforderlich | `custom:sph-meinunterricht-card` |
 | `title` | String | `Mein Unterricht – Hausaufgaben` | Kartentitel |
-| `entity` | Entity-ID | automatisch | Expliziter Mein-Unterricht-Sensor |
-| `sensor` | Entity-ID | automatisch | Alias für `entity` |
-| `child` | String | leer | Auswahl über `kind_kürzel` |
-
-## Beispiel
-
-```yaml
-type: custom:sph-meinunterricht-card
-title: Hausaufgaben
-child: mk
-```
-
-Explizite Entity:
-
-```yaml
-type: custom:sph-meinunterricht-card
-entity: sensor.mein_unterricht_maxim_mk
-```
+| `entity` | Entity-ID | automatisch | Strukturierter Mein-Unterricht-Sensor |
+| `sensor` | Entity-ID | automatisch | Alias |
+| `child` | String | leer | Kind/Kürzel |
+| `school-hacks` | String/false | false | Optionales Schulprofil |
 
 ## Eigene Hausaufgaben
 
-Mit `+ Hausaufgabe hinzufügen` öffnet die Karte einen Dialog mit folgenden Feldern:
+`+ Hausaufgabe hinzufügen` öffnet einen Dialog für:
 
-| Feld | Pflicht | Beschreibung |
-|---|---|---|
-| Datum | ja | Datum der Hausaufgabe |
-| Fach | ja | Fachbezeichnung |
-| Kurs | nein | Optionaler Kursname |
-| Lehrer | nein | Freitext |
-| Thema | nein | Optionales Thema |
-| Hausaufgabe | ja | Beschreibung der Aufgabe |
-| Bereits erledigt | nein | Setzt den Status direkt auf erledigt |
+- Datum
+- Fach
+- optionalen Kurs
+- optionale Lehrkraft
+- optionales Thema
+- Aufgabe
+- Erledigt-Status
 
-Die Karte verwendet dafür die SPH-Services `sph.meinunterricht_hausaufgabe_hinzufuegen` und `sph.meinunterricht_hausaufgabe_loeschen`.
+Services:
+
+```text
+sph.meinunterricht_hausaufgabe_hinzufuegen
+sph.meinunterricht_hausaufgabe_loeschen
+```
+
+Manuelle Hausaufgaben werden persistent gespeichert und sieben Tage nach dem eingetragenen Aufgabendatum automatisch bereinigt.
 
 ## Hinweise
 
-- Vom Schulportal geladene Hausaufgaben sind schreibgeschützt.
-- Manuelle Einträge werden in der Spalte `Quelle` als `Manuell` gekennzeichnet.
-- Der Status wird als `Offen` oder `Erledigt` dargestellt.
-- Die Tabelle ist auf schmalen Displays horizontal scrollbar.
-- Dialoginhalt und Fokus werden bei Sensorupdates möglichst erhalten.
+- SPH-Einträge sind schreibgeschützt.
+- Manuelle Einträge werden als Quelle `Manuell` gekennzeichnet.
+- Die Tabelle ist horizontal scrollbar.
+- Dialoginhalt, Fokus und Scrollposition werden bei Sensorupdates möglichst erhalten.
