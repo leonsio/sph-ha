@@ -19,6 +19,10 @@ Angezeigt werden:
 - Arbeiten/Klausuren aus dem Schulkalender
 - Vertretungsinformationen
 
+## Screenshot
+
+![SPH Tagesstundenplan](images/tagesplan.webp)
+
 ## Vertretungen
 
 Ohne School Hack verwendet die Karte automatisch den internen SPH-Vertretungsplan des Kindes.
