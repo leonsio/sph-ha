@@ -1,0 +1,110 @@
+template:
+  - triggers:
+      - trigger: time_pattern
+        minutes: "/30"
+
+      - trigger: homeassistant
+        event: start
+
+    actions:
+      - action: weather.get_forecasts
+        target:
+          entity_id: weather.haos
+        data:
+          type: daily
+        response_variable: daily_data
+
+      - action: weather.get_forecasts
+        target:
+          entity_id: weather.haos
+        data:
+          type: hourly
+        response_variable: hourly_data
+
+    sensor:
+      - name: "Maxim ePaper Wetter"
+        unique_id: maxim_epaper_wetter
+        icon: mdi:weather-partly-cloudy
+
+        # Einfacher, kurzer Zustand. Die eigentlichen Daten liegen in Attributen.
+        state: "{{ now().isoformat() }}"
+
+        availability: >
+          {{ states('weather.haos') not in ['unknown', 'unavailable', 'none'] }}
+
+        attributes:
+          # ---------------------------------------------------------------
+          # Aktuelles Außenwetter
+          # ---------------------------------------------------------------
+          condition: "{{ states('weather.haos') }}"
+          outdoor_temperature: "{{ state_attr('weather.haos', 'temperature') }}"
+          outdoor_humidity: "{{ state_attr('weather.haos', 'humidity') }}"
+          pressure: "{{ state_attr('weather.haos', 'pressure') }}"
+          wind_speed: "{{ state_attr('weather.haos', 'wind_speed') }}"
+          apparent_temperature: "{{ state_attr('weather.haos', 'apparent_temperature') }}"
+
+          # ---------------------------------------------------------------
+          # Raumklima Maxim
+          # ---------------------------------------------------------------
+          indoor_temperature: >
+            {{ state_attr('climate.og_maxim_wandthermostat', 'current_temperature') }}
+          indoor_humidity: >
+            {{ state_attr('climate.og_maxim_wandthermostat', 'current_humidity') }}
+
+          # ---------------------------------------------------------------
+          # Tagesvorhersage: heute + nächste 7 Tage
+          #
+          # Ausgabe z.B.:
+          # [
+          #   {"datetime":"...","condition":"sunny","high":25.1,"low":13.4,
+          #    "precipitation":0.0,"precipitation_probability":10},
+          #   ...
+          # ]
+          # ---------------------------------------------------------------
+          daily_json: >
+            {% set forecast = daily_data['weather.haos'].forecast
+               if daily_data is defined
+               and 'weather.haos' in daily_data
+               else [] %}
+            {% set ns = namespace(items=[]) %}
+            {% for f in forecast[:7] %}
+              {% set ns.items = ns.items + [{
+                'datetime': f.get('datetime', ''),
+                'condition': f.get('condition', ''),
+                'high': f.get('temperature', none),
+                'low': f.get('templow', none),
+                'precipitation': f.get('precipitation', none),
+                'precipitation_probability': f.get('precipitation_probability', none)
+              }] %}
+            {% endfor %}
+            {{ ns.items | to_json }}
+
+          # ---------------------------------------------------------------
+          # Stundenforecast: nächste 30 Einträge
+          #
+          # Ausgabe z.B.:
+          # [
+          #   {"datetime":"...","condition":"cloudy","temperature":22.4,
+          #    "precipitation":0.0,"precipitation_probability":20},
+          #   ...
+          # ]
+          # ---------------------------------------------------------------
+          hourly_json: >
+            {% set forecast = hourly_data['weather.haos'].forecast
+               if hourly_data is defined
+               and 'weather.haos' in hourly_data
+               else [] %}
+            {% set ns = namespace(items=[]) %}
+            {% for f in forecast[:30] %}
+              {% set ns.items = ns.items + [{
+                'datetime': f.get('datetime', ''),
+                'condition': f.get('condition', ''),
+                'temperature': f.get('temperature', none),
+                'precipitation': f.get('precipitation', none),
+                'precipitation_probability': f.get('precipitation_probability', none)
+              }] %}
+            {% endfor %}
+            {{ ns.items | to_json }}
+
+
+ 
