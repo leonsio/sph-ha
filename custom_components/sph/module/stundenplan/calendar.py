@@ -92,9 +92,18 @@ class SphTimetableCalendar(CoordinatorEntity, CalendarEntity):
         if self.substitution_coordinator is not None and getattr(
             self.substitution_coordinator, "enabled", False
         ):
+            def _substitution_updated() -> None:
+                self.async_write_ha_state()
+                self.async_update_event_listeners()
+
             self.async_on_remove(
-                self.substitution_coordinator.async_add_listener(self.async_write_ha_state)
+                self.substitution_coordinator.async_add_listener(_substitution_updated)
             )
+
+    def _handle_coordinator_update(self) -> None:
+        """Refresh both entity state and subscribed calendar event streams."""
+        super()._handle_coordinator_update()
+        self.async_update_event_listeners()
 
     def _timezone(self):
         return dt_util.get_time_zone(self.hass.config.time_zone)
