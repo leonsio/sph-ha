@@ -1,6 +1,10 @@
 """Sensor platform dispatcher for the SPH modules."""
 
-from .const import CONF_MODULE_KALENDER, DEFAULT_MODULE_ENABLED
+from .const import (
+    CONF_MODULE_KALENDER,
+    CONF_MODULE_VERTRETUNG,
+    DEFAULT_MODULE_ENABLED,
+)
 from .module.kalender.sensor import SphCalendarJsonSensor, SphCalendarSensor
 from .module.lerngruppen.sensor import (
     SphLearningGroupsJsonSensor,
@@ -11,6 +15,7 @@ from .module.meinunterricht.sensor import (
     SphMeinUnterrichtSensor,
 )
 from .module.stundenplan.sensor import SphTimetableJsonSensor, SphTimetableSensor
+from .module.vertretung.sensor import SphVertretungJsonSensor, SphVertretungSensor
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
@@ -32,6 +37,14 @@ async def async_setup_entry(hass, entry, async_add_entities):
             ]
         )
 
+    if bool(entry.data.get(CONF_MODULE_VERTRETUNG, DEFAULT_MODULE_ENABLED)):
+        entities.extend(
+            [
+                SphVertretungSensor(data["vertretung"], data["timetable"], entry),
+                SphVertretungJsonSensor(data["vertretung"], data["timetable"], entry),
+            ]
+        )
+
     async_add_entities(entities)
 
 
@@ -45,4 +58,6 @@ __all__ = [
     "SphMeinUnterrichtJsonSensor",
     "SphLearningGroupsSensor",
     "SphLearningGroupsJsonSensor",
+    "SphVertretungSensor",
+    "SphVertretungJsonSensor",
 ]
