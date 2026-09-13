@@ -73,14 +73,29 @@ globalThis.window={customCards:[],setInterval:fn=>{tick=fn;return 1;},clearInter
 for(const name of ['sph-stundenplan-card','sph-stundenplan-grid-card']){
  test(`${name} updates dates, filtering and headings on the clock; grid keeps scroll container`,async(t)=>{
   t.mock.timers.enable({apis:['Date'],now:new Date(2026,8,11,13,9,59).getTime()});
-  await import(`../custom_components/sph/static/${name}.js?v=0.4.23`);
+  await import(`../custom_components/sph/static/${name}.js?v=0.4.24`);
   const c=new (registry.get(name))();c.isConnected=true;c.setConfig({entity:'sensor.plan','school-hacks':'kfg'});
   c.hass={states:{'sensor.plan':{entity_id:'sensor.plan',attributes:attrs}}};await c._schoolReady;
-  assert.match(c.shadowRoot.innerHTML,/Woche A/);assert.match(c.shadowRoot.innerHTML,/A-Unterricht/);assert.doesNotMatch(c.shadowRoot.innerHTML,/>\(?A\)?<\/span>/);
-  const wrap={innerHTML:'',scrollLeft:120};if(name.includes('grid'))c.shadowRoot.querySelector=()=>wrap;
+  assert.match(c.shadowRoot.innerHTML,/(?:Woche|Schulwoche) A/);assert.match(c.shadowRoot.innerHTML,/A-Unterricht/);assert.doesNotMatch(c.shadowRoot.innerHTML,/>\(?A\)?<\/span>/);
+  const isGrid=name.includes('grid');
+  if(isGrid){
+   assert.equal((c.shadowRoot.innerHTML.match(/Schulwoche A/g)||[]).length,1);
+   assert.doesNotMatch(c.shadowRoot.innerHTML.split('<thead>')[1].split('</thead>')[0],/Woche|Schulwoche/);
+   assert.match(c.shadowRoot.innerHTML,/text-align:right/);
+   assert.ok(c.shadowRoot.innerHTML.indexOf('class="school-week"')<c.shadowRoot.innerHTML.indexOf('class="table-wrap"'));
+  }
+  const wrap={innerHTML:'',scrollLeft:120},weekLine={textContent:'Schulwoche A',hidden:false};
+  if(isGrid)c.shadowRoot.querySelector=selector=>selector==='.table-wrap'?wrap:selector==='.school-week'?weekLine:null;
   t.mock.timers.setTime(new Date(2026,8,11,13,10).getTime());tick();
   const html=name.includes('grid')?wrap.innerHTML:c.shadowRoot.innerHTML;
-  assert.match(html,/14\.9\.2026/);assert.match(html,/Woche B/);assert.match(html,/B-Unterricht/);assert.doesNotMatch(html,/A-Unterricht/);assert.equal(wrap.scrollLeft,120);
+  assert.match(html,/14\.9\.2026/);
+  if(isGrid){assert.equal(weekLine.textContent,'Schulwoche B');assert.equal(weekLine.hidden,false);assert.doesNotMatch(html,/Woche|Schulwoche/);}
+  else assert.match(html,/Woche B/);
+  assert.match(html,/B-Unterricht/);assert.doesNotMatch(html,/A-Unterricht/);assert.equal(wrap.scrollLeft,120);
+  if(isGrid){
+   c.setConfig({entity:'sensor.plan','school-hacks':false});assert.equal(weekLine.hidden,true);assert.equal(weekLine.textContent,'');
+   c.setConfig({entity:'sensor.plan','school-hacks':'kfg'});await c._schoolReady;assert.equal(weekLine.textContent,'Schulwoche B');assert.equal(weekLine.hidden,false);
+  }
   const oldClears=clears;c.disconnectedCallback();assert.ok(clears>oldClears);
  });
 }

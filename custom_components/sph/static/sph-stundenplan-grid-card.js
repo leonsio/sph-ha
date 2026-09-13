@@ -1,4 +1,4 @@
-import { schoolCard, visibleSchoolBadges, schoolNow, selectSchoolWeek, schoolLesson, schoolHeading, schoolBadges, schoolClasses, schoolStyles } from "./school-hacks.js?v=0.4.23";
+import { schoolCard, visibleSchoolBadges, schoolNow, selectSchoolWeek, schoolLesson, schoolHeading, schoolBadges, schoolClasses, schoolStyles } from "./school-hacks.js?v=0.4.24";
 class SphStundenplanGridCard extends HTMLElement {
   static schoolWeekView = true;
   setConfig(config) {
@@ -34,12 +34,18 @@ class SphStundenplanGridCard extends HTMLElement {
     ));
     const slots = this._buildSlots(days, maxPeriod);
     const table = this._renderTable(days, names, slots, calendarEvents, view);
+    const weekText = this._school?.profile.gridWeekHeading && view.week ? `Schulwoche ${view.week}` : "";
 
     // Keep the scroll container itself. Replacing it on every Home Assistant
     // state update resets scrollLeft and makes horizontal scrolling jump back
     // to the left on narrow screens.
     const existingWrap = this.shadowRoot.querySelector(".table-wrap");
     if (existingWrap) {
+      const weekLine = this.shadowRoot.querySelector(".school-week");
+      if (weekLine) {
+        weekLine.textContent = weekText;
+        weekLine.hidden = !weekText;
+      }
       existingWrap.innerHTML = table;
       return;
     }
@@ -48,6 +54,7 @@ class SphStundenplanGridCard extends HTMLElement {
       <style>${schoolStyles}
         :host { display:block; width:100%; box-sizing:border-box; }
         ha-card { width:100%; overflow:hidden; }
+        .school-week { padding:10px 16px; text-align:right; font-weight:700; color:var(--primary-color); }
         .table-wrap { width:100%; overflow-x:auto; }
         table { width:100%; min-width:900px; border-collapse:collapse; table-layout:fixed; }
         th,td { border:1px solid var(--divider-color); text-align:center; vertical-align:middle; box-sizing:border-box; }
@@ -69,14 +76,14 @@ class SphStundenplanGridCard extends HTMLElement {
         .error { padding:16px; color:var(--error-color); }
         @media (max-width:700px) { table{min-width:760px}.subject{font-size:.95rem} }
       </style>
-      <ha-card${header}><div class="table-wrap">${table}</div></ha-card>`;
+      <ha-card${header}><div class="school-week"${weekText ? "" : " hidden"}>${this._esc(weekText)}</div><div class="table-wrap">${table}</div></ha-card>`;
   }
 
   _renderTable(days, names, slots, calendarEvents, view) {
     const covered = Array.from({ length:5 }, () => new Set());
     const monday = view.monday;
     let html = "<table><thead><tr><th>Stunde</th>";
-    names.forEach((name, i) => { const date = new Date(monday); date.setDate(date.getDate() + i); html += `<th>${this._esc(name)}${schoolHeading(this, date, view.week)}</th>`; });
+    names.forEach((name, i) => { const date = new Date(monday); date.setDate(date.getDate() + i); html += `<th>${this._esc(name)}${schoolHeading(this, date, this._school?.profile.gridWeekHeading ? "" : view.week)}</th>`; });
     html += "</tr></thead><tbody>";
 
     for (const slot of slots) {

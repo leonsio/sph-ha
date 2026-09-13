@@ -34,6 +34,11 @@ Wochenfilterung. Die Wochenkennung wird relativ zu `wochenbeginn` fortgeschriebe
 Die Kennung bleibt im Kopf sichtbar. A/B-Badges an einzelnen Stunden werden bei
 KFG ausgeblendet; andere Badges bleiben erhalten.
 
+In der KFG-Rasteransicht steht `Schulwoche A/B` einmalig rechtsbündig in einer
+eigenen Zeile oberhalb der Tabelle. Die Tagesköpfe zeigen nur Wochentag und Datum.
+Die Wochenzeile liegt außerhalb des horizontalen Scrollbereichs und wird beim
+automatischen Wochenwechsel mit aktualisiert (`gridWeekHeading: true` im Profil).
+
 ### Wechsel auf die nächste Woche
 
 Mit dem KFG-Profil wechseln Wochenliste und Raster am Freitag nach Ende der letzten
