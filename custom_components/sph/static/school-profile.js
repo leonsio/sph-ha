@@ -431,7 +431,7 @@ export function schoolCard(Base) {
     }
 
     setConfig(config) {
-      const configured = config?.["school-profile"] ?? config?.["school-hacks"];
+      const configured = config?.["school-profile"];
       if (configured != null && configured !== false && !validProfileName(configured)) {
         throw new Error("school-profile muss ein Schulprofilname sein, z.B. kfg");
       }
