@@ -192,7 +192,7 @@ class SphMeinUnterrichtCard extends HTMLElement {
   _row(item) {
     const manual = String(item.quelle || "").toLowerCase() === "manuell";
     const done = Boolean(item.erledigt);
-    const subject = item.kurs || item.fach || "";
+    const subject = item.fach || item.kurs || "";
     return `<tr>
       <td>${this._esc(this._formatDate(item.datum))}</td>
       <td>${this._esc(subject)}</td>
