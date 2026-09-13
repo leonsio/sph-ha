@@ -9,6 +9,7 @@ from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
+from ..vertretung.apply import apply_substitution, find_substitution
 from .sensor import child_label, subject_name
 
 PAST_WEEKS = 2
@@ -79,11 +80,21 @@ class SphTimetableCalendar(CoordinatorEntity, CalendarEntity):
     _attr_has_entity_name = False
     _attr_icon = "mdi:calendar-clock"
 
-    def __init__(self, coordinator, entry):
+    def __init__(self, coordinator, entry, substitution_coordinator=None):
         super().__init__(coordinator)
         self.entry = entry
+        self.substitution_coordinator = substitution_coordinator
         self._attr_unique_id = f"{entry.entry_id}_timetable_calendar"
         self._attr_name = f"Stundenplan {child_label(entry)}"
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        if self.substitution_coordinator is not None and getattr(
+            self.substitution_coordinator, "enabled", False
+        ):
+            self.async_on_remove(
+                self.substitution_coordinator.async_add_listener(self.async_write_ha_state)
+            )
 
     def _timezone(self):
         return dt_util.get_time_zone(self.hass.config.time_zone)
@@ -104,6 +115,12 @@ class SphTimetableCalendar(CoordinatorEntity, CalendarEntity):
 
     def _data(self) -> dict:
         return self.coordinator.data or self.coordinator.last_successful_data or {}
+
+    def _substitution_data(self) -> dict:
+        coordinator = self.substitution_coordinator
+        if coordinator is None or not getattr(coordinator, "enabled", False):
+            return {}
+        return coordinator.data or getattr(coordinator, "last_successful_data", None) or {}
 
     @staticmethod
     def _parse_time(value) -> time | None:
@@ -140,7 +157,13 @@ class SphTimetableCalendar(CoordinatorEntity, CalendarEntity):
             uid=f"sph-schulwoche-{self.entry.entry_id}-{target.isoformat()}-{code}",
         )
 
-    def _lesson_event(self, lesson: dict, target: date, week: str) -> CalendarEvent | None:
+    def _lesson_event(
+        self,
+        lesson: dict,
+        target: date,
+        week: str,
+        child_class: str = "",
+    ) -> CalendarEvent | None:
         start_time = self._parse_time(lesson.get("start"))
         end_time = self._parse_time(lesson.get("end"))
         if start_time is None or end_time is None:
@@ -152,14 +175,22 @@ class SphTimetableCalendar(CoordinatorEntity, CalendarEntity):
         if end <= start:
             end = start + timedelta(minutes=1)
 
-        subject = subject_name(lesson.get("subject")) or str(lesson.get("subject") or "Unterricht")
-        teacher = str(lesson.get("teacher") or "").strip()
-        room = str(lesson.get("room") or "").strip()
+        substitution = find_substitution(
+            self._substitution_data(), target, lesson, child_class
+        )
+        display = apply_substitution(lesson, substitution)
+        subject = display["subject"]
+        teacher = display["teacher"]
+        room = display["room"]
         index = lesson.get("index")
         duration = lesson.get("duration", 1)
         badge = ", ".join(_badge_values(lesson.get("badge")))
 
         description_parts = []
+        if display["label"]:
+            description_parts.append(f"Änderung: {display['label']}")
+        if display["original_subject"]:
+            description_parts.append(f"Statt: {display['original_subject']}")
         if teacher:
             description_parts.append(f"Lehrkraft: {teacher}")
         if room:
@@ -182,10 +213,17 @@ class SphTimetableCalendar(CoordinatorEntity, CalendarEntity):
         ]
         uid = "sph-stundenplan-" + "-".join(re.sub(r"[^A-Za-z0-9_-]+", "_", part) for part in uid_parts)
 
+        if display["cancelled"]:
+            summary = f"Entfall: {subject}"
+        elif display["label"]:
+            summary = f"{subject} – {display['label']}"
+        else:
+            summary = subject
+
         return CalendarEvent(
             start=start,
             end=end,
-            summary=subject,
+            summary=summary,
             description="\n".join(description_parts) or None,
             location=room or None,
             uid=uid,
@@ -214,6 +252,7 @@ class SphTimetableCalendar(CoordinatorEntity, CalendarEntity):
         start_day = window_start.date()
         end_day = window_end.date()
         current_week = str(data.get("week_badge") or "")
+        child_class = str(data.get("klasse") or "")
         free_days = {str(value) for value in (data.get("free_days", []) or [])}
         events: list[CalendarEvent] = []
 
@@ -236,7 +275,7 @@ class SphTimetableCalendar(CoordinatorEntity, CalendarEntity):
                         events.append(week_event)
 
                 for lesson in lessons:
-                    event = self._lesson_event(lesson, target, week)
+                    event = self._lesson_event(lesson, target, week, child_class)
                     if event is not None:
                         events.append(event)
             target += timedelta(days=1)
