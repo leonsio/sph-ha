@@ -28,12 +28,14 @@ from .const import (
     CONF_MODULE_VERTRETUNG,
     CONF_SCHOOL_DISTRICT,
     CONF_SCHOOL_ID,
+    CONF_SCHOOL_PROFILE,
     CONF_TIMETABLE_OUTPUT,
     CONF_UPDATE_INTERVAL,
     DEFAULT_CALENDAR_EVENT_TYPES,
     DEFAULT_COMBINE_CALENDARS,
     DEFAULT_FIRST_LESSON,
     DEFAULT_MODULE_ENABLED,
+    DEFAULT_SCHOOL_PROFILE,
     DEFAULT_TIMETABLE_OUTPUT,
     DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
@@ -42,6 +44,7 @@ from .const import (
     TIMETABLE_OUTPUT_OWN,
 )
 from .module.stundenplan.movable_holidays import SCHOOL_DISTRICTS
+from .school_profiles import school_profile_options
 
 MODULE_STUNDENPLAN = "stundenplan"
 MODULE_KALENDER = "kalender"
@@ -143,6 +146,15 @@ def _school_district_selector():
     )
 
 
+def _school_profile_selector():
+    return SelectSelector(
+        SelectSelectorConfig(
+            options=school_profile_options(),
+            multiple=False,
+        )
+    )
+
+
 class SphConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
@@ -183,6 +195,10 @@ class SphConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_SCHOOL_ID, default=values.get(CONF_SCHOOL_ID, "")): str,
                 vol.Required(CONF_USERNAME, default=values.get(CONF_USERNAME, "")): str,
                 vol.Required(CONF_PASSWORD, default=values.get(CONF_PASSWORD, "")): str,
+                vol.Required(
+                    CONF_SCHOOL_PROFILE,
+                    default=values.get(CONF_SCHOOL_PROFILE, DEFAULT_SCHOOL_PROFILE),
+                ): _school_profile_selector(),
                 vol.Required(
                     CONF_UPDATE_INTERVAL,
                     default=values.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL),
@@ -242,6 +258,9 @@ class SphOptionsFlow(OptionsFlow):
                     CONF_SCHOOL_ID: school_id,
                     CONF_USERNAME: user_input[CONF_USERNAME].strip(),
                     CONF_PASSWORD: user_input[CONF_PASSWORD],
+                    CONF_SCHOOL_PROFILE: str(
+                        user_input.get(CONF_SCHOOL_PROFILE, DEFAULT_SCHOOL_PROFILE)
+                    ),
                     CONF_UPDATE_INTERVAL: int(user_input[CONF_UPDATE_INTERVAL]),
                     CONF_FIRST_LESSON: int(
                         user_input.get(CONF_FIRST_LESSON, DEFAULT_FIRST_LESSON)
@@ -304,6 +323,10 @@ class SphOptionsFlow(OptionsFlow):
                     CONF_PASSWORD,
                     default=values.get(CONF_PASSWORD, ""),
                 ): str,
+                vol.Required(
+                    CONF_SCHOOL_PROFILE,
+                    default=values.get(CONF_SCHOOL_PROFILE, DEFAULT_SCHOOL_PROFILE),
+                ): _school_profile_selector(),
                 vol.Required(
                     CONF_UPDATE_INTERVAL,
                     default=values.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL),
