@@ -14,7 +14,7 @@ Die Integration wird pro Kind eingerichtet und umfasst fünf unabhängig aktivie
 - **Lerngruppen** – Leistungskontrollen mit Fach, Dauer, Schulstunden und Lehrkraft sowie eigenen lokalen Terminen.
 - **Vertretungsplan** – Vertretungen, Entfälle, Raum- und Fachwechsel sowie Hinweise aus dem Schulportal.
 
-Zusätzlich stellt SPH-HA eigene Lovelace-Karten bereit. Ab Version 0.6 können schulspezifische Besonderheiten über **Schul-Profile** pro Kind aktiviert werden. Profile können sowohl Daten in Sensoren/JSON/Kalendern als auch notwendige Darstellungsregeln der Karten anpassen.
+Zusätzlich stellt SPH-HA eigene Lovelace-Karten bereit. Schulspezifische Besonderheiten werden über **Schul-Profile** pro Kind konfiguriert. Profile können sowohl Daten in Sensoren, JSON-Ausgaben und Kalendern als auch notwendige Darstellungsregeln der Karten anpassen.
 
 ## Installation über HACS
 
@@ -64,7 +64,7 @@ Der persönliche Stundenplan berücksichtigt die vom Schulportal gemeldete A-/B-
 
 Vertretungen aus dem SPH-Vertretungsplan können in datumsbezogenen Stundenplan-Darstellungen und Kalendern berücksichtigt werden. Dazu gehören unter anderem Entfälle, Vertretungslehrkräfte, Raumänderungen und Fachwechsel.
 
-Die Auswahl der Stundenplanquelle bleibt unabhängig vom Schul-Profil. Ein Profil darf insbesondere nicht `eigener_grundplan` als Ersatzquelle verwenden.
+Die Auswahl der Stundenplanquelle bleibt unabhängig vom Schul-Profil. Ein Profil verarbeitet die veröffentlichte Konfiguration, wählt aber keine alternative Stundenplanquelle.
 
 ## Schulkalender
 
@@ -115,7 +115,7 @@ Die Karten werden automatisch registriert. Die vollständige Dokumentation einsc
 
 Schul-Profile bündeln ausschließlich die Besonderheiten einer Schule. Sie werden pro Kind ausgewählt und können serverseitig Werte in Sensoren, JSON-Ausgaben und Kalendern sowie optional UI-Regeln für Lovelace anpassen.
 
-Die bestehende Sensorstruktur bleibt dabei grundsätzlich erhalten. Zusätzlich enthalten profilierte Payloads das Metadatum `school_profile`.
+Die bestehende Sensorstruktur bleibt dabei grundsätzlich erhalten. Profilierte Payloads enthalten zusätzlich das Metadatum `school_profile`.
 
 Derzeit vorhanden:
 
@@ -124,20 +124,6 @@ Derzeit vorhanden:
 Benutzerdokumentation: [Schul-Profile](docs/SCHOOL_PROFILES.md)
 
 Entwicklerdokumentation: [Schul-Profile entwickeln](docs/SCHOOL_PROFILES_DEVELOPMENT.md)
-
-### Migration von School Hacks
-
-Der bisherige Lovelace-Parameter
-
-```yaml
-school-hacks: kfg
-```
-
-ist in 0.6.0 noch als Legacy-Alias vorhanden. Neue Konfigurationen wählen das Profil direkt in der Integration oder verwenden bei einem expliziten Karten-Override:
-
-```yaml
-school-profile: kfg
-```
 
 ## Robustheit
 
