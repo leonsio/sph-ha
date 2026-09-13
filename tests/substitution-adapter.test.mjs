@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { SchoolContext, selectSchoolWeek } from "../custom_components/sph/static/school-profile.js";
-import kfg from "../custom_components/sph/static/school-profiles/kfg.js";
+import kfg from "../custom_components/sph/school_profiles/kfg/frontend/lovelace.js";
 import {
   sphSubstitutionState,
   substitutionLesson,
