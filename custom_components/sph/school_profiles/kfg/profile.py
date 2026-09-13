@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
+from ...api.subjects import subject_name
 from ..base import SchoolProfile
+
+
+_EPOCH_MARKER = re.compile(r"\s*\(\s*epo\d+\s*\)", re.IGNORECASE)
 
 
 class KFGProfile(SchoolProfile):
@@ -65,6 +70,19 @@ class KFGProfile(SchoolProfile):
         )
         resolved = mapping.get(key) if key is not None else raw
         return resolved if isinstance(resolved, str) and resolved.strip() else raw
+
+    def resolve_subject(self, value: Any) -> Any:
+        """Normalize KFG epoch markers and expand the remaining subject code."""
+        if not isinstance(value, str) or not value.strip():
+            return value
+
+        raw = value.strip()
+        cleaned = _EPOCH_MARKER.sub(" ", raw)
+        cleaned = " ".join(cleaned.split())
+        if cleaned != raw:
+            cleaned = subject_name(cleaned)
+
+        return super().resolve_subject(cleaned)
 
 
 PROFILE = KFGProfile()
