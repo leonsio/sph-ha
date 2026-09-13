@@ -1,4 +1,5 @@
-import { schoolCard, visibleSchoolBadges, schoolNow, selectSchoolWeek, schoolLesson, schoolHeading, schoolBadges, schoolClasses, schoolStyles } from "./school-hacks.js?v=0.4.24";
+import { schoolCard, visibleSchoolBadges, schoolNow, selectSchoolWeek, schoolHeading, schoolBadges, schoolClasses, schoolStyles } from "./school-hacks.js?v=0.4.24";
+import { substitutionLesson } from "./substitution-adapter.js?v=0.5.0";
 class SphStundenplanGridCard extends HTMLElement {
   static schoolWeekView = true;
   setConfig(config) {
@@ -105,7 +106,7 @@ class SphStundenplanGridCard extends HTMLElement {
 
   _renderLessons(lessons, date, calendarEvents) {
     return `<div class="lessons">${lessons.map(rawLesson => {
-      const lesson = schoolLesson(this, rawLesson, date);
+      const lesson = substitutionLesson(this, rawLesson, date);
       const events = this._calendarEventsForLesson(calendarEvents, date, lesson);
       return `<div class="lesson${schoolClasses(lesson)}"><div class="subject">${this._esc(lesson.displaySubject || lesson.fach || lesson.subject || "Unterricht")}${this._renderBadge(visibleSchoolBadges(this,lesson.badge))}</div>${schoolBadges(lesson)}${events.map(event => `<span class="calendar-event ${event.cssClass}">${this._esc(event.summary)}</span>`).join("")}<div class="teacher">${this._esc(lesson.displayTeacher || lesson.teacher || "")}${lesson.room ? ` <span>· Raum: ${this._esc(lesson.room)}</span>` : ""}</div></div>`;
     }).join("")}</div>`;
