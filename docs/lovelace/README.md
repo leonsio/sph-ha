@@ -1,6 +1,8 @@
 # Lovelace-Karten
 
-SPH-HA registriert seine Lovelace-JavaScript-Ressourcen automatisch. Nach Installation oder Update der Integration genügt normalerweise ein Neustart von Home Assistant und anschließend ein Neuladen des Browsers.
+SPH-HA registriert seine JavaScript-Ressourcen automatisch. Nach einem Integrationsupdate genügt normalerweise ein Home-Assistant-Neustart und anschließend ein Neuladen des Dashboards.
+
+Dokumentationsstand: **0.5.0**.
 
 ## Verfügbare Karten
 
@@ -8,25 +10,70 @@ SPH-HA registriert seine Lovelace-JavaScript-Ressourcen automatisch. Nach Instal
 |---|---|---|
 | [SPH Stundenplan](sph-stundenplan-card.md) | `custom:sph-stundenplan-card` | Persönlicher Wochenstundenplan als Liste |
 | [SPH Tagesstundenplan](sph-stundenplan-tag-card.md) | `custom:sph-stundenplan-tag-card` | Aktueller bzw. nächster Unterrichtstag |
-| [SPH Stundenplan Raster](sph-stundenplan-grid-card.md) | `custom:sph-stundenplan-grid-card` | Wochenstundenplan als klassisches Raster |
-| [SPH Mein Unterricht](sph-meinunterricht-card.md) | `custom:sph-meinunterricht-card` | Hausaufgaben anzeigen und eigene Einträge verwalten |
-| [SPH Lerngruppen](sph-lerngruppen-card.md) | `custom:sph-lerngruppen-card` | Leistungskontrollen anzeigen und eigene Termine verwalten |
-| [SPH Kalender](sph-kalender-card.md) | `custom:sph-kalender-card` | Tag-/Woche-/Monat-Kalender für die SPH-Kalender-Entities |
-| [SPH Vertretungsplan](sph-vertretungsplan-card.md) | `custom:sph-vertretungsplan-card` | Vertretungen, Raumwechsel und Ausfälle anzeigen |
+| [SPH Stundenplan Raster](sph-stundenplan-grid-card.md) | `custom:sph-stundenplan-grid-card` | Wochenstundenplan als Raster |
+| [SPH Mein Unterricht](sph-meinunterricht-card.md) | `custom:sph-meinunterricht-card` | Hausaufgaben anzeigen und lokale Einträge verwalten |
+| [SPH Lerngruppen](sph-lerngruppen-card.md) | `custom:sph-lerngruppen-card` | Leistungskontrollen anzeigen und lokale Termine verwalten |
+| [SPH Kalender](sph-kalender-card.md) | `custom:sph-kalender-card` | Tag-/Woche-/Monat-Darstellung der SPH-Kalender |
+| [SPH Vertretungsplan](sph-vertretungsplan-card.md) | `custom:sph-vertretungsplan-card` | Vertretungen, Raumwechsel, Entfälle und Hinweise |
 
-Schulanpassungen werden auf den normalen Karten mit `school-hacks: kfg` aktiviert.
-[Schulprofile und Umstieg](school-hacks.md). Die alten KFG-Kartentypen wurden entfernt.
+## Gemeinsame Entity-Auswahl
 
-## Gemeinsame Auswahlparameter
+Viele Karten unterstützen:
 
-Die Stundenplan-, Mein-Unterricht-, Lerngruppen- und Vertretungsplan-Karten unterstützen grundsätzlich die explizite Entity-Auswahl über `entity` beziehungsweise den Alias `sensor`. Wird keine Entity angegeben, kann bei mehreren Kindern mit `child` das in den Sensorattributen hinterlegte `kind_kürzel` ausgewählt werden.
+- `entity` – explizite Entity-ID,
+- `sensor` – Alias für `entity`,
+- `child` – Auswahl über `kind_kürzel` bzw. Kindnamen.
 
-Beispiel:
+Bei mehreren Kindern ist eine explizite `entity` oder ein eindeutiges `child` empfehlenswert.
+
+## Vertretungsdaten in Stundenplankarten
+
+Seit 0.5.0 verwenden die drei allgemeinen Stundenplankarten automatisch den zum Kind passenden internen SPH-Vertretungsplan.
+
+Damit können sie direkt an einer Stunde darstellen:
+
+- Entfall/Ausfall,
+- Vertretung,
+- Fachwechsel,
+- Raumänderung,
+- Vertretungslehrkraft,
+- Hinweise/Nachricht des Tages.
+
+Ohne School Hack ist der interne SPH-Vertretungsplan die primäre Quelle.
+
+## School Hacks
+
+Schulspezifische Anpassungen werden auf denselben allgemeinen Karten aktiviert:
 
 ```yaml
-type: custom:sph-stundenplan-card
-child: mk
-title: Maxim – Stundenplan
+type: custom:sph-stundenplan-grid-card
+entity: sensor.stundenplan_maxim_mk
+school-hacks: kfg
 ```
 
-Für produktive Dashboards ist bei mehreren SPH-Konfigurationen eine explizite `entity` oder ein eindeutiges `child` empfehlenswert.
+Bei einem aktiven School Hack gilt:
+
+1. explizit gesetzte Vertretungsquelle bleibt autoritativ,
+2. die schulische Profilquelle wird bevorzugt,
+3. der interne SPH-Vertretungsplan kann als Fallback dienen.
+
+Dadurch lassen sich weitere Schulen über eigene Profildateien ergänzen, ohne neue Kartenklassen zu kopieren.
+
+Allgemeine School-Hacks-Doku: [school-hacks.md](school-hacks.md).
+
+Schulspezifische Profile: [../schools/README.md](../schools/README.md).
+
+Aktuell vorhanden:
+
+- `kfg` – [Kaiserin-Friedrich-Gymnasium Bad Homburg](../schools/kfg/README.md)
+
+## Ressourcen und Cache
+
+Die Ressourcen werden versioniert unter `/api/sph/static/...` registriert. Alte separate KFG-Kartentypen werden nicht mehr verwendet.
+
+Nach einem Update:
+
+1. Home Assistant neu starten,
+2. Dashboard bzw. Browser-Cache neu laden.
+
+Manuelle `/local/...`-Ressourceneinträge sind für aktuelle Home-Assistant-Versionen nicht erforderlich.
