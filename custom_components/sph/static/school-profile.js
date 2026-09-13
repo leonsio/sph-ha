@@ -135,6 +135,17 @@ export class SchoolContext {
     if (explicit !== undefined) return explicit ? hass.states?.[explicit] || null : null;
 
     const timetable = this.timetable(hass);
+    const settings = this.profile.substitution;
+    if (settings) {
+      const cls = String(timetable?.attributes?.klasse || "").trim().toLowerCase()
+        .replace(/ä/g,"a").replace(/ö/g,"o").replace(/ü/g,"u").replace(/ß/g,"ss")
+        .replace(/[^a-z0-9_]+/g,"_").replace(/^_+|_+$/g, "");
+      const preferred =
+        (cls && settings.classPrefix ? hass.states?.[`${settings.classPrefix}${cls}`] : null) ||
+        (settings.fallback ? hass.states?.[settings.fallback] : null);
+      if (preferred) return preferred;
+    }
+
     const wantedShortcut = norm(timetable?.attributes?.kind_kürzel || config.child);
     const wantedName = norm(timetable?.attributes?.kind);
     const candidates = Object.values(hass.states || {}).filter(s =>
@@ -144,14 +155,7 @@ export class SchoolContext {
       (wantedShortcut && norm(s.attributes?.kind_kürzel) === wantedShortcut) ||
       (wantedName && norm(s.attributes?.kind) === wantedName)
     );
-    if (match || candidates.length === 1) return match || candidates[0];
-
-    const settings = this.profile.substitution;
-    if (!settings) return null;
-    const cls = String(timetable?.attributes?.klasse || "").trim().toLowerCase()
-      .replace(/ä/g,"a").replace(/ö/g,"o").replace(/ü/g,"u").replace(/ß/g,"ss")
-      .replace(/[^a-z0-9_]+/g,"_").replace(/^_+|_+$/g, "");
-    return (cls && hass.states?.[`${settings.classPrefix}${cls}`]) || hass.states?.[settings.fallback] || null;
+    return match || (candidates.length === 1 ? candidates[0] : null);
   }
 
   teacher(value, hass) {
@@ -402,6 +406,7 @@ export function schoolCard(Base) {
       if (!name) {
         this._schoolLoading = false;
         this._startSchoolClock();
+        if (this._schoolHass) super.hass = this._schoolHass;
         return;
       }
 
