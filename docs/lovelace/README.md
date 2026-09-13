@@ -2,7 +2,7 @@
 
 SPH-HA registriert seine JavaScript-Ressourcen automatisch. Nach einem Integrationsupdate genügt normalerweise ein Home-Assistant-Neustart und anschließend ein Neuladen des Dashboards.
 
-Dokumentationsstand: **0.5.0**.
+Dokumentationsstand: **0.6.0**.
 
 ## Verfügbare Karten
 
@@ -28,7 +28,7 @@ Bei mehreren Kindern ist eine explizite `entity` oder ein eindeutiges `child` em
 
 ## Vertretungsdaten in Stundenplankarten
 
-Seit 0.5.0 verwenden die drei allgemeinen Stundenplankarten automatisch den zum Kind passenden internen SPH-Vertretungsplan.
+Die drei allgemeinen Stundenplankarten verwenden automatisch den zum Kind passenden internen SPH-Vertretungsplan.
 
 Damit können sie direkt an einer Stunde darstellen:
 
@@ -39,27 +39,58 @@ Damit können sie direkt an einer Stunde darstellen:
 - Vertretungslehrkraft,
 - Hinweise/Nachricht des Tages.
 
-Ohne School Hack ist der interne SPH-Vertretungsplan die primäre Quelle.
+Die Verknüpfung erfolgt datumsbezogen. Konkrete Vertretungen werden nicht dauerhaft in einen wiederverwendeten Wochenplan geschrieben.
 
-## School Hacks
+## Schul-Profile
 
-Schulspezifische Anpassungen werden auf denselben allgemeinen Karten aktiviert:
+Ab 0.6.0 wird ein Schul-Profil normalerweise **nicht mehr in jeder Karte konfiguriert**. Das Profil wird pro Kind im Integrationseintrag ausgewählt und von den Karten über das Sensorattribut `school_profile` automatisch erkannt.
+
+Beispiel:
 
 ```yaml
 type: custom:sph-stundenplan-grid-card
 entity: sensor.stundenplan_maxim_mk
+```
+
+Wenn der zugehörige Sensor enthält:
+
+```yaml
+school_profile: kfg
+```
+
+lädt die Karte automatisch das KFG-Frontendprofil.
+
+### Expliziter Override
+
+Für Tests oder Sonderfälle kann das Profil direkt an der Karte gesetzt werden:
+
+```yaml
+type: custom:sph-stundenplan-grid-card
+entity: sensor.stundenplan_maxim_mk
+school-profile: kfg
+```
+
+Ein explizites
+
+```yaml
+school-profile: false
+```
+
+unterdrückt die Profil-Darstellung der Karte, auch wenn der Sensor ein Profil meldet.
+
+### Legacy
+
+Der bisherige Parameter
+
+```yaml
 school-hacks: kfg
 ```
 
-Bei einem aktiven School Hack gilt:
+bleibt in 0.6.0 als Alias bestehen. Neue Konfigurationen sollten ihn nicht mehr verwenden.
 
-1. explizit gesetzte Vertretungsquelle bleibt autoritativ,
-2. die schulische Profilquelle wird bevorzugt,
-3. der interne SPH-Vertretungsplan kann als Fallback dienen.
+Allgemeine Profil-Dokumentation: [Schul-Profile](../SCHOOL_PROFILES.md).
 
-Dadurch lassen sich weitere Schulen über eigene Profildateien ergänzen, ohne neue Kartenklassen zu kopieren.
-
-Allgemeine School-Hacks-Doku: [school-hacks.md](school-hacks.md).
+Entwickler-API: [Schul-Profile entwickeln](../SCHOOL_PROFILES_DEVELOPMENT.md).
 
 Schulspezifische Profile: [../schools/README.md](../schools/README.md).
 
@@ -69,7 +100,9 @@ Aktuell vorhanden:
 
 ## Ressourcen und Cache
 
-Die Ressourcen werden versioniert unter `/api/sph/static/...` registriert. Alte separate KFG-Kartentypen werden nicht mehr verwendet.
+Die Ressourcen werden versioniert unter `/api/sph/static/...` registriert. In 0.6.0 verwenden die Stundenplankarten `school-profile.js` und `substitution-adapter.js` mit Version `0.6.0`.
+
+Die alten `school-hacks`-Dateien bleiben nur als Kompatibilitätsbrücke erhalten. Alte separate KFG-Kartentypen werden nicht mehr verwendet.
 
 Nach einem Update:
 
