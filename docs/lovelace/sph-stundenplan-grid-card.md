@@ -1,59 +1,80 @@
 # SPH Stundenplan Raster
 
-> Schulprofile: Normale SPH-Karten unterstützen `school-hacks: kfg`.
-> [Konfiguration und Umstieg](school-hacks.md).
-
-
 Kartentyp: `custom:sph-stundenplan-grid-card`
 
-## Funktionsweise
+## Funktion
 
-Die Karte stellt den persönlichen Wochenstundenplan Montag bis Freitag als klassisches Tabellenraster dar. Zeilen entsprechen Unterrichtsstunden, Spalten den Wochentagen. Doppelstunden beziehungsweise längere Blöcke werden über mehrere Stundenzeilen zusammengefasst.
+Die Karte zeigt den persönlichen Wochenstundenplan Montag bis Freitag als Tabellenraster. Zeilen entsprechen Schulstunden, Spalten den Wochentagen. Doppelstunden bzw. längere Blöcke werden über mehrere Stundenzeilen zusammengefasst.
 
-Die Zeitangaben der einzelnen Stunden werden aus Start, Ende und `duration` der vorhandenen Unterrichtseinträge abgeleitet. Mindestens acht Stundenzeilen werden dargestellt; bei späteren Stunden erweitert sich das Raster automatisch.
+Mindestens acht Stundenzeilen werden dargestellt; bei späteren Stunden erweitert sich das Raster automatisch.
 
-Passende Termine aus `sensor.schulkalender_*` der Arten `Arbeiten` und `Klausuren` werden in der jeweiligen Unterrichtszelle hervorgehoben.
+Angezeigt werden:
+
+- Schulstunde und Uhrzeit
+- Fach
+- Lehrkraft
+- Raum
+- Badges
+- Arbeiten/Klausuren aus dem Schulkalender
+- Vertretungsinformationen
+
+## Vertretungen
+
+Ohne School Hack verwendet die Karte automatisch den internen SPH-Vertretungsplan des Kindes.
+
+Entfall, Vertretung, Fachwechsel, Raumänderung und Vertretungslehrkraft werden direkt in der jeweiligen Tabellenzelle dargestellt.
+
+Mit `school-hacks: <profil>` wird zuerst die schulische Profilquelle verwendet. Der interne SPH-Vertretungsplan dient als Fallback für Stunden ohne Treffer in der bevorzugten Quelle.
+
+Eine explizit konfigurierte Vertretungsquelle bleibt autoritativ.
+
+## School Hacks
+
+```yaml
+type: custom:sph-stundenplan-grid-card
+entity: sensor.stundenplan_maxim_mk
+school-hacks: kfg
+```
+
+Allgemein: [School Hacks](school-hacks.md).
+
+KFG: [Kaiserin-Friedrich-Gymnasium Bad Homburg](../schools/kfg/README.md).
 
 ## Entity-Auswahl
 
-Reihenfolge:
+1. `entity` oder `sensor`.
+2. `child` über `kind_kürzel`.
+3. automatische Stundenplan-Suche.
 
-1. `entity` oder `sensor`, falls konfiguriert und vorhanden.
-2. Bei gesetztem `child`: ein Sensor mit passendem Attribut `kind_kürzel`.
-3. Ohne `child`: `sensor.stundenplan`.
-
-## Konfigurationsparameter
+## Konfiguration
 
 | Parameter | Typ | Standard | Beschreibung |
 |---|---|---|---|
 | `type` | String | erforderlich | `custom:sph-stundenplan-grid-card` |
-| `title` | String | leer | Optionaler Kartentitel |
-| `entity` | Entity-ID | automatisch | Expliziter Stundenplan-Sensor |
-| `sensor` | Entity-ID | automatisch | Alias für `entity` |
-| `child` | String | leer | Auswahl über `kind_kürzel`, z. B. `mk` |
+| `title` | String | leer | Kartentitel |
+| `entity` | Entity-ID | automatisch | Stundenplan-Sensor |
+| `sensor` | Entity-ID | automatisch | Alias |
+| `child` | String | leer | Kind/Kürzel |
+| `school-hacks` | String/false | false | Optionales Schulprofil |
+| `vertretungsplan_sensor` | Entity-ID | automatisch | Explizite Vertretungsquelle |
+| `vertretungsplan` | Entity-ID | automatisch | Alias |
+| `substitution_sensor` | Entity-ID | automatisch | Alias |
 
 ## Beispiel
 
 ```yaml
 type: custom:sph-stundenplan-grid-card
-title: Wochenstundenplan
 entity: sensor.stundenplan_maxim_mk
+title: Wochenstundenplan
 ```
 
-Oder über das Kind-Kürzel:
+## Sections-Dashboard
 
-```yaml
-type: custom:sph-stundenplan-grid-card
-child: mk
-```
-
-## Darstellung im Sections-Dashboard
-
-Die Karte meldet Home Assistant eigene Grid-Empfehlungen: volle Breite, mindestens 12 Spalten sowie mindestens 5 Zeilen. Auf schmalen Displays bleibt das Raster horizontal scrollbar.
+Die Karte meldet Home Assistant eine Darstellung in voller Breite mit mindestens 12 Spalten. Auf schmalen Displays bleibt das Raster horizontal scrollbar.
 
 ## Hinweise
 
 - Die Ansicht umfasst Montag bis Freitag.
-- Kalender-Markierungen beziehen sich auf `Arbeiten` und `Klausuren`.
-- Bei automatischer Kalendererkennung wird zunächst `sensor.schulkalender_maxim_mk` verwendet, falls vorhanden; andernfalls der erste passende `sensor.schulkalender_*`.
-- Die Karte verändert keine Stundenplan- oder Kalendereinträge.
+- Kalender-Markierungen beziehen sich auf Arbeiten und Klausuren.
+- Die Karte verändert keine Stundenplan-, Vertretungs- oder Kalendereinträge.
+- School-Hack-spezifische Wochenüberschriften und Badge-Regeln werden ausschließlich vom Profil gesteuert.
