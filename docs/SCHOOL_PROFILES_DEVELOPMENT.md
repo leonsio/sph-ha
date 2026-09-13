@@ -1,6 +1,6 @@
 # Schul-Profile entwickeln
 
-Diese Dokumentation beschreibt die Entwickler-API für **School Profiles** ab SPH-HA 0.6.0.
+Diese Dokumentation beschreibt die aktuelle Entwickler-API für **Schul-Profile** in SPH-HA.
 
 Schul-Profile sind kleine, pro Kind auswählbare Erweiterungen für Besonderheiten einer Schule. Sie dürfen Werte aus SPH schulspezifisch aufbereiten, ohne die allgemeine SPH-Logik oder die öffentlichen Sensorstrukturen für alle Schulen zu verändern.
 
@@ -24,7 +24,7 @@ Ein Schul-Profil soll **nicht**:
 - neue schulspezifische Sensorvarianten erzeugen,
 - bestehende Sensor-/JSON-Strukturen unnötig verändern.
 
-Der langfristige Grundsatz lautet: **Was für mehrere Schulen gleich funktioniert, gehört in den Core. Nur tatsächliche Abweichungen gehören in ein Schul-Profil.**
+Grundsatz: **Was schulübergreifend funktioniert, gehört in den Core. Nur echte Abweichungen gehören in ein Schul-Profil.**
 
 ---
 
@@ -45,12 +45,12 @@ allgemeine Normalisierung
 konfigurierte Ausgabe des Kindes
  │
  ▼
-serverseitiges School Profile (Python)
+serverseitiges Schul-Profil (Python)
  │
  ├── Sensoren
  ├── JSON-Sensoren
  ├── native Kalender
- └── Services/weitere Verbraucher
+ └── weitere serverseitige Verbraucher
 
 Lovelace
  │
@@ -60,17 +60,13 @@ optionales Präsentationsprofil (JavaScript)
 
 Das Python-Profil ist für **Daten** zuständig. Das JavaScript-Profil enthält nur Regeln, die tatsächlich Darstellung oder zeitabhängige UI-Auswahl betreffen.
 
-### Warum zwei Ebenen?
-
-Ein Lehrerkürzel soll nicht nur in einer Lovelace-Karte korrekt erscheinen. Wenn eine Schule dafür eine schulspezifische Zuordnung benötigt, soll derselbe Wert auch in Sensoren, JSON und Kalendern verfügbar sein.
-
-Andererseits sind Dinge wie das Ausblenden eines A/B-Badges oder eine zusätzliche Überschrift im Grid reine Darstellung und gehören nicht in Sensorwerte.
+Ein Lehrerkürzel, das schulspezifisch aufgelöst werden muss, gehört daher in das Python-Profil. Ein ausgeblendetes A/B-Badge oder eine zusätzliche Grid-Überschrift gehört in das Frontend-Profil.
 
 ---
 
 ## Konfiguration pro Kind
 
-Der Config-Entry enthält ab 0.6.0:
+Der Config-Entry enthält:
 
 ```text
 school_profile
@@ -88,15 +84,13 @@ Beispiel:
 kfg
 ```
 
-Die Auswahl erfolgt bei der Einrichtung und in den Optionen **pro Kind**. Dadurch können mehrere Kinder an verschiedenen Schulen in derselben Home-Assistant-Installation unterschiedliche Profile verwenden.
-
-Das ausgewählte Profil wird in veröffentlichten Payloads zusätzlich als
+Die Auswahl erfolgt bei der Einrichtung und in den Optionen pro Kind. Das ausgewählte Profil wird in veröffentlichten Payloads zusätzlich als Metadatum ausgegeben:
 
 ```yaml
 school_profile: kfg
 ```
 
-angegeben. Das Feld ist additiv; bestehende Schlüssel und Verschachtelungen bleiben erhalten.
+Dieses Feld ist additiv. Bestehende Schlüssel und Verschachtelungen bleiben erhalten.
 
 ---
 
@@ -152,7 +146,7 @@ class ExampleProfile(SchoolProfile):
     name = "Beispielschule"
 ```
 
-Danach muss das Profil in `school_profiles/__init__.py` registriert werden.
+Anschließend wird das Profil in `school_profiles/__init__.py` registriert.
 
 ---
 
@@ -160,18 +154,13 @@ Danach muss das Profil in `school_profiles/__init__.py` registriert werden.
 
 ### `id`
 
-Technischer Profilname. Muss stabil und für Konfiguration/Frontend geeignet sein.
+Technischer Profilname. Der Wert wird in Konfiguration, Payloads und Frontend verwendet.
 
 ```python
 id = "example"
 ```
 
-Empfohlen:
-
-- Kleinbuchstaben
-- Ziffern
-- `-` oder `_`
-- keine Leerzeichen
+Empfohlen sind Kleinbuchstaben, Ziffern, `-` und `_` ohne Leerzeichen.
 
 ### `name`
 
@@ -192,9 +181,9 @@ subject_names = {
 }
 ```
 
-Die Zuordnung erfolgt case-insensitiv.
+Die Zuordnung erfolgt case-insensitiv über `resolve_subject()`.
 
-Allgemeine Fachnormalisierung, die für mehrere Schulen gilt, gehört dagegen in `api/subjects.py`, nicht in ein Schul-Profil.
+Allgemeine Fachnormalisierung, die für mehrere Schulen gilt, gehört in `api/subjects.py` und nicht in ein Schul-Profil.
 
 ### `substitution_labels`
 
@@ -207,17 +196,55 @@ substitution_labels = {
 }
 ```
 
-Der Rohcode bleibt in den ursprünglichen Feldern erhalten. Das Profil kann einen lesbaren Wert in `art_lang` bzw. in datumsbezogenen Kalenderdarstellungen bereitstellen.
+Der Rohcode `art` bleibt erhalten. Die lesbare Bezeichnung wird über `art_lang` beziehungsweise datumsbezogene Anzeigen bereitgestellt.
 
 ### `description_teacher_labels`
 
-Kennzeichnet Zeilen in mehrzeiligen Beschreibungen, deren Wert mit `resolve_teacher()` verarbeitet werden darf.
+Kennzeichnet Zeilen in mehrzeiligen Beschreibungen, deren Wert als Lehrerwert behandelt werden darf.
 
 ```python
 description_teacher_labels = (
     "lehrer",
     "lehrkraft",
 )
+```
+
+Beispiel:
+
+```text
+Lehrkraft: FRA
+Raum: 123
+```
+
+Nur die Zeile `Lehrkraft:` wird dabei über `resolve_teacher()` verarbeitet.
+
+### `teacher_fields`
+
+Menge der Dictionary-Felder, die `transform_data()` automatisch als Lehrerwerte behandelt.
+
+Standard:
+
+```text
+teacher
+lehrer
+lehrkraft
+vertreter
+lehrer_nach
+verantwortlich
+```
+
+Ein Profil kann `teacher_fields` überschreiben, wenn seine Daten eine andere Semantik verwenden.
+
+### `subject_fields`
+
+Menge der Dictionary-Felder, die automatisch über `resolve_subject()` verarbeitet werden.
+
+Standard:
+
+```text
+fach
+fach_lang
+displaySubject
 ```
 
 ---
@@ -232,9 +259,7 @@ def state_entities(self) -> tuple[str, ...]:
     return ()
 ```
 
-Ein Profil kann eigene Home-Assistant-Entities angeben, von denen seine Transformation abhängt.
-
-Wenn sich eine dieser Entities ändert, werden die betroffenen SPH-Ausgaben erneut veröffentlicht.
+Ein Profil kann Home-Assistant-Entities angeben, von denen seine Transformation abhängt. Wenn sich eine dieser Entities ändert, veröffentlicht SPH-HA die betroffenen Profildaten erneut.
 
 Beispiel:
 
@@ -244,9 +269,7 @@ def state_entities(self):
     return ("sensor.meine_schule_lehrerliste",)
 ```
 
-**Wichtig:** Solche Entities gehören ausschließlich in das konkrete Profil. Der Core kennt keine schulabhängigen Entity-Namen.
-
-Beim KFG ist daher `sensor.kfg_kollegium` ausschließlich in `KFGProfile` definiert.
+Solche Entity-Namen gehören ausschließlich in das konkrete Profil. Der Core kennt keine schulspezifischen Datenquellen.
 
 ---
 
@@ -257,9 +280,7 @@ def resolve_teacher(self, value, hass=None):
     return value
 ```
 
-Wird für bekannte Lehrerfelder verwendet.
-
-Die Basisklasse verändert nichts. Ein Profil kann z. B.:
+Die Basisklasse verändert den Wert nicht. Ein Profil kann hier beispielsweise:
 
 - eine statische Mapping-Tabelle verwenden,
 - eine profil-eigene HA-Entity auslesen,
@@ -275,22 +296,7 @@ def resolve_teacher(self, value, hass=None):
     return self.TEACHERS.get(value.strip(), value)
 ```
 
-### Welche Felder werden standardmäßig als Lehrerfelder behandelt?
-
-Die Basisklasse verarbeitet aktuell rekursiv:
-
-```text
-teacher
-lehrer
-lehrkraft
-vertreter
-lehrer_nach
-verantwortlich
-```
-
-Ein Profil kann `teacher_fields` überschreiben, wenn eine Schule andere Semantik benötigt.
-
-`lehrkraft_kürzel` wird bewusst nicht automatisch durch einen Langnamen ersetzt, damit Kürzel-Felder Kürzel bleiben.
+Kürzel-Felder, die ausdrücklich Kürzel bleiben sollen, sollten nicht in `teacher_fields` aufgenommen werden.
 
 ---
 
@@ -301,19 +307,7 @@ def resolve_subject(self, value):
     ...
 ```
 
-Standardmäßig werden Einträge aus `subject_names` angewandt.
-
-Bekannte Felder:
-
-```text
-fach
-fach_lang
-displaySubject
-```
-
-Für komplexere Regeln kann der Hook überschrieben werden.
-
-Beispiel:
+Die Basisklasse verwendet `subject_names`. Für komplexere Regeln kann der Hook überschrieben werden.
 
 ```python
 def resolve_subject(self, value):
@@ -327,7 +321,7 @@ def resolve_subject(self, value):
 
 ## `resolve_substitution_label(value)`
 
-Löst einen schulspezifischen Vertretungscode auf.
+Löst einen schulspezifischen Vertretungscode über `substitution_labels` auf.
 
 ```python
 def resolve_substitution_label(self, value):
@@ -338,39 +332,23 @@ def resolve_substitution_label(self, value):
 
 ## `transform_description(value, hass=None)`
 
-Verarbeitet mehrzeilige Beschreibungstexte. Standardmäßig werden nur Zeilen mit einem Prefix aus `description_teacher_labels` verändert.
-
-Beispiel:
-
-```text
-Lehrkraft: FRA
-Raum: 123
-```
-
-kann zu
-
-```text
-Lehrkraft: Vorname Nachname
-Raum: 123
-```
-
-werden, wenn das Profil `FRA` auflösen kann.
+Verarbeitet mehrzeilige Beschreibungstexte. Die Basisklasse ändert nur Zeilen, deren Prefix in `description_teacher_labels` enthalten ist.
 
 ---
 
 ## `transform_data(value, hass=None)`
 
-Generischer rekursiver Transformer für Listen und Dictionaries.
+Generischer rekursiver Transformer für Listen, Tupel und Dictionaries.
 
-Er verarbeitet standardmäßig:
+Die Basisklasse verarbeitet:
 
-- Lehrerfelder über `resolve_teacher()`
-- Fachfelder über `resolve_subject()`
+- Felder aus `teacher_fields` über `resolve_teacher()`
+- Felder aus `subject_fields` über `resolve_subject()`
 - `description` über `transform_description()`
 
-Die Struktur des Objekts bleibt erhalten.
+Andere Werte werden rekursiv verarbeitet. Die Datenstruktur bleibt erhalten.
 
-Dieser Hook ist für kleine, schemaerhaltende Anpassungen gedacht. Für modulbezogene Sonderfälle sollten die spezifischen Hooks verwendet werden.
+Für modulbezogene Besonderheiten sollten die spezifischen Hooks verwendet werden.
 
 ---
 
@@ -380,18 +358,16 @@ Dieser Hook ist für kleine, schemaerhaltende Anpassungen gedacht. Für modulbez
 
 Wird vor Veröffentlichung von Stundenplan-Sensor und Stundenplan-JSON angewandt.
 
-Standardverhalten:
+Die Basisklasse:
 
-- verarbeitet `eigener_plan`
-- verarbeitet `tage`, falls diese durch die Konfiguration ausgegeben werden
-- fügt `school_profile` hinzu
-- verändert `eigener_grundplan` nicht
+- verarbeitet `eigener_plan`,
+- verarbeitet `tage`, wenn dieser Bereich durch die Konfiguration ausgegeben wird,
+- fügt `school_profile` hinzu,
+- verändert `eigener_grundplan` nicht.
 
-### Wichtige Regel zur Stundenplanquelle
+### Stundenplanquelle
 
-Das Profil darf niemals selbst entscheiden, ob `own` oder `all` verwendet wird.
-
-Die Reihenfolge ist:
+Das Profil darf niemals selbst zwischen persönlichem und vollständigem Stundenplan umschalten.
 
 ```text
 SPH own/all
@@ -400,40 +376,28 @@ Benutzerkonfiguration timetable_output
   ↓
 veröffentlichte Planbereiche
   ↓
-School Profile
+Schul-Profil
 ```
 
-Insbesondere darf ein Profil **nicht `eigener_grundplan` als Quelle verwenden**.
-
-Warum: An manchen Schulen enthält ein umfangreicher Plan gleichzeitig mehrere alternative Gruppen, z. B. katholische Religion, evangelische Religion und Ethik. Für ein Kind darf das Profil nicht aus einer anderen Quelle zusätzliche Unterrichtseinträge hineinmischen.
+Bei `timetable_output = all` werden `eigener_plan` und `tage` jeweils profiliert. `eigener_grundplan` wird weder als Profilquelle verwendet noch durch die Profiltransformation umgeschrieben.
 
 ### Datumsbezogene Vertretungen
 
-Eine Vertretung gilt für ein konkretes Datum. Der Wochenplan wird jedoch auch zur Berechnung anderer Wochen verwendet.
-
-Daher werden datumsbezogene Vertretungen nicht dauerhaft in den wiederverwendeten `eigener_plan` geschrieben. Sie werden dort angewandt, wo das Datum bekannt ist, z. B. im Stundenplan-Kalender oder in der Lovelace-Darstellung.
+Konkrete Vertretungen gelten für ein bestimmtes Datum. Sie werden deshalb nicht dauerhaft in einen wiederverwendeten Wochenplan geschrieben. Die Anwendung erfolgt in datumsbewussten Kontexten, insbesondere Kalendern und Stundenplan-Karten.
 
 ---
 
 ## `transform_calendar_payload(payload, hass=None)`
 
-Wird für den Schulkalender-Sensor und dessen JSON-Ausgabe verwendet.
+Wird auf den strukturierten Schulkalender-Sensor und dessen JSON-Ausgabe angewandt.
 
-Geeignet für:
-
-- Lehrernamen
-- Fachnamen
-- schulspezifische Verantwortlichen-Bezeichnungen
-- Beschreibungen
-- weitere schemaerhaltende Werte
+Geeignet für Lehrer-, Fach- und Beschreibungswerte sowie andere schemaerhaltende Anpassungen.
 
 ---
 
 ## `transform_meinunterricht_payload(payload, hass=None)`
 
-Wird auf den Sensor und JSON-Sensor von **Mein Unterricht** angewandt.
-
-Damit können beispielsweise schulspezifische Lehrer- und Fachbezeichnungen auch außerhalb der Lovelace-Karte korrigiert werden.
+Wird auf Sensor und JSON-Sensor von **Mein Unterricht** angewandt.
 
 ---
 
@@ -449,52 +413,45 @@ Wird auf Vertretungsplan-Sensor und JSON-Sensor angewandt.
 
 Die Basisklasse:
 
-1. führt die normale Daten-Transformation aus,
-2. ergänzt für bekannte `art`-Codes die profilabhängige `art_lang`-Bezeichnung,
-3. fügt `school_profile` hinzu.
+1. führt `transform_data()` aus,
+2. löst bekannte `art`-Codes über `resolve_substitution_label()` auf,
+3. setzt `art_lang`,
+4. ergänzt `school_profile`.
 
 ---
 
 ## `transform_calendar_item(item, hass=None)`
 
-Verarbeitet einen einzelnen nativen Kalender-Quelldatensatz, bevor daraus ein `CalendarEvent` erzeugt wird.
-
-Dadurch werden schulspezifische Daten nicht nur im Sensor, sondern auch in Home Assistants Kalender-Entities sichtbar.
+Verarbeitet einen einzelnen Quelldatensatz des nativen Schulkalenders, bevor daraus ein `CalendarEvent` erzeugt wird.
 
 ---
 
 ## `transform_timetable_display(display, hass=None, substitution=None)`
 
-Wird für einen **datumsbezogenen** Stundenplan-Kalendereintrag aufgerufen.
+Verarbeitet einen datumsbezogenen Stundenplan-/Kalendereintrag. Hier ist eine konkrete Vertretung bereits dem Unterrichtstermin zugeordnet.
 
-Hier ist das konkrete Datum bereits bekannt und die passende Vertretung wurde gefunden. Deshalb ist dieser Hook für Änderungen geeignet, die nur zusammen mit einem konkreten Vertretungseintrag korrekt sind.
+Die Basisklasse bereitet auf:
 
-Standardmäßig werden:
-
-- Fachname
-- Lehrkraft
-- Vertretungsbezeichnung
-
-über das Profil aufbereitet.
+- `subject` über `resolve_subject()`
+- `teacher` über `resolve_teacher()`
+- `label` bei vorhandener Vertretung über `resolve_substitution_label()`
 
 ---
 
 # Sensor- und JSON-Kompatibilität
 
-School Profiles sollen bestehende Verbraucher nicht unnötig brechen.
+Schul-Profile sollen bestehende Verbraucher nicht unnötig brechen.
 
-Grundregeln:
+Regeln:
 
 1. Vorhandene Top-Level-Strukturen bleiben erhalten.
-2. Vorhandene Listen/Dictionaries werden nicht ohne zwingenden Grund verschoben.
+2. Listen und Dictionaries werden nicht ohne zwingenden Grund verschoben.
 3. Werte dürfen schulspezifisch korrigiert werden.
 4. Neue Felder sollen additiv sein.
 5. `school_profile` ist ein zusätzliches Metadatenfeld.
-6. JSON-Sensoren verwenden dieselben transformierten Payloads wie normale Sensoren.
+6. JSON-Sensoren verwenden dieselben transformierten Payloads wie die strukturierten Sensoren.
 
 Beispiel:
-
-Vorher:
 
 ```json
 {
@@ -503,7 +460,7 @@ Vorher:
 }
 ```
 
-Mit einem Profil, das Lehrerkürzel auflöst:
+kann durch ein Profil zu
 
 ```json
 {
@@ -512,38 +469,36 @@ Mit einem Profil, das Lehrerkürzel auflöst:
 }
 ```
 
-Die Struktur bleibt gleich.
+werden. Die Struktur bleibt identisch.
 
 ---
 
-# Profil-eigene externe Home-Assistant-Daten
+# Profil-eigene Home-Assistant-Daten
 
-Ein Profil darf auf andere HA-Entities zugreifen, wenn die Schule diese Information tatsächlich benötigt.
+Ein Profil darf andere HA-Entities auslesen, wenn die Schule diese Information tatsächlich benötigt. Diese Abhängigkeit wird im Profil selbst gekapselt.
 
-Das ist **keine allgemeine SPH-Abhängigkeit**.
-
-Beispiel KFG:
+Beispiel:
 
 ```python
-teacher_entity = "sensor.kfg_kollegium"
+teacher_entity = "sensor.meine_schule_kollegium"
+
+@property
+def state_entities(self):
+    return (self.teacher_entity,)
 ```
 
-Diese Entity ist nur relevant, wenn `school_profile: kfg` gewählt ist.
+Empfehlungen:
 
-Ein anderes Profil kann:
-
-- gar keine externe Entity benötigen,
-- eine eigene Lehrerliste verwenden,
-- eine statische Mapping-Tabelle enthalten,
-- andere Datenquellen verwenden.
-
-Profile sollten bei fehlenden optionalen Datenquellen möglichst auf die unveränderten SPH-Werte zurückfallen.
+- fehlende optionale Datenquellen dürfen das Profil nicht unbrauchbar machen,
+- unbekannte Lehrer-/Fachwerte sollten unverändert bleiben,
+- der Core darf keine Profil-spezifischen Entity-Namen enthalten,
+- `state_entities` sollte nur tatsächlich benötigte Entities melden.
 
 ---
 
 # Registrierung eines neuen Profils
 
-Beispiel `example.py`:
+Beispiel `custom_components/sph/school_profiles/example.py`:
 
 ```python
 from .base import SchoolProfile
@@ -563,7 +518,7 @@ class ExampleProfile(SchoolProfile):
     }
 ```
 
-Dann in `school_profiles/__init__.py`:
+Registrierung in `school_profiles/__init__.py`:
 
 ```python
 from .example import ExampleProfile
@@ -575,25 +530,21 @@ _PROFILES = {
 }
 ```
 
-Das Profil erscheint danach automatisch in der Profil-Auswahl des Config-Flows.
+`school_profile_options()` erzeugt aus dieser Registry die Auswahl für den Config-Flow.
 
 ---
 
 # Frontend-Profil
 
-Nur wenn die Schule tatsächlich eine besondere Darstellung benötigt, wird zusätzlich eine Datei angelegt:
+Ein Frontend-Profil ist nur erforderlich, wenn eine Schule zusätzliche Darstellungsregeln benötigt.
+
+Datei:
 
 ```text
 custom_components/sph/static/school-profiles/example.js
 ```
 
-Minimal:
-
-```javascript
-export default {};
-```
-
-Mögliche aktuelle UI-Eigenschaften:
+Beispiel:
 
 ```javascript
 export default {
@@ -602,195 +553,115 @@ export default {
   hideWeekBadges: true,
   gridWeekHeading: true,
   advanceWeekAfterFriday: true,
+  teachers: {
+    entity: "sensor.meine_schule_kollegium",
+    attribute: "lehrer",
+    descriptionLabels: ["lehrer", "lehrkraft"]
+  },
+  substitution: {
+    classPrefix: "sensor.vertretungsplan_",
+    fallback: "sensor.vertretungsplan",
+    news: true,
+    labels: {
+      V: "Vertretung",
+      E: "Entfall"
+    }
+  }
 };
 ```
 
-## `weekBadges`
+Verfügbare Präsentationseinstellungen hängen von `static/school-profile.js` ab. Aktuell verwendet die gemeinsame Kartenlogik insbesondere:
 
-Welche Badge-Werte als Wochenkennung behandelt werden.
+| Einstellung | Bedeutung |
+|---|---|
+| `weekBadges` | gültige Wochenkennungen für die UI-Filterung |
+| `unbadgedFallback` | blendet unmarkierte Gegenstücke aus, wenn derselbe Slot ein passendes Wochen-Badge besitzt |
+| `hideWeekBadges` | versteckt Wochen-Badges an einzelnen Unterrichtseinträgen |
+| `gridWeekHeading` | zeigt die Schulwoche einmal oberhalb der Grid-Ansicht |
+| `advanceWeekAfterFriday` | schaltet nach Ende der letzten Freitagsstunde auf die nächste Woche |
+| `teachers` | optionale Lehrerauflösung für reine UI-Texte |
+| `substitution` | bevorzugte Vertretungsquelle, Labels und Nachrichtenanzeige |
 
-## `unbadgedFallback`
+Die Karten erkennen das Profil normalerweise über das Sensorattribut `school_profile`.
 
-Steuert die Auswahl unmarkierter paralleler Stunden bei A/B-Gruppen.
+Für Tests oder einen gezielten Override kann eine Karte verwenden:
 
-## `hideWeekBadges`
+```yaml
+school-profile: example
+```
 
-Blendet A/B-Badges an einzelnen Unterrichtseinträgen aus, wenn die Woche bereits an anderer Stelle dargestellt wird.
+Mit
 
-## `gridWeekHeading`
+```yaml
+school-profile: false
+```
 
-Zeigt die Schulwoche einmal oberhalb der Grid-Ansicht statt an jedem Tag.
-
-## `advanceWeekAfterFriday`
-
-Die Wochenansicht wechselt nach Ende der letzten Freitagsstunde auf die folgende Schulwoche.
+wird die Profil-Darstellung für diese Karte deaktiviert.
 
 ---
 
-# Optionale Frontend-Lehrerquelle
+# Vertretungsquellen im Frontend
 
-Für Legacy-/UI-Fallbacks kann ein Frontend-Profil weiterhin einen `teachers`-Block definieren:
+Für Stundenplan-Karten gilt folgende Priorität:
 
-```javascript
-teachers: {
-  entity: "sensor.example_teachers",
-  attribute: "lehrer",
-  descriptionLabels: ["lehrer", "lehrkraft"]
-}
-```
+1. explizit in der Karte konfigurierte Quelle über `vertretungsplan_sensor`, `vertretungsplan` oder `substitution_sensor`,
+2. bevorzugte Quelle des aktiven Frontend-Profils,
+3. interner SPH-Vertretungsplan des Kindes als Fallback.
 
-Neue serverseitige Profile sollten Lehrernamen jedoch bevorzugt bereits im Python-Profil auflösen. Dann bekommen Sensoren, JSON und Kalender dieselben Werte.
+Eine explizit konfigurierte Quelle ist autoritativ. Wenn sie nicht existiert, wird nicht automatisch auf eine andere Quelle gewechselt.
 
-Beim KFG ist der Block nur wegen der bestehenden KFG-Funktionalität und als Fallback vorhanden.
+Das Matching eines Eintrags berücksichtigt unter anderem Datum, Klasse, Stunde/Stundenbereich und Fach beziehungsweise Originalfach.
 
 ---
 
-# Vertretungsdarstellung im Frontend
+# Dokumentation eines Profils
 
-Ein Profil kann für die Lovelace-Darstellung aktuell definieren:
+Für jedes Profil sollte eine Datei angelegt werden:
 
-```javascript
-substitution: {
-  classPrefix: "sensor.vertretungsplan_",
-  fallback: "sensor.vertretungsplan",
-  news: true,
-  labels: {
-    Vertr: "Vertretung",
-    Entf: "Entfall"
-  }
-}
+```text
+docs/schools/<profil>/README.md
 ```
 
-Die allgemeinen SPH-Vertretungssensoren werden bevorzugt automatisch dem Kind zugeordnet. `classPrefix`/`fallback` dienen hauptsächlich als Kompatibilitäts-/Sonderfallmechanismus.
+Sie sollte nur den aktuellen Funktionsumfang beschreiben:
 
-Langfristig sollten solche Angaben aus einem Profil entfernt werden, sobald die allgemeine Integration die betreffende Schule ohne Sonderregel korrekt bedienen kann.
+- Schule und Profil-ID
+- Aktivierung
+- serverseitige Anpassungen
+- zusätzliche HA-Abhängigkeiten
+- Vertretungslabels
+- Frontend-Regeln
+- besondere Einschränkungen
 
 ---
 
-# Automatische Profil-Erkennung in Lovelace
+# Tests
 
-Die SPH-Sensoren tragen das Feld:
+Ein neues Profil sollte mindestens folgende Fälle abdecken:
 
-```yaml
-school_profile: kfg
-```
+- Registry und Config-Flow-Auswahl
+- Verhalten ohne Profil
+- Lehrerauflösung einschließlich unbekannter Werte
+- Fachauflösung
+- Vertretungslabels
+- Sensor- und JSON-Strukturerhalt
+- `eigener_plan` und `tage` bei vollständiger Stundenplan-Ausgabe
+- unverändertes `eigener_grundplan`
+- Frontend-Profilladen und `school-profile: false`
+- profil-eigene Vertretungsquelle und Fallback
+- optionale `state_entities`
 
-Die mitgelieferten Lovelace-Karten erkennen das Profil darüber automatisch.
-
-Damit genügt normalerweise:
-
-```yaml
-type: custom:sph-stundenplan-grid-card
-entity: sensor.stundenplan_maxim_mk
-```
-
-Eine zusätzliche Kartenkonfiguration ist nicht erforderlich.
-
-Für Tests oder explizite Overrides kann weiterhin verwendet werden:
-
-```yaml
-school-profile: kfg
-```
-
-Der alte Parameter
-
-```yaml
-school-hacks: kfg
-```
-
-bleibt in 0.6.0 als Legacy-Alias erhalten, sollte für neue Konfigurationen aber nicht mehr verwendet werden.
+Python-Tests liegen unter `tests/test_*.py`, Frontend-Tests unter `tests/*.test.mjs`.
 
 ---
 
-# KFG als Referenzprofil
+# Referenz: KFG
 
-Server:
+Das KFG-Profil zeigt die vollständige aktuelle Struktur eines Profils:
 
 ```text
 custom_components/sph/school_profiles/kfg.py
-```
-
-Frontend:
-
-```text
 custom_components/sph/static/school-profiles/kfg.js
+docs/schools/kfg/README.md
 ```
 
-Das KFG-Profil übernimmt die vorherige `school-hacks/kfg.js`-Funktionalität, trennt sie aber nun nach Verantwortlichkeit.
-
-Serverseitig gehören dazu insbesondere:
-
-- Lehrernamen über die KFG-eigene Kollegiums-Entity,
-- KFG-Bezeichnungen für Vertretungsarten,
-- Transformation derselben Werte in Sensoren, JSON und Kalendern.
-
-Frontendseitig bleiben insbesondere:
-
-- A/B-Badge-Darstellung,
-- Grid-Wochenüberschrift,
-- Wechsel auf die Folgewoche nach der letzten Freitagsstunde,
-- visuelle Vertretungskennzeichnung und Tageshinweise.
-
-`sensor.kfg_kollegium` ist **keine allgemeine Abhängigkeit von SPH-HA**. Er wird ausschließlich vom KFG-Profil verwendet.
-
----
-
-# Wann gehört etwas in den Core?
-
-Vor dem Hinzufügen eines Profil-Hooks sollte geprüft werden:
-
-**Core**, wenn:
-
-- SPH dieselbe Semantik schulübergreifend liefert,
-- mehrere Schulen dieselbe Regel benötigen,
-- es sich um Normalisierung eines allgemeinen SPH-Formats handelt,
-- es sich um allgemeine Vertretungs-/Kalenderlogik handelt.
-
-**Profil**, wenn:
-
-- eine Schule eigene Codes verwendet,
-- eine Schule eine zusätzliche lokale Mapping-Quelle benötigt,
-- dieselben SPH-Daten an dieser Schule anders interpretiert werden müssen,
-- eine Darstellung wirklich schulabhängig ist.
-
-Beispiele:
-
-| Funktion | Ort |
-|---|---|
-| `Deutsch 7n` → `Deutsch` allgemeingültig normalisieren | Core |
-| SPH-Vertretung nach Datum und Stunde zuordnen | Core |
-| KFG-Kürzel über `sensor.kfg_kollegium` auflösen | KFG-Profil |
-| KFG-Code `Betr` als `Betreuung` anzeigen | KFG-Profil |
-| Kalendertermine aus Stundenplan erzeugen | Core |
-| Grid-Ansicht am KFG nach Freitag auf Folgewoche schalten, solange nicht verallgemeinert | KFG-Frontendprofil |
-
----
-
-# Empfehlungen für neue Profile
-
-1. Mit möglichst wenigen Overrides beginnen.
-2. Allgemeine Parser- oder Normalisierungsfehler zuerst im Core beheben.
-3. Sensorschlüssel nicht umbenennen.
-4. Rohwerte nur dann ersetzen, wenn der veröffentlichte Wert dadurch fachlich korrekter wird.
-5. Bei optionalen externen Entities einen sicheren Fallback vorsehen.
-6. Datumsabhängige Änderungen nur in einem datumsbewussten Kontext anwenden.
-7. Für jedes Profil eine eigene Dokumentation unter `docs/schools/<profil>/README.md` anlegen.
-8. Python-Tests für Daten-Hooks und JavaScript-Tests für reine UI-Regeln ergänzen.
-9. Das Profil regelmäßig verkleinern, wenn frühere Sonderfälle in den Core übernommen wurden.
-
----
-
-# Checkliste für ein neues Profil
-
-- [ ] `school_profiles/<name>.py` angelegt
-- [ ] eindeutige `id` und `name` gesetzt
-- [ ] Profil in `school_profiles/__init__.py` registriert
-- [ ] nur tatsächlich schulspezifische Hooks überschrieben
-- [ ] externe Entities ausschließlich im Profil definiert
-- [ ] vorhandene Sensorstruktur erhalten
-- [ ] Stundenplan-Auswahl nicht verändert
-- [ ] `eigener_grundplan` nicht als alternative Profilquelle verwendet
-- [ ] falls nötig `static/school-profiles/<name>.js` angelegt
-- [ ] Entwickler-/Schuldokumentation ergänzt
-- [ ] Tests für Transformationsregeln ergänzt
-
+`sensor.kfg_kollegium` ist ausschließlich Bestandteil dieses Profils. Die allgemeine Profil-Engine kennt diese Entity nicht.
