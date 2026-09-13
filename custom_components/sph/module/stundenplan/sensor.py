@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from datetime import timedelta
 import json
-import re
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
+from ...api.subjects import SUBJECT_NAMES, subject_name
 from ...const import (
     CONF_CHILD_NAME,
     CONF_CHILD_SHORTCUT,
@@ -15,28 +15,6 @@ from ...const import (
     DEFAULT_TIMETABLE_OUTPUT,
     TIMETABLE_OUTPUT_ALL,
 )
-
-SUBJECT_NAMES = {
-    "M": "Mathematik", "D": "Deutsch", "E": "Englisch", "F": "Französisch", "L": "Latein",
-    "G": "Geschichte", "GE": "Geschichte", "EK": "Erdkunde", "POW": "Politik und Wirtschaft",
-    "PW": "Politik und Wirtschaft", "PH": "Physik", "CH": "Chemie", "BIO": "Biologie",
-    "SP": "Sport", "MU": "Musik", "ETH": "Ethik", "RKA": "Religion katholisch",
-    "REV": "Religion evangelisch", "RELI": "Religion", "INF": "Informatik", "KU": "Kunst",
-    "LRS": "Lese-Rechtschreib-Schwäche",
-}
-
-
-def subject_name(subject):
-    if not subject:
-        return subject
-    value = str(subject).strip()
-    match = re.match(r"^([A-Za-zÄÖÜäöü]+)(\d+)(.*)$", value)
-    if match:
-        code, number, suffix = match.groups()
-        base = SUBJECT_NAMES.get(code.upper())
-        if base:
-            return f"{base} {number}{suffix}"
-    return SUBJECT_NAMES.get(value.upper(), value)
 
 
 def enrich_days(days):
@@ -77,13 +55,7 @@ def _empty_days_like(days):
 
 
 def timetable_payload(coordinator, entry) -> dict:
-    """Build the timetable payload shared by normal and JSON sensors.
-
-    The personal timetable (``eigener_plan``) is always populated. The legacy
-    complete timetable block (``tage``) remains present for compatibility but
-    is empty by default. It is populated only when explicitly enabled in the
-    integration options.
-    """
+    """Build the timetable payload shared by normal and JSON sensors."""
     data = coordinator.data or coordinator.last_successful_data or {}
     free_days = list(data.get("free_days", []) or [])
     all_days = _mask_current_week_free_days(coordinator, data.get("all", []), free_days)
@@ -92,7 +64,9 @@ def timetable_payload(coordinator, entry) -> dict:
     timetable_output = str(
         entry.data.get(CONF_TIMETABLE_OUTPUT, DEFAULT_TIMETABLE_OUTPUT)
     ).strip().lower()
-    exposed_all_days = all_days if timetable_output == TIMETABLE_OUTPUT_ALL else _empty_days_like(all_days)
+    exposed_all_days = (
+        all_days if timetable_output == TIMETABLE_OUTPUT_ALL else _empty_days_like(all_days)
+    )
 
     return {
         "kind": entry.data.get(CONF_CHILD_NAME, ""),
@@ -169,3 +143,14 @@ class SphTimetableJsonSensor(CoordinatorEntity, SensorEntity):
             "format": "application/json",
             "bytes": len(value.encode("utf-8")),
         }
+
+
+__all__ = [
+    "SUBJECT_NAMES",
+    "subject_name",
+    "child_label",
+    "timetable_payload",
+    "compact_json",
+    "SphTimetableSensor",
+    "SphTimetableJsonSensor",
+]
