@@ -9,7 +9,8 @@ Diese Datei beschreibt die aktuelle technische Struktur von SPH-HA.
 - Fachlogik bleibt im jeweiligen Modul.
 - Modulübergreifende Normalisierung liegt unter `api/`.
 - Schulspezifische Datenanpassungen werden über serverseitige **Schul-Profile** gekapselt.
-- Schulspezifische Darstellungsregeln liegen in optionalen Frontend-Profilen.
+- Jede Schule besitzt ein eigenes dynamisch entdecktes Profilpaket.
+- Schulspezifische Darstellungsregeln liegen im `frontend/`-Unterordner des jeweiligen Profils.
 - Sensoren, JSON-Sensoren und native Kalender verwenden dieselben serverseitig profilierten Datenregeln.
 - Datumsbezogene Vertretungen werden nur in datumsbewussten Kontexten auf einen Stundenplaneintrag angewandt.
 
@@ -32,7 +33,11 @@ custom_components/sph/
 ├── school_profiles/
 │   ├── __init__.py
 │   ├── base.py
-│   └── kfg.py
+│   └── kfg/
+│       ├── __init__.py
+│       ├── profile.py
+│       └── frontend/
+│           └── lovelace.js
 ├── module/
 │   ├── stundenplan/
 │   ├── kalender/
@@ -41,8 +46,6 @@ custom_components/sph/
 │   └── vertretung/
 ├── static/
 │   ├── school-profile.js
-│   ├── school-profiles/
-│   │   └── kfg.js
 │   ├── substitution-adapter.js
 │   ├── sph-stundenplan-card.js
 │   ├── sph-stundenplan-tag-card.js
@@ -65,6 +68,7 @@ Verantwortlich für:
 - Modulaktivierung,
 - Entity-ID-Verwaltung,
 - automatische Lovelace-Ressourcenregistrierung,
+- dynamische Registrierung der Frontend-Verzeichnisse gefundener Schul-Profile,
 - Beobachtung profil-eigener Home-Assistant-Entities,
 - Start und Stop integrationsweiter Hilfslogik.
 
@@ -106,9 +110,23 @@ Schulspezifische Ausnahmen gehören dagegen in das jeweilige Schul-Profil.
 
 ## Schul-Profile
 
-### Registry
+### Dynamische Discovery
 
-`school_profiles/__init__.py` verwaltet die verfügbaren Profile.
+`school_profiles/__init__.py` durchsucht direkte Unterordner von `school_profiles/`. Ein Profilpaket wird erkannt, wenn es eine `profile.py` enthält.
+
+Beispiel:
+
+```text
+school_profiles/example/
+├── __init__.py
+├── profile.py
+└── frontend/
+    └── lovelace.js
+```
+
+`profile.py` exportiert ein `PROFILE`-Objekt auf Basis von `SchoolProfile`. Die Profil-ID muss dem Ordnernamen entsprechen.
+
+Die Registry enthält keine statische Liste konkreter Schulen. Neue Profilpakete werden automatisch gefunden und aus ihren eigenen Metadaten in Config-Flow und Laufzeit eingebunden.
 
 Der Standardwert ist:
 
@@ -116,13 +134,18 @@ Der Standardwert ist:
 none
 ```
 
-Aktuell registriert ist zusätzlich:
+### Profilmetadaten
 
-```text
-kfg
-```
+Jedes Profil liefert selbst:
 
-`school_profile_options()` liefert die Auswahl für Config-Flow und Options-Flow.
+- `id`
+- `name`
+- `description`
+- `frontend_module`
+
+`school_profile_options()` erzeugt die Auswahl für Config-Flow und Options-Flow aus `profile.config_option()`.
+
+`school_profile_metadata()` stellt die Metadaten generischen Komponenten zur Verfügung.
 
 ### Serverprofil
 
@@ -144,13 +167,25 @@ Die Basisklasse erhält bereits vom Core ausgewählte und normalisierte Daten. E
 
 Bei vollständiger Stundenplan-Ausgabe werden `eigener_plan` und `tage` jeweils profiliert. `eigener_grundplan` wird nicht als Profilquelle verwendet und nicht durch die Profiltransformation umgeschrieben.
 
+### Profil-eigene Python-Dateien
+
+Zusätzliche Hilfsdateien können im jeweiligen Profilordner liegen und von `profile.py` relativ importiert werden. Nur `profile.py` dient als Discovery-Einstiegspunkt; dadurch werden beliebige Dateien nicht automatisch ausgeführt.
+
 ### Frontendprofil
 
-`static/school-profile.js` enthält die gemeinsame Darstellungsschicht. Profil-spezifische Einstellungen liegen unter:
+`static/school-profile.js` enthält die gemeinsame Darstellungsschicht. Profil-spezifische Frontend-Dateien liegen innerhalb des jeweiligen Profilpakets:
 
 ```text
-static/school-profiles/<profil>.js
+school_profiles/<profil>/frontend/
 ```
+
+Der Profilordner wird von `school_profile_frontend_paths()` ermittelt. `async_setup()` registriert ausschließlich diesen `frontend/`-Ordner als statischen Pfad:
+
+```text
+/api/sph/school_profiles/<profil>/frontend/
+```
+
+Python-Dateien des Profils werden dadurch nicht als statische Ressourcen veröffentlicht.
 
 Das Frontend erkennt das aktive Profil über das Sensorattribut:
 
@@ -308,7 +343,7 @@ Profil-Hooks können einzelne Kalenderdatensätze sowie strukturierte Sensor-/JS
 
 ## Lovelace-Ressourcen
 
-Die Integration registriert ihre JavaScript-Ressourcen selbst und verwendet versionierte URLs.
+Die Integration registriert ihre allgemeinen JavaScript-Ressourcen selbst und verwendet versionierte URLs. Profil-eigene Frontend-Verzeichnisse werden zusätzlich dynamisch aus den entdeckten Profilpaketen registriert.
 
 Aktuelle Karten:
 
@@ -325,14 +360,17 @@ Aktuelle Karten:
 - Erfolgreiche Daten bleiben bei temporären Abruffehlern soweit möglich erhalten.
 - Lokale Einträge werden unabhängig von SPH gespeichert.
 - Profile sollen unbekannte Werte unverändert lassen, wenn eine optionale schulspezifische Datenquelle fehlt.
+- Fehlerhafte Profilpakete werden bei der Discovery isoliert und nicht in der Auswahl angeboten.
 - Frontend-Karten verändern keine Home-Assistant-State-Objekte.
 
 ## Tests
 
 Die Tests decken unter anderem ab:
 
+- dynamische Profil-Discovery,
+- profil-eigene Metadaten und Config-Optionen,
+- Frontend-Pfade aus Profilpaketen,
 - A/B-Wochenlogik,
-- Schul-Profilladen,
 - serverseitige Profiltransformationen,
 - Vertretungsquellen-Priorität,
 - internen SPH-Vertretungsadapter,

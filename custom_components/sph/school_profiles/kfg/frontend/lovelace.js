@@ -1,5 +1,4 @@
-// Kaiserin-Friedrich-Gymnasium: only school-specific presentation settings.
-// Data transformations live in school_profiles/kfg.py and are applied server-side.
+// Kaiserin-Friedrich-Gymnasium: school-specific presentation settings.
 export default {
   weekBadges: ["A", "B"],
   unbadgedFallback: true,

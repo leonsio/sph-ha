@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { filterDay, SchoolContext, schoolCard, schoolDescription, schoolBadges } from '../custom_components/sph/static/school-profile.js';
-import kfg from '../custom_components/sph/static/school-profiles/kfg.js';
+import kfg from '../custom_components/sph/school_profiles/kfg/frontend/lovelace.js';
 
 const lesson = {subject:'M',fach:'Mathematik',teacher:'Her',index:1,duration:2,start:'07:55',end:'09:25'};
 const timetable = {entity_id:'sensor.stundenplan_maxim_mk',attributes:{klasse:'7n',kind_kürzel:'Mk',school_profile:'kfg',wochenkennung:'A',wochenbeginn:'2026-09-07',eigener_plan:[[lesson]]}};

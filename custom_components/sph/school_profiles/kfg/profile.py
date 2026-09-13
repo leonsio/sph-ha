@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .base import SchoolProfile
+from ..base import SchoolProfile
 
 
 class KFGProfile(SchoolProfile):
@@ -12,17 +12,15 @@ class KFGProfile(SchoolProfile):
 
     id = "kfg"
     name = "Kaiserin-Friedrich-Gymnasium Bad Homburg"
+    description = "Schulprofil für das Kaiserin-Friedrich-Gymnasium Bad Homburg."
+    frontend_module = "lovelace.js"
 
-    # Presentation-only flags are mirrored in static/school-profiles/kfg.js;
-    # data transformations live in this server-side profile.
     week_badges = ("A", "B")
     unbadged_fallback = True
     hide_week_badges = True
     grid_week_heading = True
     advance_week_after_friday = True
 
-    # KFG-only dependency. The generic SchoolProfile API knows nothing about
-    # this entity and does not require any teacher directory.
     teacher_entity = "sensor.kfg_kollegium"
     teacher_attribute = "lehrer"
     description_teacher_labels = ("lehrer", "lehrkraft", "verantwortlich")
@@ -67,3 +65,6 @@ class KFGProfile(SchoolProfile):
         )
         resolved = mapping.get(key) if key is not None else raw
         return resolved if isinstance(resolved, str) and resolved.strip() else raw
+
+
+PROFILE = KFGProfile()

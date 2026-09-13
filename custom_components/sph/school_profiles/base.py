@@ -16,6 +16,8 @@ class SchoolProfile:
 
     id = "none"
     name = "Standard / kein Schulprofil"
+    description = "Keine schulspezifischen Anpassungen."
+    frontend_module: str | None = None
 
     # Optional exact subject-name replacements. Keys are matched case-insensitively.
     subject_names: dict[str, str] = {}
@@ -38,6 +40,19 @@ class SchoolProfile:
         }
     )
     subject_fields = frozenset({"fach", "fach_lang", "displaySubject"})
+
+    def metadata(self) -> dict[str, Any]:
+        """Return profile-owned metadata used by configuration and other components."""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "frontend_module": self.frontend_module,
+        }
+
+    def config_option(self) -> dict[str, str]:
+        """Return the Home Assistant selector option for this profile."""
+        return {"value": self.id, "label": self.name}
 
     @property
     def state_entities(self) -> tuple[str, ...]:

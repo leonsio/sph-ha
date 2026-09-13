@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {selectSchoolWeek,selectSchoolDay,weekForDate,visibleSchoolBadges,schoolNow,SchoolContext} from '../custom_components/sph/static/school-profile.js';
-import kfg from '../custom_components/sph/static/school-profiles/kfg.js';
+import kfg from '../custom_components/sph/school_profiles/kfg/frontend/lovelace.js';
 const a={subject:'A-Fach',fach:'A-Unterricht',teacher:'Her',badge:'A',start:'12:25',end:'13:10',index:7,duration:1};
 const b={...a,subject:'B-Fach',fach:'B-Unterricht',badge:'B',end:'15:20'};
 const attrs={wochenkennung:'A',wochenbeginn:'2026-09-07',klasse:'7n',eigener_plan:Array.from({length:5},()=>[a,b]),freie_tage:[]};

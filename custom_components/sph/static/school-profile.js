@@ -411,7 +411,7 @@ export function schoolCard(Base) {
       }
 
       if (!profiles.has(name)) {
-        profiles.set(name, import(`./school-profiles/${name}.js?v=0.6.0`).then(m => m.default).catch(error => {
+        profiles.set(name, import(`../school_profiles/${name}/frontend/lovelace.js?v=0.6.0`).then(m => m.default).catch(error => {
           profiles.delete(name);
           throw error;
         }));
