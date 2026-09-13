@@ -1,50 +1,75 @@
 # SPH Stundenplan
 
-> Schulprofile: Normale SPH-Karten unterstützen `school-hacks: kfg`.
-> [Konfiguration und Umstieg](school-hacks.md).
-
-
 Kartentyp: `custom:sph-stundenplan-card`
 
-## Funktionsweise
+## Funktion
 
-Die Karte zeigt den persönlichen Stundenplan Montag bis Freitag als Liste. Unterrichtseinträge mit identischer Start-/Endzeit werden als parallele Optionen zusammengefasst. Angezeigt werden Fach, Uhrzeit, Lehrkraft, Raum und A/B-Badges.
+Die Karte zeigt den persönlichen Stundenplan Montag bis Freitag als Liste. Einträge mit identischer Start-/Endzeit werden als parallele Optionen zusammengefasst.
 
-Zusätzlich sucht die Karte nach einem passenden `sensor.schulkalender_*` und blendet Termine der Arten `Arbeiten` und `Klausuren` an den zugehörigen Unterrichtsstunden ein. Die Zuordnung erfolgt über Datum und Fachbezeichnung; bei zeitlich begrenzten Kalendereinträgen kann außerdem die zeitliche Überlappung verwendet werden.
+Angezeigt werden unter anderem:
+
+- Uhrzeit
+- Fach
+- Lehrkraft
+- Raum
+- Badges
+- Kalenderhinweise für Arbeiten/Klausuren
+- Vertretungsinformationen
+
+## Vertretungsinformationen
+
+Seit 0.5.0 verwendet die Karte ohne School Hack automatisch den zum Kind passenden internen `sensor.vertretungsplan_*`.
+
+Mögliche Darstellungen:
+
+- Entfall/Ausfall
+- Vertretung
+- Fachwechsel inklusive ursprünglichem Fach
+- Raumänderung
+- Vertretungslehrkraft
+- Nachricht/Hinweise des Tages
+
+Mit `school-hacks: <profil>` wird zuerst die bevorzugte Vertretungsquelle des Schulprofils verwendet. Falls sie für eine konkrete Stunde keinen Treffer liefert, kann der interne SPH-Vertretungsplan als Fallback dienen.
+
+Eine explizite Kartenquelle über `vertretungsplan_sensor`, `vertretungsplan` oder `substitution_sensor` bleibt autoritativ.
+
+## School Hacks
+
+```yaml
+type: custom:sph-stundenplan-card
+entity: sensor.stundenplan_maxim_mk
+school-hacks: kfg
+```
+
+Allgemeine Beschreibung: [School Hacks](school-hacks.md).
+
+KFG: [Kaiserin-Friedrich-Gymnasium Bad Homburg](../schools/kfg/README.md).
+
+## Kalender-Markierungen
+
+Passende Termine aus `sensor.schulkalender_*` der Arten `Arbeiten` und `Klausuren` werden an der zugehörigen Unterrichtsstunde eingeblendet. Die Zuordnung erfolgt über Datum/Fach und bei zeitgebundenen Terminen zusätzlich über zeitliche Überlappung.
 
 ## Entity-Auswahl
 
-Reihenfolge:
-
 1. `entity` oder `sensor`, falls konfiguriert und vorhanden.
-2. Bei gesetztem `child`: ein Sensor mit passendem Attribut `kind_kürzel`.
-3. Ohne `child`: `sensor.schulportal_hessen_stundenplan`.
+2. Bei `child`: passender Stundenplan über `kind_kürzel`.
+3. Andernfalls automatische Stundenplan-Suche.
 
-## Konfigurationsparameter
+## Konfiguration
 
 | Parameter | Typ | Standard | Beschreibung |
 |---|---|---|---|
 | `type` | String | erforderlich | `custom:sph-stundenplan-card` |
-| `title` | String | leer | Optionaler Kartentitel |
-| `entity` | Entity-ID | automatisch | Expliziter Stundenplan-Sensor |
+| `title` | String | leer | Kartentitel |
+| `entity` | Entity-ID | automatisch | Stundenplan-Sensor |
 | `sensor` | Entity-ID | automatisch | Alias für `entity` |
-| `child` | String | leer | Auswahl über `kind_kürzel`, z. B. `mk` |
+| `child` | String | leer | Auswahl über Kind/Kürzel |
+| `school-hacks` | String/false | false | Optionales Schulprofil |
+| `vertretungsplan_sensor` | Entity-ID | automatisch | Explizite Vertretungsquelle |
+| `vertretungsplan` | Entity-ID | automatisch | Alias |
+| `substitution_sensor` | Entity-ID | automatisch | Alias |
 
-## Minimale Konfiguration
-
-```yaml
-type: custom:sph-stundenplan-card
-```
-
-## Empfohlene Konfiguration bei mehreren Kindern
-
-```yaml
-type: custom:sph-stundenplan-card
-title: Stundenplan Maxim
-child: mk
-```
-
-Oder vollständig explizit:
+## Beispiel
 
 ```yaml
 type: custom:sph-stundenplan-card
@@ -54,6 +79,6 @@ title: Stundenplan Maxim
 
 ## Hinweise
 
-- Es werden maximal die ersten fünf Tage aus `eigener_plan` dargestellt.
-- Die Karte ist eine reine Anzeige; Stundenplaneinträge können nicht verändert werden.
-- Kalender-Markierungen werden nur für `Arbeiten` und `Klausuren` dargestellt.
+- Die Karte verändert keine SPH-Daten.
+- School Hacks wirken nur auf die Darstellung.
+- Der interne Vertretungsplan wird anhand des Kindes ausgewählt; bei mehreren Integrationsinstanzen ist eine explizite Stundenplan-Entity empfehlenswert.
