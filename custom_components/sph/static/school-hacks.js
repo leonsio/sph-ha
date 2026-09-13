@@ -248,7 +248,7 @@ export function schoolCard(Base) {
       this._renderedEntity = null;
       this._schoolLoading = Boolean(name);
       if (!name) { if (this._schoolHass) this.hass = this._schoolHass; return; }
-      if (!profiles.has(name)) profiles.set(name, import(`./school-hacks/${name}.js?v=0.4.23`).then(m => m.default).catch(error => { profiles.delete(name); throw error; }));
+      if (!profiles.has(name)) profiles.set(name, import(`./school-hacks/${name}.js?v=0.4.24`).then(m => m.default).catch(error => { profiles.delete(name); throw error; }));
       this._schoolReady = profiles.get(name).then(profile => {
         if (generation !== this._schoolGeneration) return;
         this._school = new SchoolContext(profile, this);
