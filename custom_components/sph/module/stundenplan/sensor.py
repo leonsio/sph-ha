@@ -99,6 +99,8 @@ def timetable_payload(coordinator, entry) -> dict:
         "kind_kürzel": entry.data.get(CONF_CHILD_SHORTCUT, ""),
         "klasse": data.get("klasse", ""),
         "wochenkennung": data.get("week_badge"),
+        "wochenbeginn": data.get("week_reference_date"),
+        "eigener_grundplan": enrich_days(data.get("own", [])),
         "tage": enrich_days(exposed_all_days),
         "eigener_plan": enrich_days(own_days),
         "freie_tage": free_days,

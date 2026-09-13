@@ -2,6 +2,8 @@
 export default {
   weekBadges: ["A", "B"],
   unbadgedFallback: true,
+  hideWeekBadges: true,
+  advanceWeekAfterFriday: true,
   teachers: { entity: "sensor.kfg_kollegium", attribute: "lehrer", descriptionLabels: ["lehrer", "lehrkraft", "verantwortlich"] },
   substitution: {
     classPrefix: "sensor.vertretungsplan_",

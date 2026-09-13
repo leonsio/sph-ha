@@ -1,5 +1,6 @@
-import { schoolCard, schoolDays, schoolLesson, schoolHeading, schoolBadges, schoolClasses, schoolStyles } from "./school-hacks.js?v=0.4.22";
+import { schoolCard, visibleSchoolBadges, schoolNow, selectSchoolWeek, schoolLesson, schoolHeading, schoolBadges, schoolClasses, schoolStyles } from "./school-hacks.js?v=0.4.23";
 class SphStundenplanGridCard extends HTMLElement {
+  static schoolWeekView = true;
   setConfig(config) {
     this.config = config || {};
     if (!this.shadowRoot) this.attachShadow({ mode: "open" });
@@ -16,7 +17,8 @@ class SphStundenplanGridCard extends HTMLElement {
 
     const entity = this._findEntity(hass);
     const attrs = entity?.attributes || {};
-    const days = Array.isArray(attrs.eigener_plan) ? schoolDays(this, attrs.eigener_plan, attrs.wochenkennung).slice(0, 5) : [];
+    const view = selectSchoolWeek(attrs, this._school?.profile, schoolNow(this));
+    const days = view.days.slice(0, 5);
     const calendarEvents = this._calendarEvents(hass);
     const title = this.config.title || "";
     const header = title ? ` header="${this._esc(title)}"` : "";
@@ -31,7 +33,7 @@ class SphStundenplanGridCard extends HTMLElement {
       (Array.isArray(day) ? day : []).map(lesson => this._periodEnd(lesson))
     ));
     const slots = this._buildSlots(days, maxPeriod);
-    const table = this._renderTable(days, names, slots, calendarEvents);
+    const table = this._renderTable(days, names, slots, calendarEvents, view);
 
     // Keep the scroll container itself. Replacing it on every Home Assistant
     // state update resets scrollLeft and makes horizontal scrolling jump back
@@ -70,11 +72,11 @@ class SphStundenplanGridCard extends HTMLElement {
       <ha-card${header}><div class="table-wrap">${table}</div></ha-card>`;
   }
 
-  _renderTable(days, names, slots, calendarEvents) {
+  _renderTable(days, names, slots, calendarEvents, view) {
     const covered = Array.from({ length:5 }, () => new Set());
-    const monday = this._monday(new Date());
+    const monday = view.monday;
     let html = "<table><thead><tr><th>Stunde</th>";
-    names.forEach((name, i) => { const date = new Date(monday); date.setDate(date.getDate() + i); html += `<th>${this._esc(name)}${schoolHeading(this, date)}</th>`; });
+    names.forEach((name, i) => { const date = new Date(monday); date.setDate(date.getDate() + i); html += `<th>${this._esc(name)}${schoolHeading(this, date, view.week)}</th>`; });
     html += "</tr></thead><tbody>";
 
     for (const slot of slots) {
@@ -98,7 +100,7 @@ class SphStundenplanGridCard extends HTMLElement {
     return `<div class="lessons">${lessons.map(rawLesson => {
       const lesson = schoolLesson(this, rawLesson, date);
       const events = this._calendarEventsForLesson(calendarEvents, date, lesson);
-      return `<div class="lesson${schoolClasses(lesson)}"><div class="subject">${this._esc(lesson.displaySubject || lesson.fach || lesson.subject || "Unterricht")}${this._renderBadge(lesson.badge)}</div>${schoolBadges(lesson)}${events.map(event => `<span class="calendar-event ${event.cssClass}">${this._esc(event.summary)}</span>`).join("")}<div class="teacher">${this._esc(lesson.displayTeacher || lesson.teacher || "")}${lesson.room ? ` <span>· Raum: ${this._esc(lesson.room)}</span>` : ""}</div></div>`;
+      return `<div class="lesson${schoolClasses(lesson)}"><div class="subject">${this._esc(lesson.displaySubject || lesson.fach || lesson.subject || "Unterricht")}${this._renderBadge(visibleSchoolBadges(this,lesson.badge))}</div>${schoolBadges(lesson)}${events.map(event => `<span class="calendar-event ${event.cssClass}">${this._esc(event.summary)}</span>`).join("")}<div class="teacher">${this._esc(lesson.displayTeacher || lesson.teacher || "")}${lesson.room ? ` <span>· Raum: ${this._esc(lesson.room)}</span>` : ""}</div></div>`;
     }).join("")}</div>`;
   }
 

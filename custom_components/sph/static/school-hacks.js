@@ -15,6 +15,82 @@ export function filterDay(day, week, profile) {
   });
 }
 
+// Calendar-day arithmetic avoids DST-dependent 167/169-hour week differences.
+const mondayOf = date => {
+  const result = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  result.setDate(result.getDate() - (result.getDay() + 6) % 7);
+  return result;
+};
+const dateKey = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+const civilDay = date => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000;
+const parseDate = value => {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const date = new Date(+match[1], +match[2]-1, +match[3]);
+  return dateKey(date) === value ? date : null;
+};
+export const schoolNow = (card, instant = new Date()) => {
+  const zone = card._hass?.config?.time_zone;
+  if (!zone) return instant;
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-GB", {
+    timeZone: zone, year:"numeric", month:"2-digit", day:"2-digit",
+    hour:"2-digit", minute:"2-digit", second:"2-digit", hourCycle:"h23"
+  }).formatToParts(instant).map(p => [p.type, p.value]));
+  return new Date(+parts.year, +parts.month-1, +parts.day, +parts.hour, +parts.minute, +parts.second);
+};
+export function weekForDate(attrs, date, now = new Date()) {
+  const badge = String(attrs.wochenkennung || "").trim().toUpperCase();
+  if (!["A", "B"].includes(badge)) return badge;
+  const anchor = mondayOf(parseDate(attrs.wochenbeginn) || now);
+  const distance = Math.round((civilDay(mondayOf(date)) - civilDay(anchor)) / 7);
+  return Math.abs(distance) % 2 ? (badge === "A" ? "B" : "A") : badge;
+}
+const planForDate = (attrs, date, profile, now) => {
+  const source = Array.isArray(attrs.eigener_grundplan) ? attrs.eigener_grundplan : (Array.isArray(attrs.eigener_plan) ? attrs.eigener_plan : []);
+  if ((attrs.freie_tage || []).includes(dateKey(date))) return [];
+  return filterDay(source?.[(date.getDay()+6)%7], weekForDate(attrs,date,now), profile);
+};
+const endMinutes = value => {
+  const match = String(value || "").trim().match(/^(\d{1,2}):(\d{2})$/);
+  return match && +match[1] < 24 && +match[2] < 60 ? +match[1]*60 + +match[2] : null;
+};
+export function selectSchoolWeek(attrs, profile, now = new Date()) {
+  const monday = mondayOf(now);
+  if (profile?.advanceWeekAfterFriday) {
+    const weekday = (now.getDay()+6)%7;
+    const friday = new Date(monday); friday.setDate(friday.getDate()+4);
+    const lessons = planForDate(attrs, friday, profile, now);
+    const ends = lessons.map(l => endMinutes(l.end));
+    // A free Friday switches at midnight. Unknown end times wait until Saturday.
+    const finished = !lessons.length || (ends.every(end => end !== null) && now.getHours()*60+now.getMinutes() >= Math.max(...ends));
+    if (weekday > 4 || (weekday === 4 && finished)) monday.setDate(monday.getDate()+7);
+  }
+  const week = weekForDate(attrs, monday, now);
+  const days = profile?.advanceWeekAfterFriday ? Array.from({length:5}, (_, i) => {
+    const date = new Date(monday); date.setDate(date.getDate()+i);
+    return planForDate(attrs,date,profile,now);
+  }) : (Array.isArray(attrs.eigener_plan) ? attrs.eigener_plan : []).map(day => filterDay(day,week,profile));
+  return {monday, week, days};
+}
+export function selectSchoolDay(attrs, profile, now = new Date()) {
+  for (let offset=0; offset<=7; offset++) {
+    const date = new Date(now.getFullYear(),now.getMonth(),now.getDate()+offset);
+    const index = (date.getDay()+6)%7;
+    const lessons = planForDate(attrs,date,profile,now);
+    if (index > 4 || !lessons.length) continue;
+    const ends = lessons.map(l => endMinutes(l.end));
+    if (offset === 0 && ends.every(end => end !== null) && now.getHours()*60+now.getMinutes() >= Math.max(...ends)) continue;
+    return {date,index,lessons,week:weekForDate(attrs,date,now)};
+  }
+  return null;
+}
+export function visibleSchoolBadges(card, value) {
+  const profile = card._school?.profile;
+  if (!profile?.hideWeekBadges) return value;
+  const values = Array.isArray(value) ? value : String(value ?? "").split(/[,;/|]+/);
+  return values.filter(v => String(v ?? "").trim() && !badges(v).some(b => profile.weekBadges?.includes(b)));
+}
+
 export class SchoolContext {
   constructor(profile, card) { this.profile = profile; this.card = card; }
   timetable(hass) {
@@ -42,7 +118,7 @@ export class SchoolContext {
     const attrs = this.timetable(hass)?.attributes || {};
     const entries = this._entries(this.substitution(hass)?.attributes || {});
     // Match the original subject code before resolving display names.
-    const item = entries.find(i => this._class(i, attrs.klasse) && this._dateMatch(i, date, (date.getDay()+6)%7) && this._period(i.stunde, lesson) && this._norm(i.fach_original || i.subject_original || i.fach || i.subject) === this._norm(lesson.subject));
+    const item = entries.find(i => this._class(i, attrs.klasse) && this._dateMatch(i, date, (date.getDay()+6)%7, parseDate(attrs.wochenbeginn) || schoolNow(this.card)) && this._period(i.stunde, lesson) && this._norm(i.fach_original || i.subject_original || i.fach || i.subject) === this._norm(lesson.subject));
     if (!item) return base;
     const art = String(item.art || "").trim();
     const label = this.profile.substitution?.labels?.[art] || art || "Vertretung";
@@ -62,12 +138,12 @@ export class SchoolContext {
 
   _looksLikeEntry(value) { return !!(value && (value.fach || value.fach_original || value.subject) && (value.stunde || value.datum || value.art || value.vertreter || value.lehrer_nach)); }
 
-  _dateMatch(item, date, dayIndex) {
+  _dateMatch(item, date, dayIndex, referenceDate = date) {
     if (!item?.datum) return false;
     const value = String(item.datum).trim().toLowerCase();
     const names = ["montag", "dienstag", "mittwoch", "donnerstag", "freitag", "samstag", "sonntag"];
     const weekdayIndex = names.indexOf(value);
-    if (weekdayIndex >= 0) return weekdayIndex === dayIndex;
+    if (weekdayIndex >= 0) return weekdayIndex === dayIndex && civilDay(mondayOf(date)) === civilDay(mondayOf(referenceDate));
     const iso = value.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T|\s)/i);
     if (iso) return +iso[1] === date.getFullYear() && +iso[2] === date.getMonth()+1 && +iso[3] === date.getDate();
     const match = value.match(/(\d{1,2})[.\/-](\d{1,2})(?:[.\/-](\d{2,4}))?/);
@@ -123,9 +199,9 @@ export const schoolNews = (card, date) => {
   const news = card._school._news(card._hass, date);
   return news.length ? card._school._newsHtml(news) : "";
 };
-export const schoolHeading = (card, date) => {
+export const schoolHeading = (card, date, selectedWeek) => {
   if (!card._school) return "";
-  const week = card._school.timetable(card._hass)?.attributes?.wochenkennung;
+  const week = selectedWeek ?? weekForDate(card._school.timetable(card._hass)?.attributes || {}, date, schoolNow(card));
   return ` ${escapeHtml(new Intl.DateTimeFormat("de-DE").format(date))}${week ? ` · Woche ${escapeHtml(week)}` : ""}`;
 };
 export const schoolBadges = lesson => `${lesson.originalSubject ? `<small>statt ${escapeHtml(lesson.originalSubject)}</small>` : ""}${lesson.changeLabel ? `<span class="badge ${escapeHtml(lesson.changeClass)}">${escapeHtml(lesson.changeLabel)}</span>` : ""}`;
@@ -136,21 +212,48 @@ export const schoolStyles = `.cancelled{text-decoration:line-through;opacity:.65
 // independent of Lovelace resource order; stale async loads cannot win.
 export function schoolCard(Base) {
   return class extends Base {
+    connectedCallback() {
+      super.connectedCallback?.();
+      this._startSchoolClock();
+    }
+    disconnectedCallback() {
+      super.disconnectedCallback?.();
+      this._stopSchoolClock();
+    }
+    _stopSchoolClock() {
+      if (this._schoolClock != null) window.clearInterval(this._schoolClock);
+      this._schoolClock = null;
+    }
+    _startSchoolClock() {
+      this._stopSchoolClock();
+      if (Base.schoolWeekView && this.isConnected && this._school?.profile.advanceWeekAfterFriday) {
+        this._schoolClockKey = null;
+        this._schoolClock = window.setInterval(() => {
+          if (!this._hass) return;
+          const attrs = this._school.timetable(this._hass)?.attributes || {};
+          const view = selectSchoolWeek(attrs,this._school.profile,schoolNow(this));
+          const key = `${dateKey(view.monday)}|${view.week}`;
+          if (key !== this._schoolClockKey) { this._schoolClockKey = key; this._render(); }
+        }, 1000);
+      }
+    }
     setConfig(config) {
       const name = config?.["school-hacks"];
       if (name != null && name !== false && (typeof name !== "string" || !/^[a-z0-9][a-z0-9_-]*$/.test(name))) throw new Error("school-hacks muss ein Schulprofilname sein, z.B. kfg");
       super.setConfig(config);
       const generation = this._schoolGeneration = (this._schoolGeneration || 0) + 1;
+      this._stopSchoolClock();
       this._school = null;
       this._schoolError = null;
       this._renderedEntity = null;
       this._schoolLoading = Boolean(name);
       if (!name) { if (this._schoolHass) this.hass = this._schoolHass; return; }
-      if (!profiles.has(name)) profiles.set(name, import(`./school-hacks/${name}.js?v=0.4.22`).then(m => m.default).catch(error => { profiles.delete(name); throw error; }));
+      if (!profiles.has(name)) profiles.set(name, import(`./school-hacks/${name}.js?v=0.4.23`).then(m => m.default).catch(error => { profiles.delete(name); throw error; }));
       this._schoolReady = profiles.get(name).then(profile => {
         if (generation !== this._schoolGeneration) return;
         this._school = new SchoolContext(profile, this);
         this._schoolLoading = false;
+        this._startSchoolClock();
         if (this._schoolHass) this.hass = this._schoolHass;
       }, () => {
         if (generation !== this._schoolGeneration) return;
