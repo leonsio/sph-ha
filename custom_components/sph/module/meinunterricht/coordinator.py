@@ -9,6 +9,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from ...api.client import SphAuthClient
+from ...api.subjects import subject_from_course
 from ...const import (
     CONF_MODULE_MEINUNTERRICHT,
     CONF_UPDATE_INTERVAL,
@@ -119,7 +120,6 @@ class SphMeinUnterrichtCoordinator(DataUpdateCoordinator):
             ]
             return self._merged_items()
         except Exception as err:
-            # DataUpdateCoordinator keeps the last successful data on UpdateFailed.
             raise UpdateFailed(str(err)) from err
 
     def _merged_items(self) -> list[dict]:
@@ -154,6 +154,13 @@ class SphMeinUnterrichtCoordinator(DataUpdateCoordinator):
     def _normalize_item(item: dict, source: str) -> dict:
         result = dict(item)
         result["quelle"] = source
+
+        course = str(result.get("kurs") or "").strip()
+        raw_subject = str(result.get("fach") or "").strip()
+        normalized_subject = subject_from_course(course or raw_subject)
+        if normalized_subject:
+            result["fach"] = normalized_subject
+
         value = str(result.get("datum", "")).strip()
         try:
             parsed = datetime.fromisoformat(value).date()
