@@ -32,9 +32,9 @@ Unterstützt werden:
 
 ## Vertretungen im Stundenplan-Kalender
 
-Seit 0.5.0 werden Unterrichtstermine des nativen `calendar.stundenplan_*` serverseitig mit dem internen SPH-Vertretungsplan abgeglichen.
+Unterrichtstermine des nativen `calendar.stundenplan_*` werden serverseitig mit dem internen SPH-Vertretungsplan abgeglichen.
 
-Dabei können Kalendertermine unter anderem enthalten bzw. widerspiegeln:
+Dabei können Kalendertermine unter anderem enthalten beziehungsweise widerspiegeln:
 
 - Entfall/Ausfall
 - Vertretungsart
@@ -43,9 +43,9 @@ Dabei können Kalendertermine unter anderem enthalten bzw. widerspiegeln:
 - Vertretungslehrkraft
 - Raumänderung
 
-Die UID des regulären Unterrichtstermins bleibt stabil. Eine Vertretung erzeugt daher nicht unnötig einen zweiten unabhängigen Stundenplaneintrag.
+Die UID des regulären Unterrichtstermins bleibt stabil. Eine Vertretung erzeugt daher keinen zusätzlichen unabhängigen Stundenplaneintrag.
 
-**Wichtig:** Diese Kalenderanpassung verwendet ausschließlich das interne SPH-Vertretungsplan-Modul. Frontend-School-Hacks und deren externe Vertretungsquellen werden nicht in der serverseitigen Kalendergenerierung ausgeführt.
+Das aktive serverseitige Schul-Profil kann die daraus erzeugten Fach-, Lehrer- und Vertretungsbezeichnungen weiter schulspezifisch aufbereiten.
 
 ## Automatische Kalenderauswahl
 
@@ -56,6 +56,23 @@ Ohne `calendars:` gilt:
 3. `calendar.bewegliche_ferientage_*` wird nicht automatisch eingeblendet.
 
 Bei mehreren Kindern kann `child` die Suche eingrenzen.
+
+## Schul-Profile
+
+Die Karte erkennt das zum Kind gehörende Profil automatisch über die SPH-Sensoren. Serverseitige Profilanpassungen sind bereits in den Kalenderdaten enthalten; das optionale Frontend-Profil kann zusätzlich reine Darstellungsdetails wie beschriftete Lehrerzeilen anpassen.
+
+Für Tests oder einen gezielten Override kann `school-profile` gesetzt werden:
+
+```yaml
+type: custom:sph-kalender-card
+view: week
+child: mk
+school-profile: kfg
+```
+
+Mit `school-profile: false` kann die Profil-Darstellung der Karte deaktiviert werden.
+
+Allgemeine Dokumentation: [Schul-Profile](../SCHOOL_PROFILES.md).
 
 ## Konfiguration
 
@@ -74,7 +91,7 @@ Bei mehreren Kindern kann `child` die Suche eingrenzen.
 | `end_hour` | Zahl | `18`/automatisch | Letzter sichtbarer Stundenwert |
 | `hour_height` | Zahl | `52` | Pixelhöhe pro Stunde |
 | `month_max_events` | Zahl | `4` | Direkt sichtbare Termine pro Tag im Monat |
-| `school-hacks` | String/false | false | Optionales Profil für reine Darstellungsanpassungen |
+| `school-profile` | String/false | automatisch | Expliziter Schul-Profil-Override für die Darstellung |
 
 ## Minimalbeispiel
 
@@ -136,12 +153,6 @@ Textvergleiche erfolgen ohne Beachtung der Groß-/Kleinschreibung.
 Wenn die ausgewählte SPH-Kalenderquelle `CREATE_EVENT` und `DELETE_EVENT` unterstützt, zeigt die Karte `+ Termin` an.
 
 Lokale Termine können Titel, Start/Ende, Ganztag, Ort und Beschreibung enthalten. Nur lokal angelegte SPH-Termine sind löschbar. Wiederholungsregeln werden derzeit nicht unterstützt.
-
-## School Hacks
-
-School Hacks können in der Kalenderkarte Darstellungsdetails beeinflussen, etwa die Auflösung beschrifteter Lehrerzeilen. Sie ändern **nicht** die serverseitigen Kalenderdaten.
-
-Allgemein: [School Hacks](school-hacks.md).
 
 ## Hinweise
 

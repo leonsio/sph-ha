@@ -10,6 +10,18 @@ Die folgenden Namen zeigen die standardmäßig von der Integration verwendeten E
 
 In den Beispielen steht `NAME_KUERZEL` für dieses normalisierte Suffix.
 
+## Schul-Profile in Payloads
+
+Das pro Kind ausgewählte Schul-Profil wird serverseitig auf die veröffentlichten Modul-Payloads angewandt. Profilierte Daten enthalten zusätzlich das Metadatum:
+
+```yaml
+school_profile: kfg
+```
+
+Ohne spezielles Profil lautet der Wert `none`.
+
+Schul-Profile können Werte wie Lehrer-, Fach- oder Vertretungsbezeichnungen anpassen, ohne die grundlegende Sensor- und JSON-Struktur zu verändern. Die zugehörigen JSON-Sensoren verwenden dieselben transformierten Payloads wie die strukturierten Sensoren.
+
 ## Sensoren
 
 ### Stundenplan
@@ -30,11 +42,12 @@ Strukturierter persönlicher Stundenplan.
 | `kind` | Name des Kindes |
 | `kind_kürzel` | Kürzel des Kindes |
 | `klasse` | vom SPH erkannte Klasse |
+| `school_profile` | aktives Schul-Profil, z. B. `none` oder `kfg` |
 | `wochenkennung` | aktuelle A-/B-Wochenkennung |
 | `wochenbeginn` | Referenzdatum der vom SPH gelieferten Woche |
-| `eigener_grundplan` | persönlicher Grundstundenplan ohne Maskierung aktueller freier Tage |
-| `eigener_plan` | persönlicher Stundenplan unter Berücksichtigung erkannter freier Tage |
-| `tage` | vollständiger SPH-Stundenplan, wenn in den Optionen die vollständige Stundenplan-Ausgabe aktiviert ist; sonst leere Tageslisten |
+| `eigener_grundplan` | persönlicher Grundstundenplan ohne Maskierung aktueller freier Tage; wird nicht als Profilquelle verwendet und nicht durch das Schul-Profil transformiert |
+| `eigener_plan` | persönlicher Stundenplan unter Berücksichtigung erkannter freier Tage; Profilanpassungen werden hier angewandt |
+| `tage` | vollständiger SPH-Stundenplan, wenn in den Optionen die vollständige Stundenplan-Ausgabe aktiviert ist; dann ebenfalls profiliert, sonst leere Tageslisten |
 | `freie_tage` | erkannte schulfreie Datumswerte |
 | `freie_tage_kalender` | verwendete Kalenderquelle für schulfreie Tage |
 
@@ -67,6 +80,7 @@ Anzahl der aktuell berücksichtigten Termine.
 | Attribut | Inhalt |
 |---|---|
 | `kind`, `kind_kürzel`, `klasse` | Zuordnung zum Kind |
+| `school_profile` | aktives Schul-Profil |
 | `kalenderarten` | aktuell ausgewählte Kalenderarten |
 | `termine` | Vorschau der nächsten bzw. relevanten Termine, begrenzt auf 50 Einträge |
 | `termine_gesamt` | Gesamtzahl der berücksichtigten Termine |
@@ -98,6 +112,7 @@ Anzahl der aktuell vorhandenen Aufgaben.
 
 | Attribut | Inhalt |
 |---|---|
+| `school_profile` | aktives Schul-Profil |
 | `aufgaben` | vollständige Aufgabenliste |
 | `anzahl` | Gesamtzahl der Aufgaben |
 | `unerledigt` | Zahl der offenen Aufgaben |
@@ -130,6 +145,7 @@ Anzahl der vorhandenen Leistungskontrollen.
 
 - `kind`
 - `kind_kürzel`
+- `school_profile`
 - `anzahl`
 - `leistungskontrollen`
 
@@ -157,6 +173,7 @@ Gesamtzahl der Einträge in den aktuell veröffentlichten Plantagen.
 
 | Attribut | Inhalt |
 |---|---|
+| `school_profile` | aktives Schul-Profil |
 | `tage` | veröffentlichte Plantage mit Einträgen und Hinweisen |
 | `heute` | Einträge für heute |
 | `morgen` | Einträge für morgen |
@@ -167,7 +184,7 @@ Gesamtzahl der Einträge in den aktuell veröffentlichten Plantagen.
 | `wird_aktualisiert` | Kennzeichnung eines laufenden Portalupdates |
 | `geplante_tage` | Datumswerte der veröffentlichten Plantage |
 
-Ein Vertretungseintrag kann unter anderem Datum, Stunde/Stundenbereich, Klasse, Fach, ursprüngliches Fach, Vertretungslehrkraft, Raum, Vertretungsart, Hinweis und Entfallkennzeichnung enthalten. Zusätzlich wird ein aufgelöster Fachname bereitgestellt.
+Ein Vertretungseintrag kann unter anderem Datum, Stunde/Stundenbereich, Klasse, Fach, ursprüngliches Fach, Vertretungslehrkraft, Raum, Vertretungsart, Hinweis und Entfallkennzeichnung enthalten. Zusätzlich wird ein aufgelöster Fachname bereitgestellt. Das aktive Schul-Profil kann insbesondere Lehrer-, Fach- und `art_lang`-Werte schulspezifisch aufbereiten.
 
 #### `sensor.vertretungsplan_NAME_KUERZEL_json`
 
@@ -223,7 +240,7 @@ Wenn der gemeinsame SPH-Kalender deaktiviert ist, werden die jeweiligen Kalender
 | `calendar.schulkalender_NAME_KUERZEL` | SPH-Schulkalender und lokale eigene Termine |
 | `calendar.lerngruppen_NAME_KUERZEL` | Leistungskontrollen aus Lerngruppen |
 
-Der Stundenplankalender erzeugt ein rollierendes Fenster von zwei Wochen Vergangenheit bis acht Wochen Zukunft. Er berücksichtigt A-/B-Wochen, schulfreie Tage und den internen SPH-Vertretungsplan. Vertretungen ändern vorhandene Unterrichtstermine, statt für dieselbe Stunde einen zusätzlichen unabhängigen Termin anzulegen.
+Der Stundenplankalender erzeugt ein rollierendes Fenster von zwei Wochen Vergangenheit bis acht Wochen Zukunft. Er berücksichtigt A-/B-Wochen, schulfreie Tage und den internen SPH-Vertretungsplan. Vertretungen ändern vorhandene Unterrichtstermine, statt für dieselbe Stunde einen zusätzlichen unabhängigen Termin anzulegen. Das aktive Schul-Profil wird auch auf datumsbezogene Kalenderwerte angewandt.
 
 ### Bewegliche Ferientage
 
@@ -322,11 +339,12 @@ format: application/json
 bytes
 ```
 
-Der logische Inhalt entspricht jeweils dem strukturierten Sensor des gleichen Moduls.
+Der logische Inhalt entspricht jeweils dem strukturierten Sensor des gleichen Moduls und enthält dieselben Schul-Profil-Transformationen.
 
 ## Weitere technische Dokumentation
 
 - [Architektur](ARCHITEKTUR.md)
 - [Lovelace-Karten](lovelace/README.md)
-- [School Hacks](lovelace/school-hacks.md)
+- [Schul-Profile](SCHOOL_PROFILES.md)
+- [Schul-Profile für Entwickler](SCHOOL_PROFILES_DEVELOPMENT.md)
 - [Schulspezifische Profile](schools/README.md)

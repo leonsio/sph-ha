@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { SchoolContext, selectSchoolWeek } from "../custom_components/sph/static/school-hacks.js";
-import kfg from "../custom_components/sph/static/school-hacks/kfg.js";
+import { SchoolContext, selectSchoolWeek } from "../custom_components/sph/static/school-profile.js";
+import kfg from "../custom_components/sph/static/school-profiles/kfg.js";
 import {
   sphSubstitutionState,
   substitutionLesson,
@@ -27,6 +27,7 @@ function makeHass() {
       kind: "Maxim",
       kind_kürzel: "Mk",
       klasse: "7n",
+      school_profile: "kfg",
       wochenkennung: "A",
       wochenbeginn: "2026-09-07",
       eigener_plan: [[lesson]],
@@ -179,9 +180,9 @@ test("unique class and period entry is used when SPH subject labels differ", () 
   assert.equal(result.substitutionSource, "sph");
 });
 
-test("KFG school hack keeps its external source as first priority", () => {
+test("KFG profile keeps its external source as first priority", () => {
   const hass = makeHass();
-  const card = makeCard(hass, { "school-hacks": "kfg" });
+  const card = makeCard(hass, { "school-profile": "kfg" });
   card._school = new SchoolContext(kfg, card);
   const result = substitutionLesson(card, lesson, date);
   assert.equal(result.cancelled, false);
@@ -192,20 +193,20 @@ test("KFG school hack keeps its external source as first priority", () => {
   assert.notEqual(result.substitutionSource, "sph");
 });
 
-test("school hacks fall back to internal SPH substitutions when their source has no match", () => {
+test("school profiles fall back to internal SPH substitutions when their source has no match", () => {
   const hass = makeHass();
   hass.states["sensor.vertretungsplan_7n"].attributes.entries = [];
-  const card = makeCard(hass, { "school-hacks": "kfg" });
+  const card = makeCard(hass, { "school-profile": "kfg" });
   card._school = new SchoolContext(kfg, card);
   const result = substitutionLesson(card, lesson, date);
   assert.equal(result.cancelled, true);
   assert.equal(result.substitutionSource, "sph");
 });
 
-test("explicit school substitution source remains authoritative even when missing", () => {
+test("explicit profile substitution source remains authoritative even when missing", () => {
   const hass = makeHass();
   const card = makeCard(hass, {
-    "school-hacks": "kfg",
+    "school-profile": "kfg",
     vertretungsplan_sensor: "sensor.does_not_exist",
   });
   card._school = new SchoolContext(kfg, card);
@@ -215,7 +216,7 @@ test("explicit school substitution source remains authoritative even when missin
   assert.equal(result.substitutionSource, undefined);
 });
 
-test("future school profiles can define their own preferred class source", () => {
+test("school profiles can define their own preferred class source", () => {
   const hass = makeHass();
   hass.states["sensor.other_7n"] = {
     entity_id: "sensor.other_7n",
@@ -238,7 +239,7 @@ test("future school profiles can define their own preferred class source", () =>
       labels: { Raum: "Raumänderung" },
     },
   };
-  const card = makeCard(hass, { "school-hacks": "other" });
+  const card = makeCard(hass, { "school-profile": "other" });
   card._school = new SchoolContext(profile, card);
   const result = substitutionLesson(card, lesson, date);
   assert.equal(result.room, "303");

@@ -42,15 +42,13 @@ Danach unter **Einstellungen → Geräte & Dienste → Integration hinzufügen**
 
 ## Schul-Profile
 
-Ab 0.6.0 können schulspezifische Besonderheiten direkt im Integrationseintrag des Kindes über **Schul-Profil** ausgewählt werden.
+Schulspezifische Besonderheiten werden direkt im Integrationseintrag des Kindes über **Schul-Profil** ausgewählt.
 
 Ein Profil kann Werte serverseitig in Sensoren, JSON und Kalendern aufbereiten und zusätzlich notwendige Darstellungsregeln für die SPH-Lovelace-Karten bereitstellen.
 
-Das derzeit vorhandene Profil `kfg` ist für das **Kaiserin-Friedrich-Gymnasium Bad Homburg** vorgesehen.
+Das Profil `kfg` ist für das **Kaiserin-Friedrich-Gymnasium Bad Homburg** vorgesehen.
 
-Die Karten erkennen das Profil automatisch. Ein zusätzlicher Kartenparameter ist normalerweise nicht erforderlich.
-
-Der alte Parameter `school-hacks: kfg` bleibt in 0.6.0 als Legacy-Alias erhalten.
+Die Karten erkennen das ausgewählte Profil automatisch. Ein zusätzlicher Kartenparameter ist normalerweise nicht erforderlich. Für Tests oder Sonderfälle kann `school-profile` direkt an einer Karte gesetzt werden.
 
 ## Beispiel-Entities
 

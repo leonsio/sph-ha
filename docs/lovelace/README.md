@@ -28,9 +28,9 @@ Bei mehreren Kindern ist eine explizite `entity` oder ein eindeutiges `child` em
 
 ## Vertretungsdaten in Stundenplankarten
 
-Die drei allgemeinen Stundenplankarten verwenden automatisch den zum Kind passenden internen SPH-Vertretungsplan.
+Die drei Stundenplankarten verwenden automatisch den zum Kind passenden internen SPH-Vertretungsplan. Ein aktives Schul-Profil kann zusätzlich eine bevorzugte Vertretungsquelle definieren.
 
-Damit können sie direkt an einer Stunde darstellen:
+Darstellbar sind unter anderem:
 
 - Entfall/Ausfall,
 - Vertretung,
@@ -43,7 +43,7 @@ Die Verknüpfung erfolgt datumsbezogen. Konkrete Vertretungen werden nicht dauer
 
 ## Schul-Profile
 
-Ab 0.6.0 wird ein Schul-Profil normalerweise **nicht mehr in jeder Karte konfiguriert**. Das Profil wird pro Kind im Integrationseintrag ausgewählt und von den Karten über das Sensorattribut `school_profile` automatisch erkannt.
+Ein Schul-Profil wird pro Kind im Integrationseintrag ausgewählt und von den Karten über das Sensorattribut `school_profile` automatisch erkannt.
 
 Beispiel:
 
@@ -78,16 +78,6 @@ school-profile: false
 
 unterdrückt die Profil-Darstellung der Karte, auch wenn der Sensor ein Profil meldet.
 
-### Legacy
-
-Der bisherige Parameter
-
-```yaml
-school-hacks: kfg
-```
-
-bleibt in 0.6.0 als Alias bestehen. Neue Konfigurationen sollten ihn nicht mehr verwenden.
-
 Allgemeine Profil-Dokumentation: [Schul-Profile](../SCHOOL_PROFILES.md).
 
 Entwickler-API: [Schul-Profile entwickeln](../SCHOOL_PROFILES_DEVELOPMENT.md).
@@ -100,9 +90,7 @@ Aktuell vorhanden:
 
 ## Ressourcen und Cache
 
-Die Ressourcen werden versioniert unter `/api/sph/static/...` registriert. In 0.6.0 verwenden die Stundenplankarten `school-profile.js` und `substitution-adapter.js` mit Version `0.6.0`.
-
-Die alten `school-hacks`-Dateien bleiben nur als Kompatibilitätsbrücke erhalten. Alte separate KFG-Kartentypen werden nicht mehr verwendet.
+Die Ressourcen werden versioniert unter `/api/sph/static/...` registriert. Die Stundenplankarten verwenden `school-profile.js` und `substitution-adapter.js` mit Version `0.6.0`.
 
 Nach einem Update:
 

@@ -10,14 +10,14 @@ Lokale Hausaufgaben können direkt über die Karte angelegt und wieder gelöscht
 
 ## Kurs- und Fachnormalisierung
 
-Seit 0.5.0 werden Kursnamen bereits im Backend auf gemeinsame Fachbezeichnungen normalisiert.
+Kursnamen werden bereits im Backend auf gemeinsame Fachbezeichnungen normalisiert.
 
 Beispiele:
 
 ```text
-D 05cG      → Deutsch
-Deutsch 7n  → Deutsch
-M 05cG      → Mathematik
+D 05cG        → Deutsch
+Deutsch 7n    → Deutsch
+M 05cG        → Mathematik
 Biologie 05cg → Biologie
 ```
 
@@ -31,17 +31,21 @@ Normaler Sensor und JSON-Sensor enthalten zusätzlich:
 
 Die Karte selbst bleibt primär eine Aufgabenansicht; die Fachübersicht steht für weitere Dashboards und Automationen im Sensor zur Verfügung.
 
-## School Hacks
+## Schul-Profile
 
-Ein Schulprofil kann beispielsweise Lehrerkürzel auflösen:
+Das pro Kind ausgewählte Schul-Profil wird bereits serverseitig auf den Sensor- und JSON-Payload angewandt. Dadurch können beispielsweise schulspezifische Fach- oder Lehrernamen direkt in den veröffentlichten Daten erscheinen.
+
+Die Karte erkennt das Profil zusätzlich über `school_profile`. Für Tests oder einen gezielten Darstellungs-Override kann verwendet werden:
 
 ```yaml
 type: custom:sph-meinunterricht-card
 entity: sensor.mein_unterricht_maxim_mk
-school-hacks: kfg
+school-profile: kfg
 ```
 
-Allgemein: [School Hacks](school-hacks.md).
+Mit `school-profile: false` kann die Profil-Darstellung einer einzelnen Karte deaktiviert werden.
+
+Allgemein: [Schul-Profile](../SCHOOL_PROFILES.md).
 
 ## Entity-Auswahl
 
@@ -60,7 +64,7 @@ JSON-Sensoren mit `_json` werden nicht als Kartenquelle gewählt.
 | `entity` | Entity-ID | automatisch | Strukturierter Mein-Unterricht-Sensor |
 | `sensor` | Entity-ID | automatisch | Alias |
 | `child` | String | leer | Kind/Kürzel |
-| `school-hacks` | String/false | false | Optionales Schulprofil |
+| `school-profile` | String/false | automatisch | Expliziter Schul-Profil-Override |
 
 ## Eigene Hausaufgaben
 

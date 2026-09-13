@@ -53,10 +53,10 @@ test('explicit school-profile overrides sensor profile', async () => {
   assert.equal(card.renders, 1);
 });
 
-test('legacy school-hacks key remains an alias', async () => {
+test('explicit school-profile selects a profile', async () => {
   const Card = schoolCard(Base);
   const card = new Card();
-  card.setConfig({ entity: timetable.entity_id, 'school-hacks': 'kfg' });
+  card.setConfig({ entity: timetable.entity_id, 'school-profile': 'kfg' });
   card.hass = hass;
   await card._schoolReady;
 

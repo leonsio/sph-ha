@@ -16,17 +16,21 @@ Neben SPH-Daten können lokale Termine angelegt werden. Nur lokal erstellte Term
 
 Schulstunden wie `3`, `3,4` oder `3-4` werden im Backend normalisiert. Wenn der persönliche Stundenplan für diese Stunden Zeiten enthält, erzeugt das Modul zeitgebundene Kalendertermine; andernfalls bleibt der Termin ganztägig.
 
-## School Hacks
+## Schul-Profile
 
-Ein Schulprofil kann beispielsweise Lehrerkürzel auflösen:
+Das pro Kind ausgewählte Schul-Profil wird serverseitig auf Sensor-, JSON- und Kalenderdaten angewandt. Dadurch können beispielsweise schulspezifische Fach- oder Lehrernamen direkt in den veröffentlichten Daten erscheinen.
+
+Die Karte erkennt das Profil zusätzlich über `school_profile`. Für Tests oder einen gezielten Darstellungs-Override kann verwendet werden:
 
 ```yaml
 type: custom:sph-lerngruppen-card
 entity: sensor.lerngruppen_maxim_mk
-school-hacks: kfg
+school-profile: kfg
 ```
 
-Allgemein: [School Hacks](school-hacks.md).
+Mit `school-profile: false` kann die Profil-Darstellung einer einzelnen Karte deaktiviert werden.
+
+Allgemein: [Schul-Profile](../SCHOOL_PROFILES.md).
 
 ## Entity-Auswahl
 
@@ -45,7 +49,7 @@ JSON-Sensoren mit `_json` werden nicht als Kartenquelle verwendet.
 | `entity` | Entity-ID | automatisch | Strukturierter Lerngruppen-Sensor |
 | `sensor` | Entity-ID | automatisch | Alias |
 | `child` | String | leer | Kind/Kürzel |
-| `school-hacks` | String/false | false | Optionales Schulprofil |
+| `school-profile` | String/false | automatisch | Expliziter Schul-Profil-Override |
 
 ## Eigene Termine
 
@@ -65,7 +69,7 @@ sph.lerngruppen_termin_hinzufuegen
 sph.lerngruppen_termin_loeschen
 ```
 
-Lokale Termine werden persistent gespeichert und mit SPH-Terminen zusammengeführt. Ein passender späterer SPH-Termin kann den lokalen Eintrag in der Anzeige verdrängen, ohne den lokalen Datensatz zu löschen.
+Lokale Termine werden persistent gespeichert und mit SPH-Terminen zusammengeführt. Ein passender SPH-Termin kann einen lokalen Eintrag in der Anzeige verdrängen, ohne den lokalen Datensatz zu löschen.
 
 ## Hinweise
 

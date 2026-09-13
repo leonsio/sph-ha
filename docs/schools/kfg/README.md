@@ -2,8 +2,6 @@
 
 Das Profil `kfg` enthält die Besonderheiten des **Kaiserin-Friedrich-Gymnasiums Bad Homburg**.
 
-Ab SPH-HA 0.6.0 ersetzt es die bisherige KFG-Konfiguration über `school-hacks: kfg`.
-
 ## Aktivierung
 
 Das Profil wird direkt beim Integrationseintrag des Kindes ausgewählt:
@@ -20,9 +18,7 @@ Die Auswahl gilt nur für dieses Kind.
 
 ## Datenebene
 
-Das KFG-Profil wird serverseitig auf die veröffentlichten SPH-Daten angewandt. Dadurch sind KFG-spezifische Anpassungen nicht mehr ausschließlich in Lovelace sichtbar.
-
-Aktuell werden insbesondere unterstützt:
+Das KFG-Profil wird serverseitig auf die veröffentlichten SPH-Daten angewandt. Aktuell werden insbesondere unterstützt:
 
 - Auflösung von Lehrerkürzeln
 - KFG-spezifische Bezeichnungen für Vertretungsarten
@@ -31,7 +27,7 @@ Aktuell werden insbesondere unterstützt:
 - dieselbe Lehrerauflösung in Mein Unterricht und Lerngruppen
 - KFG-spezifische Beschreibungstexte, soweit sie Lehrerfelder enthalten
 
-Die vorhandene Sensorstruktur bleibt dabei erhalten.
+Die vorhandene Sensorstruktur bleibt erhalten.
 
 ## `sensor.kfg_kollegium`
 
@@ -63,8 +59,6 @@ Fehlt die Entity oder ein Kürzel, bleibt der vorhandene SPH-Wert unverändert.
 
 ## Vertretungsarten
 
-Das Profil übernimmt die bisherigen KFG-Zuordnungen aus dem School-Hacks-Profil:
-
 | KFG-Code | Anzeige |
 |---|---|
 | `Betr` | Betreuung |
@@ -78,21 +72,17 @@ Das Profil übernimmt die bisherigen KFG-Zuordnungen aus dem School-Hacks-Profil
 | `SES` | Sonderunterricht |
 | `Vtr. ohne Lehrer` | Vertretung ohne Lehrer |
 
-Im Vertretungsplan-Sensor wird dafür der vorhandene Datensatz um bzw. über `art_lang` lesbar aufbereitet. Der Rohcode `art` bleibt erhalten.
+Im Vertretungsplan-Sensor wird der lesbare Wert in `art_lang` bereitgestellt. Der Rohcode `art` bleibt erhalten.
 
 ## Stundenplanquelle
 
-Das KFG-Profil wählt keinen eigenen Stundenplan aus.
+Das KFG-Profil wählt keinen eigenen Stundenplan aus. Die Integrationseinstellung **Stundenplan-Ausgabe** bleibt maßgeblich.
 
-Die vorhandene Integrationseinstellung **Stundenplan-Ausgabe** bleibt vollständig maßgeblich. Insbesondere wird `eigener_grundplan` nicht als alternative Profilquelle verwendet.
-
-Das ist relevant, wenn ein umfangreicher Schulplan parallele Angebote enthält, die nicht alle für das Kind gelten.
+Bei persönlicher Ausgabe wird `eigener_plan` profiliert. Bei vollständiger Ausgabe werden `eigener_plan` und `tage` profiliert. `eigener_grundplan` wird nicht als Profilquelle verwendet und nicht durch das Profil verändert.
 
 ## Vertretungen und Wochenplan
 
-Konkrete Vertretungen besitzen ein Datum. Sie werden deshalb nicht dauerhaft in den wiederverwendeten Wochenplan eingebrannt.
-
-Dadurch wird verhindert, dass beispielsweise eine Vertretungslehrkraft aus dieser Woche beim Anzeigen einer späteren Woche fälschlich weiterverwendet wird.
+Konkrete Vertretungen besitzen ein Datum. Sie werden deshalb nicht dauerhaft in den wiederverwendeten Wochenplan geschrieben.
 
 Die Zusammenführung erfolgt in datumsbezogenen Kontexten:
 
@@ -100,7 +90,7 @@ Die Zusammenführung erfolgt in datumsbezogenen Kontexten:
 - kombinierter SPH-Kalender
 - Stundenplan-Lovelace-Karten
 
-Der Vertretungsplan-Sensor selbst enthält die veröffentlichten Änderungen natürlich weiterhin als eigene Datenquelle.
+Der Vertretungsplan-Sensor enthält die veröffentlichten Änderungen als eigene Datenquelle.
 
 ## Lovelace
 
@@ -113,42 +103,38 @@ type: custom:sph-stundenplan-grid-card
 entity: sensor.stundenplan_maxim_mk
 ```
 
-Ein zusätzlicher Parameter ist nicht erforderlich.
-
-### Expliziter Override
-
-Für Tests kann weiterhin angegeben werden:
+Für Tests oder einen gezielten Override kann angegeben werden:
 
 ```yaml
 school-profile: kfg
 ```
 
-Der alte Parameter
+Mit
 
 ```yaml
-school-hacks: kfg
+school-profile: false
 ```
 
-bleibt in 0.6.0 als Kompatibilitätsalias erhalten.
+kann die Profil-Darstellung einer einzelnen Karte deaktiviert werden.
 
 ## KFG-spezifische UI-Regeln
 
-Die bisherigen KFG-Lovelace-Anpassungen wurden in das Frontend-Profil übernommen:
+Das Frontend-Profil befindet sich unter:
 
 ```text
 custom_components/sph/static/school-profiles/kfg.js
 ```
 
-Dazu gehören aktuell:
+Es definiert aktuell:
 
 - A/B-Wochen als Wochenlogik
 - A/B-Badges nicht an jedem einzelnen Unterrichtseintrag anzeigen
 - Schulwoche einmal oberhalb der Grid-Ansicht anzeigen
 - nach Ende der letzten Freitagsstunde auf die nächste Schulwoche wechseln
-- korrekte Fortschreibung A → B bzw. B → A
+- Fortschreibung A → B beziehungsweise B → A
 - KFG-Vertretungsbezeichnungen
 - Hinweise/Nachrichten des Vertretungsplans
-- visuelle Kennzeichnung von Vertretung, Entfall, Fachwechsel, Tausch usw.
+- visuelle Kennzeichnung von Vertretung, Entfall, Fachwechsel, Tausch und weiteren Änderungsarten
 
 ## Dateien
 
@@ -164,27 +150,9 @@ Frontend-Darstellung:
 custom_components/sph/static/school-profiles/kfg.js
 ```
 
-Legacy-Bridges:
+## Entwicklungsregel
 
-```text
-custom_components/sph/static/school-hacks.js
-custom_components/sph/static/school-hacks/kfg.js
-```
-
-Die Legacy-Dateien existieren nur für die Übergangsphase und verweisen auf die neue School-Profile-Implementierung.
-
-## Ziel für die weitere Entwicklung
-
-Das KFG-Profil soll mit der Zeit kleiner werden. Bei jeder neuen Regel ist zu prüfen, ob sie tatsächlich nur am KFG benötigt wird.
-
-Beispiele für allgemeine Logik, die nicht dauerhaft im KFG-Profil bleiben sollte:
-
-- allgemeine Fachnormalisierung
-- allgemeines Matching eines SPH-Vertretungseintrags auf Datum/Stunde/Klasse
-- Erzeugung von Kalenderterminen
-- allgemeine A/B-Wochenberechnung, sofern sie sich schulübergreifend vereinheitlichen lässt
-
-Nur echte KFG-Abweichungen bleiben im Profil.
+Das KFG-Profil enthält nur KFG-spezifische Abweichungen. Allgemeine Fachnormalisierung, generisches Vertretungsmatching, Kalendererzeugung und andere schulübergreifende Funktionen gehören in den Core.
 
 ## Entwickler
 

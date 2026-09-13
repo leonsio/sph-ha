@@ -24,29 +24,39 @@ Angezeigt werden:
 
 ![SPH Stundenplan Raster](images/wochenplan-grid.png)
 
-### Beispiel mit KFG School Hack
+### Beispiel mit KFG-Schulprofil
 
-![SPH Stundenplan Raster mit KFG School Hack](images/wochenplan-grid-kfg.png)
+![SPH Stundenplan Raster mit KFG-Schulprofil](images/wochenplan-grid-kfg.png)
 
 ## Vertretungen
 
-Ohne School Hack verwendet die Karte automatisch den internen SPH-Vertretungsplan des Kindes.
+Die Karte verwendet automatisch den internen SPH-Vertretungsplan des Kindes. Ein aktives Schul-Profil kann zusätzlich eine bevorzugte Vertretungsquelle definieren.
 
 Entfall, Vertretung, Fachwechsel, Raumänderung und Vertretungslehrkraft werden direkt in der jeweiligen Tabellenzelle dargestellt.
 
-Mit `school-hacks: <profil>` wird zuerst die schulische Profilquelle verwendet. Der interne SPH-Vertretungsplan dient als Fallback für Stunden ohne Treffer in der bevorzugten Quelle.
+Die Quellen-Priorität lautet:
+
+1. explizite Kartenquelle über `vertretungsplan_sensor`, `vertretungsplan` oder `substitution_sensor`,
+2. bevorzugte Quelle des aktiven Schul-Profils,
+3. interner SPH-Vertretungsplan als Fallback.
 
 Eine explizit konfigurierte Vertretungsquelle bleibt autoritativ.
 
-## School Hacks
+## Schul-Profile
+
+Das im Integrationseintrag ausgewählte Profil wird über das Sensorattribut `school_profile` automatisch erkannt.
+
+Für Tests oder einen gezielten Override:
 
 ```yaml
 type: custom:sph-stundenplan-grid-card
 entity: sensor.stundenplan_maxim_mk
-school-hacks: kfg
+school-profile: kfg
 ```
 
-Allgemein: [School Hacks](school-hacks.md).
+Mit `school-profile: false` kann die Profil-Darstellung für eine einzelne Karte deaktiviert werden.
+
+Allgemein: [Schul-Profile](../SCHOOL_PROFILES.md).
 
 KFG: [Kaiserin-Friedrich-Gymnasium Bad Homburg](../schools/kfg/README.md).
 
@@ -65,7 +75,7 @@ KFG: [Kaiserin-Friedrich-Gymnasium Bad Homburg](../schools/kfg/README.md).
 | `entity` | Entity-ID | automatisch | Stundenplan-Sensor |
 | `sensor` | Entity-ID | automatisch | Alias |
 | `child` | String | leer | Kind/Kürzel |
-| `school-hacks` | String/false | false | Optionales Schulprofil |
+| `school-profile` | String/false | automatisch | Expliziter Schul-Profil-Override |
 | `vertretungsplan_sensor` | Entity-ID | automatisch | Explizite Vertretungsquelle |
 | `vertretungsplan` | Entity-ID | automatisch | Alias |
 | `substitution_sensor` | Entity-ID | automatisch | Alias |
@@ -87,4 +97,4 @@ Die Karte meldet Home Assistant eine Darstellung in voller Breite mit mindestens
 - Die Ansicht umfasst Montag bis Freitag.
 - Kalender-Markierungen beziehen sich auf Arbeiten und Klausuren.
 - Die Karte verändert keine Stundenplan-, Vertretungs- oder Kalendereinträge.
-- School-Hack-spezifische Wochenüberschriften und Badge-Regeln werden ausschließlich vom Profil gesteuert.
+- Profil-spezifische Wochenüberschriften und Badge-Regeln werden vom aktiven Frontend-Profil gesteuert.
