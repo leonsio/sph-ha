@@ -60,6 +60,8 @@ class SphMeinUnterrichtClient:
                 soup = BeautifulSoup(html, "html.parser")
                 table = soup.select_one("#aktuellTable tbody")
                 if table is None:
+                    table = soup.select_one("#content .pupilbox table tbody")
+                if table is None:
                     raise RuntimeError(
                         "Die SPH-Seite Mein Unterricht enthält keine Tabelle mit aktuellen Einträgen."
                     )
@@ -105,7 +107,18 @@ class SphMeinUnterrichtClient:
             teacher_code = cls._extract_teacher_code(teacher)
             done = cls._is_visible(done_element)
             undone = cls._is_visible(undone_element)
-            completed = done and not undone or done
+            status = (
+                done_element.get_text(" ", strip=True).casefold() if done_element else ""
+            )
+            status_classes = (
+                set(done_element.get("class", [])) if done_element else set()
+            )
+            if "offen" in status or "label-warning" in status_classes:
+                completed = False
+            elif "erledigt" in status or "label-default" in status_classes:
+                completed = True
+            else:
+                completed = done and not undone or done
 
             tasks.append(
                 {
