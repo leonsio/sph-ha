@@ -81,6 +81,32 @@ class MeinUnterrichtParserTest(unittest.TestCase):
                 task = SphMeinUnterrichtClient._parse(tbody)[0]
                 self.assertIs(task["erledigt"], expected)
 
+    def test_hidden_done_label_with_visible_undone_button_is_open(self):
+        """SPH rendert .done und .undone gleichzeitig; nur eines ist sichtbar."""
+        cases = (
+            # (done-Klassen, undone-Klassen, erwartet)
+            ("done hidden", "undone", False),
+            ("done", "undone hidden", True),
+        )
+        for done_cls, undone_cls, expected in cases:
+            with self.subTest(done=done_cls, undone=undone_cls):
+                html = f"""
+                <table><tbody>
+                  <tr data-entry="e1" data-book="b1">
+                    <td class="name">D 7a</td>
+                    <td class="datum">21.10.2026</td>
+                    <td class="homework">
+                      <span class="realHomework">AH S. 27</span>
+                      <span class="{done_cls} label label-default"><i class="fa fa-check-square-o"></i> erledigt</span>
+                      <span class="{undone_cls}"> <span class="label label-warning change"><i class="fa fa-check-square-o"></i> als "erledigt" markieren</span> </span>
+                    </td>
+                  </tr>
+                </tbody></table>
+                """
+                tbody = BeautifulSoup(html, "html.parser").tbody
+                task = SphMeinUnterrichtClient._parse(tbody)[0]
+                self.assertIs(task["erledigt"], expected)
+
     def test_get_homework_accepts_pupilbox_layout(self):
         tasks = SphMeinUnterrichtClient(_Auth(self.fixture_html)).get_homework()
 

@@ -113,7 +113,13 @@ class SphMeinUnterrichtClient:
             status_classes = (
                 set(done_element.get("class", [])) if done_element else set()
             )
-            if "offen" in status or "label-warning" in status_classes:
+            # SPH liefert beide Elemente aus und blendet eines per "hidden" aus.
+            # Sichtbarkeit hat Vorrang vor dem (immer gleichen) Text "erledigt".
+            if undone:
+                completed = False
+            elif done_element is not None and not done:
+                completed = False
+            elif "offen" in status or "label-warning" in status_classes:
                 completed = False
             elif "erledigt" in status or "label-default" in status_classes:
                 completed = True
@@ -171,4 +177,7 @@ class SphMeinUnterrichtClient:
         if element is None:
             return False
         classes = set(element.get("class", []))
-        return "hidden" not in classes
+        if "hidden" in classes or "d-none" in classes:
+            return False
+        style = str(element.get("style", "")).replace(" ", "").casefold()
+        return "display:none" not in style
