@@ -24,8 +24,10 @@ from .const import (
     CONF_MODULE_KALENDER,
     CONF_MODULE_LERNGRUPPEN,
     CONF_MODULE_MEINUNTERRICHT,
+    CONF_MODULE_NACHRICHTEN,
     CONF_MODULE_STUNDENPLAN,
     CONF_MODULE_VERTRETUNG,
+    CONF_NACHRICHTEN_INTERVAL,
     CONF_SCHOOL_DISTRICT,
     CONF_SCHOOL_ID,
     CONF_SCHOOL_PROFILE,
@@ -35,6 +37,8 @@ from .const import (
     DEFAULT_COMBINE_CALENDARS,
     DEFAULT_FIRST_LESSON,
     DEFAULT_MODULE_ENABLED,
+    DEFAULT_MODULE_NACHRICHTEN_ENABLED,
+    DEFAULT_NACHRICHTEN_INTERVAL,
     DEFAULT_SCHOOL_PROFILE,
     DEFAULT_TIMETABLE_OUTPUT,
     DEFAULT_UPDATE_INTERVAL,
@@ -51,12 +55,14 @@ MODULE_KALENDER = "kalender"
 MODULE_MEINUNTERRICHT = "meinunterricht"
 MODULE_LERNGRUPPEN = "lerngruppen"
 MODULE_VERTRETUNG = "vertretung"
+MODULE_NACHRICHTEN = "nachrichten"
 ALL_MODULES = [
     MODULE_STUNDENPLAN,
     MODULE_KALENDER,
     MODULE_MEINUNTERRICHT,
     MODULE_LERNGRUPPEN,
     MODULE_VERTRETUNG,
+    MODULE_NACHRICHTEN,
 ]
 
 MODULE_CONFIG_KEYS = {
@@ -65,6 +71,12 @@ MODULE_CONFIG_KEYS = {
     MODULE_MEINUNTERRICHT: CONF_MODULE_MEINUNTERRICHT,
     MODULE_LERNGRUPPEN: CONF_MODULE_LERNGRUPPEN,
     MODULE_VERTRETUNG: CONF_MODULE_VERTRETUNG,
+    MODULE_NACHRICHTEN: CONF_MODULE_NACHRICHTEN,
+}
+
+# Modules not listed here default to DEFAULT_MODULE_ENABLED.
+MODULE_DEFAULTS = {
+    MODULE_NACHRICHTEN: DEFAULT_MODULE_NACHRICHTEN_ENABLED,
 }
 
 
@@ -102,7 +114,7 @@ def _active_modules(values: dict[str, Any]) -> list[str]:
     return [
         module
         for module, config_key in MODULE_CONFIG_KEYS.items()
-        if bool(values.get(config_key, DEFAULT_MODULE_ENABLED))
+        if bool(values.get(config_key, MODULE_DEFAULTS.get(module, DEFAULT_MODULE_ENABLED)))
     ]
 
 
@@ -204,6 +216,10 @@ class SphConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     default=values.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL),
                 ): vol.All(vol.Coerce(int), vol.Range(min=5, max=1440)),
                 vol.Required(
+                    CONF_NACHRICHTEN_INTERVAL,
+                    default=values.get(CONF_NACHRICHTEN_INTERVAL, DEFAULT_NACHRICHTEN_INTERVAL),
+                ): vol.All(vol.Coerce(int), vol.Range(min=15, max=10080)),
+                vol.Required(
                     CONF_FIRST_LESSON,
                     default=values.get(CONF_FIRST_LESSON, DEFAULT_FIRST_LESSON),
                 ): vol.All(vol.Coerce(int), vol.Range(min=1, max=12)),
@@ -262,6 +278,9 @@ class SphOptionsFlow(OptionsFlow):
                         user_input.get(CONF_SCHOOL_PROFILE, DEFAULT_SCHOOL_PROFILE)
                     ),
                     CONF_UPDATE_INTERVAL: int(user_input[CONF_UPDATE_INTERVAL]),
+                    CONF_NACHRICHTEN_INTERVAL: int(
+                        user_input.get(CONF_NACHRICHTEN_INTERVAL, DEFAULT_NACHRICHTEN_INTERVAL)
+                    ),
                     CONF_FIRST_LESSON: int(
                         user_input.get(CONF_FIRST_LESSON, DEFAULT_FIRST_LESSON)
                     ),
@@ -331,6 +350,10 @@ class SphOptionsFlow(OptionsFlow):
                     CONF_UPDATE_INTERVAL,
                     default=values.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL),
                 ): vol.All(vol.Coerce(int), vol.Range(min=5, max=1440)),
+                vol.Required(
+                    CONF_NACHRICHTEN_INTERVAL,
+                    default=values.get(CONF_NACHRICHTEN_INTERVAL, DEFAULT_NACHRICHTEN_INTERVAL),
+                ): vol.All(vol.Coerce(int), vol.Range(min=15, max=10080)),
                 vol.Required(
                     CONF_FIRST_LESSON,
                     default=values.get(CONF_FIRST_LESSON, DEFAULT_FIRST_LESSON),

@@ -12,6 +12,7 @@
           "password": "Passwort",
           "school_profile": "Schul-Profil",
           "update_interval": "Aktualisierungsintervall (Minuten)",
+          "nachrichten_interval": "Nachrichten: Abrufintervall (Minuten)",
           "first_lesson": "Bezugsstunde für Entfall-Sensoren",
           "timetable_output": "Stundenplan-Ausgabe",
           "combine_calendars": "Gemeinsamen SPH-Kalender verwenden",
@@ -39,6 +40,7 @@
           "password": "Passwort",
           "school_profile": "Schul-Profil",
           "update_interval": "Aktualisierungsintervall (Minuten)",
+          "nachrichten_interval": "Nachrichten: Abrufintervall (Minuten)",
           "first_lesson": "Bezugsstunde für Entfall-Sensoren",
           "timetable_output": "Stundenplan-Ausgabe",
           "combine_calendars": "Gemeinsamen SPH-Kalender verwenden",
@@ -60,7 +62,8 @@
         "kalender": "Schulkalender",
         "meinunterricht": "Mein Unterricht",
         "lerngruppen": "Lerngruppen",
-        "vertretung": "Vertretungsplan"
+        "vertretung": "Vertretungsplan",
+        "nachrichten": "Nachrichten"
       }
     },
     "timetable_output": {

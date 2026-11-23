@@ -3,7 +3,7 @@
   "name": "Schulportal Hessen",
   "codeowners": ["@leonsio"],
   "config_flow": true,
-  "dependencies": ["frontend", "http", "lovelace"],
+  "dependencies": ["frontend", "http", "lovelace", "websocket_api"],
   "documentation": "https://github.com/leonsio/sph-ha",
   "integration_type": "hub",
   "iot_class": "cloud_polling",

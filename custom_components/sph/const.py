@@ -17,6 +17,14 @@ CONF_MODULE_KALENDER = "module_kalender"
 CONF_MODULE_MEINUNTERRICHT = "module_meinunterricht"
 CONF_MODULE_LERNGRUPPEN = "module_lerngruppen"
 CONF_MODULE_VERTRETUNG = "module_vertretung"
+CONF_MODULE_NACHRICHTEN = "module_nachrichten"
+CONF_NACHRICHTEN_INTERVAL = "nachrichten_interval"
+# Messages are fetched separately; one inbox request is ~1 MB because SPH
+# includes full recipient lists, so the default is once a day.
+DEFAULT_NACHRICHTEN_INTERVAL = 1440
+# Reading a child's inbox is opt-in, also for entries created before the module existed.
+DEFAULT_MODULE_NACHRICHTEN_ENABLED = False
+EVENT_NEUE_NACHRICHT = "sph_neue_nachricht"
 DEFAULT_UPDATE_INTERVAL = 60
 DEFAULT_FIRST_LESSON = 1
 # Empty means: do not filter calendar event types, keep all entries.
@@ -39,3 +47,4 @@ SCHOOL_DISTRICT_NONE = "none"
 SPH_BASE = "https://start.schulportal.hessen.de"
 SPH_LOGIN = "https://login.schulportal.hessen.de/"
 SPH_CONNECT = "https://connect.schulportal.hessen.de/"
+SPH_NACHRICHTEN_URL = f"{SPH_BASE}/nachrichten.php"

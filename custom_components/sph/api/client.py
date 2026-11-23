@@ -52,6 +52,12 @@ class SphClient:
             AES.block_size,
         )
 
+    def decrypt_base64(self, text: str) -> bytes | None:
+        """Decrypt a base64 CryptoJS payload (e.g. AJAX ``rows``) with the session key."""
+        if not self.key:
+            return None
+        return self._decrypt(base64.b64decode(text), self.key)
+
     def _decrypt_tags(self, html):
         if not self.key:
             return html

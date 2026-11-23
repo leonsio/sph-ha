@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.start import async_at_started
 from homeassistant.util import slugify
 
 from .api.client import SphAuthClient
@@ -19,6 +20,7 @@ from .const import (
     CONF_CHILD_SHORTCUT,
     CONF_COMBINE_CALENDARS,
     CONF_MODULE_KALENDER,
+    CONF_MODULE_NACHRICHTEN,
     CONF_MODULE_VERTRETUNG,
     CONF_PASSWORD,
     CONF_SCHOOL_DISTRICT,
@@ -26,6 +28,7 @@ from .const import (
     CONF_USERNAME,
     DEFAULT_COMBINE_CALENDARS,
     DEFAULT_MODULE_ENABLED,
+    DEFAULT_MODULE_NACHRICHTEN_ENABLED,
     DOMAIN,
     SCHOOL_DISTRICT_NONE,
 )
@@ -43,7 +46,9 @@ CARD_URLS = (
     f"/api/{DOMAIN}/static/sph-meinunterricht-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/sph-kalender-card.js?v={CARD_VERSION}",
     f"/api/{DOMAIN}/static/sph-vertretungsplan-card.js?v={CARD_VERSION}",
+    f"/api/{DOMAIN}/static/sph-nachrichten-card.js?v={CARD_VERSION}",
 )
+PLATFORMS = ["sensor", "calendar", "binary_sensor", "event"]
 
 
 async def _register_lovelace_resources(hass: HomeAssistant) -> None:
@@ -95,6 +100,10 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     await async_register_lerngruppen_services(hass)
     await async_register_meinunterricht_services(hass)
 
+    from .module.nachrichten.websocket import async_register_websocket
+
+    async_register_websocket(hass)
+
     if hass.is_running:
         hass.async_create_task(_register_lovelace_resources(hass))
     else:
@@ -133,6 +142,25 @@ async def _remove_disabled_vertretung_entities(hass: HomeAssistant, entry: Confi
         if entity_id:
             registry.async_remove(entity_id)
             _LOGGER.debug("SPH: deaktivierte Vertretungsplan-Entity %s entfernt", entity_id)
+
+
+async def _remove_disabled_nachrichten_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    if bool(entry.data.get(CONF_MODULE_NACHRICHTEN, DEFAULT_MODULE_NACHRICHTEN_ENABLED)):
+        return
+    from .module.nachrichten.coordinator import nachrichten_store
+
+    # Forget known message ids so re-enabling starts with a fresh baseline
+    # instead of reporting everything received in between as new.
+    await nachrichten_store(hass, entry.entry_id).async_remove()
+    registry = er.async_get(hass)
+    for platform, unique_id in (
+        ("sensor", f"{entry.entry_id}_nachrichten_ungelesen"),
+        ("event", f"{entry.entry_id}_nachrichten_event"),
+    ):
+        entity_id = registry.async_get_entity_id(platform, DOMAIN, unique_id)
+        if entity_id:
+            registry.async_remove(entity_id)
+            _LOGGER.debug("SPH: deaktivierte Nachrichten-Entity %s entfernt", entity_id)
 
 
 async def _remove_inactive_calendar_layout_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -182,6 +210,7 @@ async def _migrate_sensor_entity_ids(hass: HomeAssistant, entry: ConfigEntry) ->
         (f"{entry.entry_id}_lerngruppen_json", f"lerngruppen_{suffix}_json"),
         (f"{entry.entry_id}_vertretungsplan", f"vertretungsplan_{suffix}"),
         (f"{entry.entry_id}_vertretungsplan_json", f"vertretungsplan_{suffix}_json"),
+        (f"{entry.entry_id}_nachrichten_ungelesen", f"nachrichten_ungelesen_{suffix}"),
     ):
         entity_id = registry.async_get_entity_id("sensor", DOMAIN, unique_id)
         if not entity_id:
@@ -215,11 +244,17 @@ async def _migrate_sensor_entity_ids(hass: HomeAssistant, entry: ConfigEntry) ->
         if entity_id and entity_id != desired and not registry.async_get(desired):
             registry.async_update_entity(entity_id, new_entity_id=desired)
 
+    entity_id = registry.async_get_entity_id("event", DOMAIN, f"{entry.entry_id}_nachrichten_event")
+    desired = f"event.neue_nachricht_{suffix}"
+    if entity_id and entity_id != desired and not registry.async_get(desired):
+        registry.async_update_entity(entity_id, new_entity_id=desired)
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     from .module.kalender.coordinator import SphCalendarCoordinator
     from .module.lerngruppen.coordinator import SphLearningGroupsCoordinator
     from .module.meinunterricht.coordinator import SphMeinUnterrichtCoordinator
+    from .module.nachrichten.coordinator import SphNachrichtenCoordinator
     from .module.stundenplan.coordinator import SphTimetableCoordinator
     from .module.stundenplan.movable_holidays import SphMovableHolidaysCoordinator
     from .module.vertretung.coordinator import SphVertretungCoordinator
@@ -272,6 +307,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except Exception as err:
             _LOGGER.warning("Schulportal Hessen Vertretungsplan für %s aktuell nicht verfügbar: %s", entry.title, err)
 
+    # Only restore state here; the first poll runs once HA has started (see below).
+    nachrichten = SphNachrichtenCoordinator(hass, entry, auth)
+    if nachrichten.enabled:
+        await nachrichten.async_load_store()
+
     profile = get_school_profile(entry)
     entry_data = {
         "auth": auth,
@@ -280,6 +320,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "meinunterricht": meinunterricht,
         "lerngruppen": lerngruppen,
         "vertretung": vertretung,
+        "nachrichten": nachrichten,
         "movable_holidays": movable_holidays,
         "school_profile": profile,
     }
@@ -302,15 +343,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await _remove_disabled_calendar_entities(hass, entry)
     await _remove_disabled_vertretung_entities(hass, entry)
+    await _remove_disabled_nachrichten_entities(hass, entry)
     await _remove_inactive_calendar_layout_entities(hass, entry)
     await _remove_unconfigured_movable_holiday_calendar(hass, entry)
-    await hass.config_entries.async_forward_entry_setups(
-        entry, ["sensor", "calendar", "binary_sensor"]
-    )
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await _migrate_sensor_entity_ids(hass, entry)
 
     timetable.async_start_free_day_tracking()
     meinunterricht.async_start_manual_cleanup()
+
+    if nachrichten.enabled:
+        # New-message events fired during startup would reach no automation,
+        # so poll only once HA runs (immediately if it already does, e.g.
+        # after an options change). Entities exist at this point.
+        async def _first_nachrichten_poll(_hass: HomeAssistant) -> None:
+            await nachrichten.async_refresh()
+
+        entry_data["nachrichten_start_unsub"] = async_at_started(hass, _first_nachrichten_poll)
     return True
 
 
@@ -320,6 +369,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if profile_unsub is not None:
         profile_unsub()
 
+    nachrichten_start_unsub = data.get("nachrichten_start_unsub")
+    if nachrichten_start_unsub is not None:
+        nachrichten_start_unsub()
+
     timetable = data.get("timetable")
     if timetable is not None:
         timetable.async_stop_free_day_tracking()
@@ -328,9 +381,14 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if meinunterricht is not None:
         meinunterricht.async_stop_manual_cleanup()
 
-    unloaded = await hass.config_entries.async_unload_platforms(
-        entry, ["sensor", "calendar", "binary_sensor"]
-    )
+    unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
         hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
     return unloaded
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Delete persisted message state when a child's entry is removed."""
+    from .module.nachrichten.coordinator import nachrichten_store
+
+    await nachrichten_store(hass, entry.entry_id).async_remove()
