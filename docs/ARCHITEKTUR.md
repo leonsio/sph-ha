@@ -21,6 +21,7 @@ custom_components/sph/
 ├── __init__.py
 ├── binary_sensor.py
 ├── calendar.py
+├── event.py
 ├── config_flow.py
 ├── const.py
 ├── coordinator.py
@@ -43,7 +44,8 @@ custom_components/sph/
 │   ├── kalender/
 │   ├── meinunterricht/
 │   ├── lerngruppen/
-│   └── vertretung/
+│   ├── vertretung/
+│   └── nachrichten/
 ├── static/
 │   ├── school-profile.js
 │   ├── substitution-adapter.js
@@ -53,7 +55,8 @@ custom_components/sph/
 │   ├── sph-meinunterricht-card.js
 │   ├── sph-lerngruppen-card.js
 │   ├── sph-kalender-card.js
-│   └── sph-vertretungsplan-card.js
+│   ├── sph-vertretungsplan-card.js
+│   └── sph-nachrichten-card.js
 └── translations/
 ```
 
@@ -83,6 +86,10 @@ Dispatcher für die Sensoren der Module. Die Module liefern strukturierte Sensor
 ### `binary_sensor.py`
 
 Dispatcher für die Vertretungsplan-Binärsensoren.
+
+### `event.py`
+
+Dispatcher für die Event-Entität des Nachrichtenmoduls.
 
 ### `calendar.py`
 
@@ -197,13 +204,14 @@ Ein Karten-Override kann über `school-profile` gesetzt werden.
 
 ## Modulaktivierung
 
-Aktuell existieren fünf Module:
+Aktuell existieren sechs Module:
 
 - Stundenplan
 - Schulkalender
 - Mein Unterricht
 - Lerngruppen
 - Vertretungsplan
+- Nachrichten
 
 Ein deaktiviertes Modul soll keine unnötigen SPH-Abrufe durchführen. Nicht benötigte Entities werden abhängig vom Modul entfernt oder nicht angelegt.
 
@@ -341,6 +349,21 @@ Der Schulkalender bevorzugt CSV und verwendet iCal als Fallback. Daten werden au
 
 Profil-Hooks können einzelne Kalenderdatensätze sowie strukturierte Sensor-/JSON-Payloads aufbereiten.
 
+## Nachrichten
+
+Das Modul ruft `nachrichten.php` mit `a=headers` und `getType=visibleOnly` ab. Die Antwort enthält die Unterhaltungen AES-verschlüsselt im Feld `rows`; entschlüsselt wird mit dem Sitzungsschlüssel aus dem gemeinsamen RSA/AES-Handshake. Liefert das Portal statt JSON eine Anmeldeseite, wird einmal neu angemeldet und erneut abgerufen.
+
+- `parser.py` enthält die reine Logik ohne Home-Assistant-Abhängigkeiten: Zeilen in kompakte Zusammenfassungen umwandeln und neu ungelesene Unterhaltungen erkennen. Die großen Empfängerlisten (`empf`, `WeitereEmpfaenger`) werden dabei verworfen.
+- Der Coordinator vergleicht den Ungelesen-Status je Unterhaltung mit dem gespeicherten Stand des vorherigen Abrufs (`.storage/sph_nachrichten_<entry_id>`). Ohne gespeicherten Stand werden keine Events ausgelöst.
+- Beim Einrichten des Eintrags wird nur der gespeicherte Stand geladen. Der erste Abruf läuft über `async_at_started` erst, wenn Home Assistant vollständig gestartet ist: Automationen hängen ihre Trigger erst dann ein, frühere Events gingen verloren, während der gespeicherte Stand bereits fortgeschrieben wäre.
+- Neue Nachrichten lösen je Unterhaltung das Bus-Event `sph_neue_nachricht` und je Abruf einmal die Event-Entität aus. Mehrere Entity-Events im selben Moment würden zu einer Zustandsänderung verschmelzen. Absender und Betreff der Event-Entität sind über `_unrecorded_attributes` vom Recorder ausgeschlossen.
+- Das Modul ist opt-in (`DEFAULT_MODULE_NACHRICHTEN_ENABLED = False`), auch für bestehende Einträge.
+- Der WebSocket-Befehl `sph/nachrichten` liefert der Karte die zwischengespeicherte Liste, ohne Betreff und Absender in Sensorattribute zu schreiben.
+- Das Abrufintervall ist getrennt vom allgemeinen Aktualisierungsintervall konfigurierbar, weil jede Antwort die vollständigen Empfängerlisten enthält und entsprechend groß ist.
+- Beim Deaktivieren des Moduls oder Entfernen des Integrationseintrags wird der gespeicherte Stand gelöscht.
+
+Das Modul arbeitet nur lesend. `a=read` wird nicht aufgerufen, da das Öffnen einer Unterhaltung sie im Portal voraussichtlich als gelesen markiert.
+
 ## Lovelace-Ressourcen
 
 Die Integration registriert ihre allgemeinen JavaScript-Ressourcen selbst und verwendet versionierte URLs. Profil-eigene Frontend-Verzeichnisse werden zusätzlich dynamisch aus den entdeckten Profilpaketen registriert.
@@ -354,6 +377,7 @@ Aktuelle Karten:
 - `sph-lerngruppen-card`
 - `sph-kalender-card`
 - `sph-vertretungsplan-card`
+- `sph-nachrichten-card`
 
 ## Robustheit
 
@@ -377,4 +401,5 @@ Die Tests decken unter anderem ab:
 - Vertretungsplan-Normalisierung und JSON-Payload,
 - Kursnormalisierung,
 - serverseitige Vertretungsanwendung,
-- Lovelace-Ressourcenregistrierung.
+- Lovelace-Ressourcenregistrierung,
+- Nachrichten-Parser, Erkennung neuer Nachrichten, Nachrichten-Client und Nachrichten-Karte.

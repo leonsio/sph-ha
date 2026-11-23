@@ -13,8 +13,9 @@ Für jedes Kind können folgende Module einzeln aktiviert werden:
 - Mein Unterricht
 - Lerngruppen
 - Vertretungsplan
+- Nachrichten
 
-Zu den Modulen gehören normale Sensoren, JSON-Sensoren und – je nach Funktion – native Home-Assistant-Kalender, Binärsensoren und Lovelace-Karten.
+Zu den Modulen gehören normale Sensoren, JSON-Sensoren und – je nach Funktion – native Home-Assistant-Kalender, Binärsensoren, Events und Lovelace-Karten.
 
 ## Installation
 
@@ -34,6 +35,7 @@ Danach unter **Einstellungen → Geräte & Dienste → Integration hinzufügen**
 - Hausaufgaben aus „Mein Unterricht“ inklusive Kurs-/Fachnormalisierung
 - Leistungskontrollen aus Lerngruppen
 - Vertretungsplan mit Entfall-, Raum-, Lehrer- und Fachänderungen
+- Zähler ungelesener Nachrichten und Event bei neuen Nachrichten
 - JSON-Sensoren für externe Clients
 - automatische Lovelace-Ressourcenregistrierung
 - zusammengefasster oder getrennter SPH-Kalender
@@ -60,6 +62,8 @@ sensor.mein_unterricht_maxim_mk
 sensor.lerngruppen_maxim_mk
 sensor.vertretungsplan_maxim_mk
 sensor.vertretungsplan_maxim_mk_json
+sensor.nachrichten_ungelesen_maxim_mk
+event.neue_nachricht_maxim_mk
 calendar.stundenplan_maxim_mk
 calendar.schulkalender_maxim_mk
 ```

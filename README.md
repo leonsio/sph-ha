@@ -6,13 +6,14 @@ Aktueller Dokumentationsstand: **Version 0.6.1**.
 
 ## Funktionen
 
-Die Integration wird pro Kind eingerichtet und umfasst fünf unabhängig aktivierbare Bereiche:
+Die Integration wird pro Kind eingerichtet und umfasst sechs unabhängig aktivierbare Bereiche:
 
 - **Stundenplan** – persönlicher Wochenstundenplan mit A-/B-Wochen, Unterrichtszeiten, Räumen, Lehrkräften und freien Tagen.
 - **Schulkalender** – Termine aus dem Schulportal, auf Wunsch nach Kalenderarten gefiltert und mit eigenen lokalen Terminen ergänzt.
 - **Mein Unterricht** – Hausaufgaben und Aufgabenübersichten mit Fachnormalisierung sowie eigenen lokalen Ergänzungen.
 - **Lerngruppen** – Leistungskontrollen mit Fach, Dauer, Schulstunden und Lehrkraft sowie eigenen lokalen Terminen.
 - **Vertretungsplan** – Vertretungen, Entfälle, Raum- und Fachwechsel sowie Hinweise aus dem Schulportal.
+- **Nachrichten** – Zähler ungelesener Nachrichten, Event bei neuen Nachrichten und Übersicht mit Link ins Schulportal.
 
 Zusätzlich stellt SPH-HA eigene Lovelace-Karten bereit. Schulspezifische Besonderheiten werden über **Schul-Profile** pro Kind konfiguriert. Profile können sowohl Daten in Sensoren, JSON-Ausgaben und Kalendern als auch notwendige Darstellungsregeln der Karten anpassen.
 
@@ -49,6 +50,7 @@ Weitere Einstellungen können später über die Integrationsoptionen geändert w
 | **Passwort** | Passwort des SPH-Kontos. |
 | **Schul-Profil** | Optionales, pro Kind gespeichertes Profil für schulspezifische Daten- und Darstellungsanpassungen. Standard ist kein Profil. |
 | **Aktualisierungsintervall** | Legt fest, wie häufig die Daten regulär aktualisiert werden. Zulässig sind 5 bis 1440 Minuten, Standard sind 60 Minuten. |
+| **Nachrichten: Abrufintervall** | Legt fest, wie häufig der Nachrichten-Posteingang abgerufen wird. Zulässig sind 15 bis 10080 Minuten, Standard sind 1440 Minuten (einmal täglich). |
 | **Bezugsstunde für Entfälle** | Legt fest, welche Schulstunde für die Prüfung auf einen Ausfall heute bzw. morgen verwendet wird. |
 | **Stundenplan-Ausgabe** | Wahl zwischen dem persönlichen Stundenplan und einer erweiterten Ausgabe, die zusätzlich den vollständigen vom SPH gelieferten Stundenplan enthält. |
 | **Gemeinsamen SPH-Kalender verwenden** | Fasst Stundenplan, Schulkalender und Lerngruppen in einer gemeinsamen Kalenderansicht zusammen. Alternativ können die Kalender getrennt verwendet werden. |
@@ -97,6 +99,27 @@ Der Vertretungsplan zeigt veröffentlichte Änderungen für die kommenden Schult
 
 Die Informationen werden in der Vertretungsplan-Karte sowie in datumsbezogenen Stundenplan- und Kalenderdarstellungen verwendet.
 
+## Nachrichten
+
+Das Modul ist standardmäßig deaktiviert und wird unter **Aktive Module** eingeschaltet. Es liest den Posteingang des Schulportals (ohne ausgeblendete Unterhaltungen) und stellt bereit:
+
+- einen Sensor mit der Anzahl ungelesener Unterhaltungen,
+- ein Event, sobald Unterhaltungen neu ungelesen sind – also neue Nachrichten oder neue Antworten in bereits gelesenen Unterhaltungen,
+- eine Lovelace-Karte mit Absender, Betreff und Datum der ungelesenen Nachrichten und einem Link ins Schulportal.
+
+Das Modul arbeitet nur lesend: Nachrichten werden weder als gelesen markiert noch versendet. Der Nachrichtentext wird nicht abgerufen.
+
+Da das Schulportal in jeder Abfrage die vollständigen Empfängerlisten mitliefert, ist eine Antwort schnell rund ein Megabyte groß. Das Modul verwendet deshalb ein eigenes, standardmäßig tägliches Abrufintervall. Zusätzlich wird nach jedem Start von Home Assistant einmal abgerufen – erst wenn Home Assistant vollständig gestartet ist, damit Automationen keine Meldung verpassen. Ein sofortiger Abruf ist jederzeit über `homeassistant.update_entity` für den Nachrichtensensor möglich.
+
+Betreff und Absender stehen nicht in den Sensorattributen; die Karte lädt sie bei Bedarf über eine WebSocket-Schnittstelle. Die Event-Entität enthält Absender und Betreff für aussagekräftige Benachrichtigungen, schließt diese Attribute aber von der Recorder-Datenbank aus. Das Bus-Event `sph_neue_nachricht` speichert Home Assistant dagegen wie alle Events in der Datenbank; wer das nicht möchte, schließt es aus:
+
+```yaml
+recorder:
+  exclude:
+    event_types:
+      - sph_neue_nachricht
+```
+
 ## Lovelace-Karten
 
 SPH-HA bringt eigene Karten für folgende Ansichten mit:
@@ -108,6 +131,7 @@ SPH-HA bringt eigene Karten für folgende Ansichten mit:
 - Lerngruppen und Leistungskontrollen
 - Kalender mit Tag-, Woche- und Monatsansicht
 - Vertretungsplan
+- Nachrichten
 
 Die Karten werden automatisch registriert. Die vollständige Dokumentation einschließlich Screenshots und Konfigurationsbeispielen befindet sich unter [docs/lovelace](docs/lovelace/README.md).
 

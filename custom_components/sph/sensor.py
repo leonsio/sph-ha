@@ -14,6 +14,7 @@ from .module.meinunterricht.sensor import (
     SphMeinUnterrichtJsonSensor,
     SphMeinUnterrichtSensor,
 )
+from .module.nachrichten.sensor import SphNachrichtenUngelesenSensor
 from .module.stundenplan.sensor import SphTimetableJsonSensor, SphTimetableSensor
 from .module.vertretung.sensor import SphVertretungJsonSensor, SphVertretungSensor
 
@@ -36,6 +37,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 SphCalendarJsonSensor(data["calendar"], data["timetable"], entry),
             ]
         )
+
+    nachrichten = data.get("nachrichten")
+    if nachrichten is not None and nachrichten.enabled:
+        entities.append(SphNachrichtenUngelesenSensor(nachrichten, entry))
 
     if bool(entry.data.get(CONF_MODULE_VERTRETUNG, DEFAULT_MODULE_ENABLED)):
         entities.extend(
@@ -60,4 +65,5 @@ __all__ = [
     "SphLearningGroupsJsonSensor",
     "SphVertretungSensor",
     "SphVertretungJsonSensor",
+    "SphNachrichtenUngelesenSensor",
 ]

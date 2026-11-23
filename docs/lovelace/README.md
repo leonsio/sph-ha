@@ -15,6 +15,7 @@ Dokumentationsstand: **0.6.0**.
 | [SPH Lerngruppen](sph-lerngruppen-card.md) | `custom:sph-lerngruppen-card` | Leistungskontrollen anzeigen und lokale Termine verwalten |
 | [SPH Kalender](sph-kalender-card.md) | `custom:sph-kalender-card` | Tag-/Woche-/Monat-Darstellung der SPH-Kalender |
 | [SPH Vertretungsplan](sph-vertretungsplan-card.md) | `custom:sph-vertretungsplan-card` | Vertretungen, Raumwechsel, Entfälle und Hinweise |
+| [SPH Nachrichten](sph-nachrichten-card.md) | `custom:sph-nachrichten-card` | Ungelesene Nachrichten mit Link ins Schulportal |
 
 ## Gemeinsame Entity-Auswahl
 

@@ -192,6 +192,67 @@ Derselbe Vertretungsplan als kompaktes JSON.
 
 Attribute: `json`, `format`, `bytes`.
 
+### Nachrichten
+
+#### `sensor.nachrichten_ungelesen_NAME_KUERZEL`
+
+Anzahl ungelesener Unterhaltungen im Posteingang des Schulportals. Ausgeblendete Unterhaltungen werden nicht berücksichtigt.
+
+**Attribute**
+
+| Attribut | Inhalt |
+|---|---|
+| `kind`, `kind_kürzel` | Kind des Integrationseintrags |
+| `nachrichten_gesamt` | Anzahl aller Unterhaltungen im Posteingang |
+| `abgerufen` | Zeitpunkt des letzten erfolgreichen Abrufs |
+| `portal_url` | Link zum Posteingang im Schulportal |
+
+Betreff und Absender sind bewusst keine Attribute, damit sie nicht in der Recorder-Datenbank gespeichert werden. Für dieses Modul gibt es deshalb auch keinen JSON-Sensor; die Karte lädt die Liste über den WebSocket-Befehl `sph/nachrichten`.
+
+Das Modul ist standardmäßig deaktiviert. Bis zum ersten Abruf nach dem Start von Home Assistant ist der Zustand `unknown`.
+
+## Event-Entitäten
+
+### `event.neue_nachricht_NAME_KUERZEL`
+
+Löst den Eventtyp `neue_nachricht` aus, wenn bei einem Abruf mindestens eine Unterhaltung im Posteingang neu ungelesen ist. Das ist der Fall bei einer neuen Unterhaltung oder einer neuen Antwort in einer bereits gelesenen Unterhaltung. Je Abruf wird höchstens ein Event ausgelöst; es fasst alle neuen Unterhaltungen zusammen. (Mehrere Events im selben Moment würde Home Assistant zu einer einzigen Zustandsänderung zusammenfassen.)
+
+Beim ersten Abruf nach dem Einrichten oder Aktivieren des Moduls werden keine Events ausgelöst; bereits vorhandene ungelesene Nachrichten gelten als bekannt. Der Stand wird dauerhaft gespeichert, sodass ein Neustart keine doppelten Events erzeugt.
+
+**Event-Attribute**
+
+| Attribut | Inhalt |
+|---|---|
+| `anzahl` | Anzahl neuer Unterhaltungen in diesem Abruf |
+| `absender`, `betreff`, `datum` | neueste der neuen Unterhaltungen |
+| `nachrichten` | alle neuen Unterhaltungen (`absender`, `betreff`, `datum`), neueste zuerst |
+| `kind`, `kind_kürzel`, `entry_id` | Kind des Integrationseintrags |
+| `portal_url` | Link zum Posteingang im Schulportal |
+
+`absender`, `betreff` und `nachrichten` werden nicht in der Recorder-Datenbank gespeichert.
+
+### Bus-Event `sph_neue_nachricht`
+
+Wird je neuer Unterhaltung einmal auf dem Home-Assistant-Eventbus ausgelöst, mit den Daten `absender`, `betreff`, `datum`, `kind`, `kind_kürzel`, `entry_id` und `portal_url`. Es eignet sich für eine Benachrichtigung je Nachricht (Trigger `event`). Home Assistant speichert Bus-Events in der Recorder-Datenbank; bei Bedarf lässt sich das über `recorder: exclude: event_types` verhindern.
+
+Beispiel-Automation:
+
+```yaml
+triggers:
+  - trigger: state
+    entity_id: event.neue_nachricht_maxim_mk
+    not_from: unavailable
+actions:
+  - action: notify.mobile_app_handy
+    data:
+      title: >-
+        Schulportal: {{ trigger.to_state.attributes.anzahl }} neue Nachricht(en)
+      message: >-
+        {{ trigger.to_state.attributes.absender }}: {{ trigger.to_state.attributes.betreff }}
+      data:
+        url: "{{ trigger.to_state.attributes.portal_url }}"
+```
+
 ## Binärsensoren für Entfälle
 
 ### `binary_sensor.erste_stunde_entfaellt_heute_NAME_KUERZEL`
@@ -340,6 +401,14 @@ bytes
 ```
 
 Der logische Inhalt entspricht jeweils dem strukturierten Sensor des gleichen Moduls und enthält dieselben Schul-Profil-Transformationen.
+
+## WebSocket-Befehle
+
+### `sph/nachrichten`
+
+Liefert die Unterhaltungen des Posteingangs aus dem letzten Abruf, ohne einen neuen Abruf beim Schulportal auszulösen. Parameter: `entity_id` des Nachrichtensensors (andere Entities werden abgelehnt). Der Befehl steht allen angemeldeten Benutzern zur Verfügung, damit die Karte auch in Dashboards von Nicht-Administratoren funktioniert.
+
+Antwort: `nachrichten` (Liste mit `id`, `betreff`, `absender`, `datum`, `datum_text`, `datum_unix`, `ungelesen`; neueste zuerst), `ungelesen`, `abgerufen`, `aktiv`, `letzter_abruf_ok`, `portal_url`.
 
 ## Weitere technische Dokumentation
 

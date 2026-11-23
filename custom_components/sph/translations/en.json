@@ -12,6 +12,7 @@
           "password": "Password",
           "school_profile": "School profile",
           "update_interval": "Update interval (minutes)",
+          "nachrichten_interval": "Messages: fetch interval (minutes)",
           "first_lesson": "Reference lesson for cancellation sensors",
           "timetable_output": "Timetable output",
           "combine_calendars": "Use combined SPH calendar",
@@ -39,6 +40,7 @@
           "password": "Password",
           "school_profile": "School profile",
           "update_interval": "Update interval (minutes)",
+          "nachrichten_interval": "Messages: fetch interval (minutes)",
           "first_lesson": "Reference lesson for cancellation sensors",
           "timetable_output": "Timetable output",
           "combine_calendars": "Use combined SPH calendar",
@@ -60,7 +62,8 @@
         "kalender": "School calendar",
         "meinunterricht": "Mein Unterricht",
         "lerngruppen": "Learning groups",
-        "vertretung": "Substitution plan"
+        "vertretung": "Substitution plan",
+        "nachrichten": "Messages"
       }
     },
     "timetable_output": {

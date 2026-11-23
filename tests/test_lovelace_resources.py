@@ -84,7 +84,7 @@ class LovelaceResourceTest(unittest.TestCase):
         asyncio.run(register(hass))
         urls = [item['url'] for item in resources.items]
 
-        self.assertEqual(len(urls), 8)
+        self.assertEqual(len(urls), 9)
         self.assertIn('/local/custom-card.js', urls)
         self.assertTrue(
             any(
@@ -95,6 +95,12 @@ class LovelaceResourceTest(unittest.TestCase):
         self.assertTrue(
             any(
                 url == f'/api/sph/static/sph-vertretungsplan-card.js?v={version}'
+                for url in urls
+            )
+        )
+        self.assertTrue(
+            any(
+                url == f'/api/sph/static/sph-nachrichten-card.js?v={version}'
                 for url in urls
             )
         )
